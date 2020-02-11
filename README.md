@@ -8,4 +8,4 @@ WalKit is an open hardware project created to monitor the elderly. It is modular
 
 ## License
 
-This project is licensed under the Creative Commons Attribution 4.0 - see the [LICENSE.md](https://github.com/joaquinballesteros/Smart-Cane/blob/master/LICENSE) file for details.
+This project is licensed under the Creative Commons Attribution 4.0 - see the [LICENSE.md](https://github.com/TaISLab/WalKit/blob/master/LICENSE) file for details.
