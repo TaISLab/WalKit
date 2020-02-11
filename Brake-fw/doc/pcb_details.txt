@@ -1,0 +1,7 @@
+-Board thickness:
+-PCB Size: (x,y mm):
+-Soldermask color:
+-Legend color: 
+-Layer number: 
+-Legend number: 
+-Surface finish:
