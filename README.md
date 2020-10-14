@@ -1,6 +1,10 @@
 # WalKit
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
 
+<p align="center">
+  <img src="https://github.com/TaISLab/WalKit/blob/master/Pictures/walkerTransfiereReduced.jpg" />
+</p>
+
 WalKit is an open hardware project created to monitor the elderly. It is modular, so different parameters, such as weight-bearing, cadence, activity duration, walking speed or other spatiotemporal gait parameters can be monitoring. 
 
 ## Contributors
