@@ -1,0 +1,4 @@
+[submodule "aws-robomaker-hospital-world"]
+	path = aws-robomaker-hospital-world
+	url = https://github.com/TaISLab/aws-robomaker-hospital-world
+    branch = ros2
