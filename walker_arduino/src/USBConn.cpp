@@ -1,5 +1,5 @@
 
-#include "walker2_driver/USBConn.hpp"
+#include "walker_arduino/USBConn.hpp"
 
 HandlePublisher::HandlePublisher() : Node("handle_publisher"){
         /*
@@ -24,11 +24,10 @@ HandlePublisher::HandlePublisher() : Node("handle_publisher"){
         this->declare_parameter<std::string>( "port_basename",  "/dev/ttyUSB") ; 
         this->get_parameter("port_basename", basename_ );
         
-
-        if (data.data_type_("int")==0) {
-            publisher_ = this->create_publisher<walker_msgs::msg::EncoderStamped>(topic_name_, 10);
-        } else if (data.data_type_("float")==0) {
-            publisher_ = this->create_publisher<walker_msgs::msg::ForceStamped>(topic_name_, 10);
+        if (data_type_.compare("int")==0) {
+            encoder_publisher_ = this->create_publisher<walker_msgs::msg::EncoderStamped>(topic_name_, 10);
+        } else if (data_type_.compare("float")==0) {
+            force_publisher_ = this->create_publisher<walker_msgs::msg::ForceStamped>(topic_name_, 10);
         } else{
             RCLCPP_FATAL(this->get_logger(), "'Data Type [%s] is nor int or float ", data_type_.c_str() ); 
         }
@@ -55,20 +54,23 @@ HandlePublisher::HandlePublisher() : Node("handle_publisher"){
 
 }
 
+HandlePublisher::~HandlePublisher(){
+    if (serial_stream_.IsOpen()) {
+        serial_stream_.Close();
+    }
+}
+
 void HandlePublisher::start(){
         bool isRecvStarted = false;
         char rc;
         std::stringstream ss;
         std::string data;
         
-        if (data.data_type_("float")==0) {
-            walker_msgs::msg::ForceStamped measurement;
-        } else if (data.data_type_("int")==0) {
-            walker_msgs::msg::EncoderStamped measurement;
-        }
-
-        measurement.header.frame_id = frame_id_;
-        RCLCPP_INFO(this->get_logger(), "Publishing handle measurements at [%s]", topic_name_.c_str());
+        walker_msgs::msg::ForceStamped f_measurement;
+        walker_msgs::msg::EncoderStamped e_measurement;
+    
+        f_measurement.header.frame_id = e_measurement.header.frame_id = frame_id_;
+        RCLCPP_INFO(this->get_logger(), "Publishing handle measurements from port [%s] at topic [%s]", port_name_.c_str(), topic_name_.c_str());
 
         while (rclcpp::ok()) {
             serial_stream_.get( rc );
@@ -78,20 +80,25 @@ void HandlePublisher::start(){
                     ss << rc;
                 } else {
                     data = ss.str();
-                    measurement.header.stamp = this->get_clock()->now();
+                    f_measurement.header.stamp = e_measurement.header.stamp = this->get_clock()->now();
                     // remove preamble and cast data to number:
                     
-                    if (data.data_type_("float")==0) {
-                        measurement.force = std::stof(data.substr(preamble_.length()));
-                        RCLCPP_DEBUG(this->get_logger(), "data is: [%3.2f]", measurement.force);
-                    } else if (data.data_type_("int")==0) {
-                        measurement.encoder = std::stoi(data.substr(preamble_.length()));
-                        RCLCPP_DEBUG(this->get_logger(), "data is: [%d]", measurement.encoder);
+                    if (data_type_.compare("float")==0) {
+                        f_measurement.force = std::stof(data.substr(preamble_.length()));
+                        RCLCPP_DEBUG(this->get_logger(), "data is: [%3.2f]", f_measurement.force);
+                    } else if (data_type_.compare("int")==0) {
+                        e_measurement.encoder = std::stoi(data.substr(preamble_.length()));
+                        RCLCPP_DEBUG(this->get_logger(), "data is: [%d]", e_measurement.encoder);
                     }
 
                     // send data
                     try {
-                        publisher_->publish(measurement);
+                        if (data_type_.compare("float")==0) {
+                            force_publisher_->publish(f_measurement);
+                        } else if (data_type_.compare("int")==0) {
+                            encoder_publisher_->publish(e_measurement);
+                        }
+
                     } catch (const rclcpp::exceptions::RCLError &e) {
                         RCLCPP_ERROR( this->get_logger(), "unexpectedly failed with %s", e.what());
                     }
@@ -122,6 +129,7 @@ std::string HandlePublisher::get_serial_port(std::string preamble, int highest_p
         std::stringstream name_builder;
         SerialStream my_serial_stream;
         bool isSearchStarted = false;
+        bool isSearchFinished = false;
         std::stringstream sb;
         std::string data;
         char rc;
@@ -143,7 +151,7 @@ std::string HandlePublisher::get_serial_port(std::string preamble, int highest_p
                 RCLCPP_DEBUG(this->get_logger(), "Opening serial port [%s].", port_name.c_str());
                 my_serial_stream.Open( port_name );
             } catch (const OpenFailed&) {
-                RCLCPP_ERROR(this->get_logger(), "The serial port [%s] couldn't be opened.", port_name.c_str());
+                RCLCPP_ERROR(this->get_logger(), "The serial port [%s] couldn't be opened. Trying next", port_name.c_str());
                 my_serial_stream.Close(  );
                 continue;
             }
@@ -178,25 +186,35 @@ std::string HandlePublisher::get_serial_port(std::string preamble, int highest_p
             isSearchStarted = false;
             sb.str(std::string());
             RCLCPP_DEBUG(this->get_logger(), "Looking for preamble [%s] ", preamble.c_str());
-            while (true) {
+            isSearchFinished = false;
+            while (!isSearchFinished) {
                 my_serial_stream.get( rc );
                 // search for preamble starts AFTER endMarker
                 if (isSearchStarted == true) {
                     sb << rc;
                     data = sb.str();
+                    RCLCPP_DEBUG(this->get_logger(), "last char is: [%c]", rc );
                     if (data.compare(preamble_)==0) {
                         //port found!
                         RCLCPP_DEBUG(this->get_logger(), "Port found!. [%s] is using preamble [%s]", port_name.c_str(), preamble.c_str());
                         my_serial_stream.Close();
                         return port_name;
                     }
+                    if (rc == endMarker_) {
+                        RCLCPP_DEBUG(this->get_logger(), "The serial port [%s] didn't have preamble [%s] but [%s]", port_name.c_str(), preamble_.c_str(), data.substr(0,preamble_.length()).c_str());
+                        my_serial_stream.Close();
+                        isSearchFinished = true;                        
+                    }
+
                 } else if (rc == endMarker_) {
+                    RCLCPP_DEBUG(this->get_logger(), "End marker detected. ");
                     if (!isSearchStarted){ 
                         isSearchStarted = true;
+                        RCLCPP_DEBUG(this->get_logger(), "Starting preamble search");
                     } else{
                         RCLCPP_DEBUG(this->get_logger(), "The serial port [%s] didn't have preamble [%s] but [%s]", port_name.c_str(), preamble_.c_str(), data.c_str());
                         my_serial_stream.Close();
-                        continue;
+                        isSearchFinished = true; 
                     }
                 }
             }   

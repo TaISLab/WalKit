@@ -47,8 +47,8 @@
    Definición de constantes
    ================================================================ */
 
-//#define WHEEL_SIDE  "LW:"
-#define WHEEL_SIDE    "RW:"
+#define WHEEL_SIDE  "LW:"
+//#define WHEEL_SIDE    "RW:"
 #define END_CHAR  "\n"
 
 // Error codes: still sent as an integer, but in a range out of encoder values
@@ -101,7 +101,7 @@ void loop() {
       Serial.print( ERROR_MAGNET_WEAK);  
     } else if (isMagnetStrong){
       Serial.print( ERROR_MAGNET_STRONG);  
-    } else if (!isMagnetStrong) && (!isMagnetWeak) && (isMagnetDetected){
+    } else if ( (!isMagnetStrong) && (!isMagnetWeak) && (isMagnetDetected) ){
     Serial.print( Sensor.getAngle());
     } 
 

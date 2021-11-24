@@ -26,8 +26,9 @@ class HandlePublisher : public rclcpp::Node
 {
   public:
     // topic where data is published
-    auto publisher_; 
-    
+    rclcpp::Publisher<walker_msgs::msg::EncoderStamped>::SharedPtr encoder_publisher_; 
+    rclcpp::Publisher<walker_msgs::msg::ForceStamped>::SharedPtr force_publisher_; 
+
     // serial usb where data is coming from
     SerialStream serial_stream_;
     
@@ -52,7 +53,7 @@ class HandlePublisher : public rclcpp::Node
     char endMarker_ ;
 
     HandlePublisher();
-
+    ~HandlePublisher();
     void start();
 
     std::string get_serial_port(std::string preamble, int highest_port) ;

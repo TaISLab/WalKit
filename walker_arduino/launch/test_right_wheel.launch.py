@@ -64,6 +64,15 @@ def generate_launch_description():
     )
     ld.add_action(robot_state_publisher_node)
 
+    visual_node = Node(
+        package='rqt_gui',
+        executable='rqt_gui',
+        name='right_wheel_gui',
+        output='screen', 
+        arguments=['--ros-args', '--log-level', log_level]
+    )
+    #ld.add_action(visual_node)
+    
     return ld
 
 if __name__ == '__main__':

@@ -33,11 +33,11 @@ def generate_launch_description():
         
     # Map these variables to Arguments: can be set from the command line or a default will be used    
     log_level_arg = DeclareLaunchArgument( 'log_level', default_value=TextSubstitution(text='INFO') )    
-    serial_preamble_arg = DeclareLaunchArgument('serial_preamble', default_value=TextSubstitution(text= 'RW' ))
-    handle_topic_name_arg = DeclareLaunchArgument('handle_topic_name', default_value=TextSubstitution(text= 'right_wheel' ))
-    handle_frame_id_arg = DeclareLaunchArgument('handle_frame_id', default_value=TextSubstitution(text= 'right_wheel_id' ))
+    serial_preamble_arg = DeclareLaunchArgument('serial_preamble', default_value=TextSubstitution(text= 'LL' ))
+    handle_topic_name_arg = DeclareLaunchArgument('handle_topic_name', default_value=TextSubstitution(text= 'left_handle' ))
+    handle_frame_id_arg = DeclareLaunchArgument('handle_frame_id', default_value=TextSubstitution(text= 'left_handle_id' ))
     port_basename_arg = DeclareLaunchArgument('port_basename', default_value=TextSubstitution(text= '/dev/ttyUSB' ))
-    data_type_arg = DeclareLaunchArgument('data_type', default_value=TextSubstitution(text= 'int' ))
+    data_type_arg = DeclareLaunchArgument('data_type', default_value=TextSubstitution(text= 'float' ))
     
     # Declare defined launch options 
     ld.add_action(log_level_arg)
@@ -51,7 +51,7 @@ def generate_launch_description():
     robot_state_publisher_node = Node(
         package='walker_arduino',
         executable='usb_conn',
-        name='right_wheel_conn',
+        name='left_handle_conn',
         output='screen', 
         arguments=['--ros-args', '--log-level', log_level],
         parameters=[
@@ -64,6 +64,15 @@ def generate_launch_description():
     )
     ld.add_action(robot_state_publisher_node)
 
+    visual_node = Node(
+        package='rqt_gui',
+        executable='rqt_gui',
+        name='left_wheel_gui',
+        output='screen', 
+        arguments=['--ros-args', '--log-level', log_level]
+    )
+    #ld.add_action(visual_node)
+    
     return ld
 
 if __name__ == '__main__':
