@@ -81,26 +81,26 @@ def generate_launch_description():
     walker_param_file_arg = DeclareLaunchArgument('walker_param_file', default_value=default_walker_param_file)
     use_sim_time_launch_arg = DeclareLaunchArgument("use_sim_time",default_value='false', description='Use simulation (Gazebo) clock if true')
 
-    left_wheel_encoder_topic_name_arg = DeclareLaunchArgument('left_wheel_encoder_topic_name', default_value=TextSubstitution(text="left"))
+    left_wheel_encoder_topic_name_arg = DeclareLaunchArgument('left_wheel_encoder_topic_name', default_value=TextSubstitution(text="left_wheel"))
     left_wheel_frame_id_arg = DeclareLaunchArgument('left_wheel_frame_id', default_value=TextSubstitution(text="left_wheel_frame"))
     left_wheel_preamble_arg = DeclareLaunchArgument('left_wheel_preamble', default_value=TextSubstitution(text="LW"))
 
-    right_wheel_encoder_topic_name_arg = DeclareLaunchArgument('right_wheel_encoder_topic_name', default_value=TextSubstitution(text="right"))
+    right_wheel_encoder_topic_name_arg = DeclareLaunchArgument('right_wheel_encoder_topic_name', default_value=TextSubstitution(text="right_wheel"))
     right_wheel_frame_id_arg = DeclareLaunchArgument('right_wheel_frame_id', default_value=TextSubstitution(text="right_wheel_frame"))
     right_wheel_preamble_arg = DeclareLaunchArgument('right_wheel_preamble', default_value=TextSubstitution(text="RW"))
 
-    left_handle_topic_name_arg = DeclareLaunchArgument('left_handle_topic_name', default_value=TextSubstitution(text="left"))
-    left_handle_frame_id_arg = DeclareLaunchArgument('left_handle_frame_id', default_value=TextSubstitution(text="left_frame"))
+    left_handle_topic_name_arg = DeclareLaunchArgument('left_handle_topic_name', default_value=TextSubstitution(text="left_handle"))
+    left_handle_frame_id_arg = DeclareLaunchArgument('left_handle_frame_id', default_value=TextSubstitution(text="left_handle_frame"))
     left_handle_preamble_arg = DeclareLaunchArgument('left_handle_preamble', default_value=TextSubstitution(text="LL"))
 
-    right_handle_topic_name_arg = DeclareLaunchArgument('right_handle_topic_name', default_value=TextSubstitution(text="right"))
-    right_handle_frame_id_arg = DeclareLaunchArgument('right_handle_frame_id', default_value=TextSubstitution(text="right_frame"))
+    right_handle_topic_name_arg = DeclareLaunchArgument('right_handle_topic_name', default_value=TextSubstitution(text="right_handle"))
+    right_handle_frame_id_arg = DeclareLaunchArgument('right_handle_frame_id', default_value=TextSubstitution(text="right_handle_frame"))
     right_handle_preamble_arg = DeclareLaunchArgument('right_handle_preamble', default_value=TextSubstitution(text="RL"))
 
     tf_rate_hz_arg = DeclareLaunchArgument('tf_rate_hz', default_value=TextSubstitution(text="10.0"))
     odom_topic_name_arg = DeclareLaunchArgument('odom_topic_name', default_value=TextSubstitution(text="odom"))
-    ticks_meter_arg = DeclareLaunchArgument('ticks_meter', default_value=TextSubstitution(text="50"))
-    base_width_arg = DeclareLaunchArgument('base_width', default_value=TextSubstitution(text="0.245"))
+    ticks_meter_arg = DeclareLaunchArgument('ticks_meter', default_value=TextSubstitution(text="76694")) # small wheels have 17mm diam. and 4096 ticks 
+    base_width_arg = DeclareLaunchArgument('base_width', default_value=TextSubstitution(text="0.57"))
     base_frame_id_arg = DeclareLaunchArgument('base_frame_id', default_value=TextSubstitution(text="base_link"))
     odom_frame_id_arg = DeclareLaunchArgument('odom_frame_id', default_value=TextSubstitution(text="odom"))
     encoder_min_arg = DeclareLaunchArgument('encoder_min', default_value=TextSubstitution(text="0"))
