@@ -220,10 +220,12 @@ std::string HandlePublisher::get_serial_port(std::string preamble, int highest_p
                 }
                 if (num_chars > 20){
                     RCLCPP_ERROR(this->get_logger(), "Couldn't find preamble [%s] in port [%s] after reading [%d] chars", preamble_.c_str(),port_name.c_str(),num_chars);                
-                        my_serial_stream.Close();
-                        isSearchFinished = true;                        
+                    my_serial_stream.Close();
+                    isSearchFinished = true;                        
                 } else {
                     num_chars++;
+                    RCLCPP_ERROR(this->get_logger(), "[%d] chars read in port [%s]", num_chars,port_name.c_str());                
+                        
                 }
             
             } 
