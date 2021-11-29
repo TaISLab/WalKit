@@ -1,8 +1,8 @@
-from launch_ros.actions import IncludeLaunchDescription, GroupAction, Node
+from launch_ros.actions import Node
 
 from launch import LaunchDescription
-from launch.substitution import LaunchConfiguration, TextSubstitution
-from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable
+from launch.substitutions import LaunchConfiguration, TextSubstitution
+from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable, IncludeLaunchDescription, GroupAction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 
 import os
@@ -41,8 +41,8 @@ def generate_launch_description():
     
     tf_rate_hz_arg = DeclareLaunchArgument('tf_rate_hz', default_value=TextSubstitution(text="10.0"))
     odom_topic_name_arg = DeclareLaunchArgument('odom_topic_name', default_value=TextSubstitution(text="odom"))
-    left_wheel_encoder_topic_name_arg = DeclareLaunchArgument('left_wheel_encoder_topic_name', default_value=TextSubstitution(text="left"))
-    right_wheel_encoder_topic_name_arg = DeclareLaunchArgument('right_wheel_encoder_topic_name', default_value=TextSubstitution(text="right"))
+    left_wheel_encoder_topic_name_arg = DeclareLaunchArgument('left_wheel_encoder_topic_name', default_value=TextSubstitution(text="left_wheel"))
+    right_wheel_encoder_topic_name_arg = DeclareLaunchArgument('right_wheel_encoder_topic_name', default_value=TextSubstitution(text="left_wheel"))
     ticks_meter_arg = DeclareLaunchArgument('ticks_meter', default_value=TextSubstitution(text="76694")) # small wheels have 17mm diam. and 4096 ticks )
     base_width_arg = DeclareLaunchArgument('base_width', default_value=TextSubstitution(text="0.57"))
     base_frame_id_arg = DeclareLaunchArgument('base_frame_id', default_value=TextSubstitution(text="base_link"))

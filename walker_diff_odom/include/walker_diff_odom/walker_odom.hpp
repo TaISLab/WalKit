@@ -8,10 +8,6 @@
 
 #include "rclcpp/rclcpp.hpp"
 
-#include <message_filters/subscriber.h>
-#include <message_filters/synchronizer.h>
-#include <message_filters/sync_policies/approximate_time.h>
-
 #include <tf2_ros/transform_broadcaster.h>
 
 #include "walker_msgs/msg/encoder_stamped.hpp"
@@ -19,37 +15,28 @@
 #include <tf2/LinearMath/Quaternion.h>
 #include <nav_msgs/msg/odometry.hpp>
 
+#include "std_msgs/msg/string.hpp"
 
-using namespace message_filters::sync_policies;
-using namespace std::placeholders;
-using namespace std::chrono_literals;
+using std::placeholders::_1;
 
 class WalkerDiffDrive : public rclcpp::Node{
   public:
       WalkerDiffDrive();
 
   private:
-      void encoderCallback(const walker_msgs::msg::EncoderStamped::ConstSharedPtr &left_enc_msg,
-                           const walker_msgs::msg::EncoderStamped::ConstSharedPtr &right_enc_msg);
-
+      void leftEncoderCallback(const walker_msgs::msg::EncoderStamped::ConstSharedPtr left_enc_msg) ;
+    
+      void rightEncoderCallback(const walker_msgs::msg::EncoderStamped::ConstSharedPtr right_enc_msg) ;
+      
       void update();
-
-      void declare_and_get_parameter(std::string param_name, rclcpp::ParameterValue param_value, std::string param_var);
-
-      void declare_and_get_parameter(std::string param_name, rclcpp::ParameterValue param_value, int param_var);
-
-      void declare_and_get_parameter(std::string param_name, rclcpp::ParameterValue param_value, double param_var);
 
       // ROS objects
       rclcpp::TimerBase::SharedPtr update_timer_;
       rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_publisher_;
       std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 
-      using SyncPolicy = message_filters::sync_policies::ApproximateTime<walker_msgs::msg::EncoderStamped, walker_msgs::msg::EncoderStamped>;
-      using Synchronizer = message_filters::Synchronizer<SyncPolicy>;
-      std::shared_ptr<Synchronizer> sync_;
-      message_filters::Subscriber<walker_msgs::msg::EncoderStamped> sub_left_;
-      message_filters::Subscriber<walker_msgs::msg::EncoderStamped> sub_right_;
+      rclcpp::Subscription<walker_msgs::msg::EncoderStamped>::SharedPtr sub_left_;
+      rclcpp::Subscription<walker_msgs::msg::EncoderStamped>::SharedPtr sub_right_;
 
       //parameters
       double rate_hz_;

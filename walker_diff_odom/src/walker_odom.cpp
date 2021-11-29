@@ -1,23 +1,34 @@
 
 #include "walker_diff_odom/walker_odom.hpp"
 
-WalkerDiffDrive::WalkerDiffDrive() : Node("diff_tf") {      
+WalkerDiffDrive::WalkerDiffDrive() : Node("diff_tf") {     
+      RCLCPP_DEBUG(this->get_logger(), "Loading params. ");
+ 
       // read params
-      declare_and_get_parameter("tf_rate_hz", rclcpp::ParameterValue(10.0), rate_hz_);
-      declare_and_get_parameter("odom_topic_name", rclcpp::ParameterValue("odom"), odom_topic_name_);
-      declare_and_get_parameter("left_wheel_encoder_topic_name", rclcpp::ParameterValue("left"), left_wheel_encoder_topic_name_);
-      declare_and_get_parameter("right_wheel_encoder_topic_name", rclcpp::ParameterValue("right"), right_wheel_encoder_topic_name_);
-
-      RCLCPP_ERROR(this->get_logger(), "REMEMBER TO SET REASONABLE DEFAULT VALUES");
-
-      declare_and_get_parameter("ticks_meter", rclcpp::ParameterValue(50), ticks_meter_ );
-      declare_and_get_parameter("base_width", rclcpp::ParameterValue(0.245), base_width_ );
-      declare_and_get_parameter("base_frame_id", rclcpp::ParameterValue("base_link"), base_frame_id_ );
-      declare_and_get_parameter("odom_frame_id", rclcpp::ParameterValue("odom"), odom_frame_id_ );
-      declare_and_get_parameter("encoder_min", rclcpp::ParameterValue(0), encoder_min_ );
-      declare_and_get_parameter("encoder_max", rclcpp::ParameterValue(4096), encoder_max_ );
-      declare_and_get_parameter("wheel_low_wrap", rclcpp::ParameterValue(( encoder_max_ - encoder_min_)*3/10 + encoder_min_), encoder_low_wrap_ );
-      declare_and_get_parameter("wheel_high_wrap", rclcpp::ParameterValue(( encoder_max_ - encoder_min_)*7/10 + encoder_min_), encoder_high_wrap_ );
+      this->declare_parameter("tf_rate_hz", rclcpp::ParameterValue(10.0));
+      this->get_parameter("tf_rate_hz", rate_hz_);
+      this->declare_parameter("odom_topic_name", rclcpp::ParameterValue("odom"));
+      this->get_parameter("odom_topic_name", odom_topic_name_);
+      this->declare_parameter("left_wheel_encoder_topic_name", rclcpp::ParameterValue("left"));
+      this->get_parameter("left_wheel_encoder_topic_name", left_wheel_encoder_topic_name_);
+      this->declare_parameter("right_wheel_encoder_topic_name", rclcpp::ParameterValue("right"));
+      this->get_parameter("right_wheel_encoder_topic_name", right_wheel_encoder_topic_name_);
+      this->declare_parameter("ticks_meter", rclcpp::ParameterValue(50));
+      this->get_parameter("ticks_meter", ticks_meter_ );
+      this->declare_parameter("base_width", rclcpp::ParameterValue(0.245) );
+      this->get_parameter("base_width", base_width_ );
+      this->declare_parameter("base_frame_id", rclcpp::ParameterValue("base_link"));
+      this->get_parameter("base_frame_id",  base_frame_id_ );
+      this->declare_parameter("odom_frame_id", rclcpp::ParameterValue("odom"));
+      this->get_parameter("odom_frame_id",  odom_frame_id_ );
+      this->declare_parameter("encoder_min", rclcpp::ParameterValue(0));
+      this->get_parameter("encoder_min",  encoder_min_ );
+      this->declare_parameter("encoder_max", rclcpp::ParameterValue(4096) );
+      this->get_parameter("encoder_max",  encoder_max_ );
+      this->declare_parameter("wheel_low_wrap", rclcpp::ParameterValue(( encoder_max_ - encoder_min_)*3/10 + encoder_min_));
+      this->get_parameter("wheel_low_wrap",  encoder_low_wrap_ );
+      this->declare_parameter("wheel_high_wrap", rclcpp::ParameterValue(( encoder_max_ - encoder_min_)*7/10 + encoder_min_));
+      this->get_parameter("wheel_high_wrap",  encoder_high_wrap_ );
 
       // status vars
       first_reading_ = true;
@@ -43,12 +54,15 @@ WalkerDiffDrive::WalkerDiffDrive() : Node("diff_tf") {
       then_ = this->get_clock()->now();
 
       // ros objects
+      RCLCPP_DEBUG(this->get_logger(), "Creating publishers/subscribers. ");
+ 
       transform_.header.frame_id = base_frame_id_;
       transform_.child_frame_id = odom_frame_id_;
 
       odom_.header.frame_id = odom_frame_id_;
       odom_.child_frame_id = base_frame_id_;
 
+      
       odom_publisher_ = this->create_publisher<nav_msgs::msg::Odometry>(odom_topic_name_, rate_hz_);
       // Initialize the transform broadcaster
       tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
@@ -56,20 +70,27 @@ WalkerDiffDrive::WalkerDiffDrive() : Node("diff_tf") {
       int period_ms = 1000.0 / rate_hz_;
       update_timer_ = this->create_wall_timer(std::chrono::milliseconds(period_ms), std::bind(&WalkerDiffDrive::update, this));
 
-      // Synchronize inputs.
-      int queue_size = 10;
-      sub_left_.subscribe(this, left_wheel_encoder_topic_name_);
-      sub_right_.subscribe(this, right_wheel_encoder_topic_name_ );
-      sync_.reset(new Synchronizer(SyncPolicy(queue_size), sub_left_, sub_right_));
-      sync_->registerCallback(std::bind(&WalkerDiffDrive::encoderCallback, this, _1, _2));
+      //  inputs.
+      sub_left_  = this->create_subscription<walker_msgs::msg::EncoderStamped>(left_wheel_encoder_topic_name_, 10, std::bind(&WalkerDiffDrive::leftEncoderCallback, this, _1));
+      sub_right_ = this->create_subscription<walker_msgs::msg::EncoderStamped>(right_wheel_encoder_topic_name_, 10, std::bind(&WalkerDiffDrive::rightEncoderCallback, this, _1));
 
+
+      RCLCPP_DEBUG(this->get_logger(), "Init done. ");
+ 
     }
 
-void WalkerDiffDrive::encoderCallback(const walker_msgs::msg::EncoderStamped::ConstSharedPtr& left_enc_msg,
-                         const walker_msgs::msg::EncoderStamped::ConstSharedPtr& right_enc_msg){
 
+void WalkerDiffDrive::leftEncoderCallback(const walker_msgs::msg::EncoderStamped::ConstSharedPtr left_enc_msg)  {
         // Left encoder
         int enc = left_enc_msg->encoder;
+        if (enc<0){
+            auto& clk = *this->get_clock();
+            RCLCPP_ERROR_THROTTLE(this->get_logger(), clk, 500, "Error on left encoder [%d]. skipping value", enc);
+            return;
+        }
+        //RCLCPP_INFO(this->get_logger(), "left encoder [%d]. ", enc);
+
+
         if ((enc < encoder_low_wrap_) && (prev_lencoder_ > encoder_high_wrap_)){
             lmult_ = lmult_ + 1;
         }
@@ -80,10 +101,21 @@ void WalkerDiffDrive::encoderCallback(const walker_msgs::msg::EncoderStamped::Co
             
         left_ = 1.0 * (enc + lmult_ * (encoder_max_ -encoder_min_));
         prev_lencoder_ = enc;
+}
+
+void WalkerDiffDrive::rightEncoderCallback(const walker_msgs::msg::EncoderStamped::ConstSharedPtr right_enc_msg)  {
 
         // Right encoder
-        enc = right_enc_msg->encoder;
-        if ((enc < encoder_low_wrap_) && (prev_rencoder_ > encoder_high_wrap_)){
+        int enc = right_enc_msg->encoder;
+        if (enc<0){
+            auto& clk = *this->get_clock();
+            RCLCPP_ERROR_THROTTLE(this->get_logger(), clk, 500, "Error on right encoder [%d]. skipping value", enc);
+            return;
+        }
+        //RCLCPP_INFO(this->get_logger(), "right encoder [%d]. ", enc);
+
+
+       if ((enc < encoder_low_wrap_) && (prev_rencoder_ > encoder_high_wrap_)){
             rmult_ = rmult_ + 1;
         }
 
@@ -108,6 +140,8 @@ void WalkerDiffDrive::update(){
         double d;
         double th;
 
+        RCLCPP_INFO(this->get_logger(), "Updating. [%3.2f, %3.2f]",left_, right_);
+ 
         // calculate odometry
         if (first_reading_){
             first_reading_ = false;
@@ -170,20 +204,3 @@ void WalkerDiffDrive::update(){
         odom_publisher_->publish(odom_);
     }
 
-void WalkerDiffDrive::declare_and_get_parameter(std::string param_name, rclcpp::ParameterValue param_value, std::string param_var){
-		this->declare_parameter(param_name, param_value); 
-		this->get_parameter(param_name, param_var);
-		RCLCPP_ERROR(this->get_logger(), "REMEMBER TO TEST THIS!!!!");
-}
-
-void WalkerDiffDrive::declare_and_get_parameter(std::string param_name, rclcpp::ParameterValue param_value, int param_var){
-		this->declare_parameter(param_name, param_value); 
-		this->get_parameter(param_name, param_var);
-		RCLCPP_ERROR(this->get_logger(), "REMEMBER TO TEST THIS!!!!");
-}    
-
-void WalkerDiffDrive::declare_and_get_parameter(std::string param_name, rclcpp::ParameterValue param_value, double param_var){
-		this->declare_parameter(param_name, param_value); 
-		this->get_parameter(param_name, param_var);
-		RCLCPP_ERROR(this->get_logger(), "REMEMBER TO TEST THIS!!!!");
-}    

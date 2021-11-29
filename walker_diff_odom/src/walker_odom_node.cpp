@@ -6,8 +6,10 @@ int main(int argc, char **argv)
 
 	rclcpp::init(argc, argv);
 	auto diff_node = std::make_shared<WalkerDiffDrive>();	
-    rclcpp::spin(diff_node);
+    RCLCPP_INFO(diff_node->get_logger(), "Starting odometry node. ");
 
+	rclcpp::spin(diff_node);
+    RCLCPP_INFO(diff_node->get_logger(), "Finishing odometry node. ");
 	rclcpp::shutdown();
 	return 0;
 
