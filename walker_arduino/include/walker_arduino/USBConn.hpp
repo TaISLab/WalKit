@@ -4,13 +4,14 @@
 #include <chrono>
 #include <functional>
 #include <memory>
-#include <libserial/SerialPort.h>
-#include <libserial/SerialPort.h>
+#include <libserial/SerialStream.h>
+#include <libserial/SerialStream.h>
 
 #include <cstdlib>
 #include <iomanip>
 #include <unistd.h>
 
+#include <filesystem>
 #include <string>       // std::string
 #include <iostream>     // std::cout
 #include <sstream>      // std::stringstream
@@ -30,7 +31,7 @@ class HandlePublisher : public rclcpp::Node
     rclcpp::Publisher<walker_msgs::msg::ForceStamped>::SharedPtr force_publisher_; 
 
     // serial usb where data is coming from
-    SerialPort serial_port_;
+    SerialStream serial_stream_;
     
     // port descriptor base name ( ttyACM, USB, ...)
     std::string basename_;
