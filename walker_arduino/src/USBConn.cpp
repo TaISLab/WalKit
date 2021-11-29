@@ -187,6 +187,7 @@ std::string HandlePublisher::get_serial_port(std::string preamble, int highest_p
             sb.str(std::string());
             RCLCPP_DEBUG(this->get_logger(), "Looking for preamble [%s] ", preamble.c_str());
             isSearchFinished = false;
+            int num_chars =0;
             while (!isSearchFinished) {
                 my_serial_stream.get( rc );
                 // search for preamble starts AFTER endMarker
@@ -217,7 +218,16 @@ std::string HandlePublisher::get_serial_port(std::string preamble, int highest_p
                         isSearchFinished = true; 
                     }
                 }
-            }   
+                if (num_chars > 20){
+                    RCLCPP_ERROR(this->get_logger(), "Couldn't find preamble [%s] in port [%s] after reading [%d] chars", preamble_.c_str(),port_name.c_str(),num_chars);                
+                        my_serial_stream.Close();
+                        isSearchFinished = true;                        
+                } {
+                    num_chars++;
+                }
+            
+            } 
+
         }
         RCLCPP_ERROR(this->get_logger(), "Couldn't find preamble [%s] in ports [%s0] to [%s%i]", preamble_.c_str(),basename_.c_str(),basename_.c_str(),highest_port);                
         return "";
