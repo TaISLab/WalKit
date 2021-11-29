@@ -30,7 +30,8 @@ def generate_launch_description():
     serial_preamble = LaunchConfiguration('serial_preamble')
     port_basename = LaunchConfiguration('port_basename')
     data_type = LaunchConfiguration('data_type')
-        
+    data_type = LaunchConfiguration('port_name')
+
     # Map these variables to Arguments: can be set from the command line or a default will be used    
     log_level_arg = DeclareLaunchArgument( 'log_level', default_value=TextSubstitution(text='INFO') )    
     serial_preamble_arg = DeclareLaunchArgument('serial_preamble', default_value=TextSubstitution(text= 'LL' ))
@@ -38,7 +39,8 @@ def generate_launch_description():
     handle_frame_id_arg = DeclareLaunchArgument('handle_frame_id', default_value=TextSubstitution(text= 'left_handle_id' ))
     port_basename_arg = DeclareLaunchArgument('port_basename', default_value=TextSubstitution(text= '/dev/ttyUSB' ))
     data_type_arg = DeclareLaunchArgument('data_type', default_value=TextSubstitution(text= 'float' ))
-    
+    port_name_arg = DeclareLaunchArgument('port_name', default_value=TextSubstitution(text= '' ))
+
     # Declare defined launch options 
     ld.add_action(log_level_arg)
     ld.add_action(serial_preamble_arg)
@@ -59,7 +61,8 @@ def generate_launch_description():
                     {'handle_topic_name': handle_topic_name},
                     {'handle_frame_id': handle_frame_id},
                     {'port_basename': port_basename},
-                    {'data_type': data_type}                    
+                    {'data_type': data_type},
+                    {'port_name': port_name}                    
                     ]
     )
     ld.add_action(robot_state_publisher_node)
