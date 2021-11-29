@@ -222,7 +222,7 @@ std::string HandlePublisher::get_serial_port(std::string preamble, int highest_p
                     RCLCPP_ERROR(this->get_logger(), "Couldn't find preamble [%s] in port [%s] after reading [%d] chars", preamble_.c_str(),port_name.c_str(),num_chars);                
                         my_serial_stream.Close();
                         isSearchFinished = true;                        
-                } {
+                } else {
                     num_chars++;
                 }
             
