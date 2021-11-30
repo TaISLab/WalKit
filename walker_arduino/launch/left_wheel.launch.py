@@ -34,12 +34,12 @@ def generate_launch_description():
 
     # Map these variables to Arguments: can be set from the command line or a default will be used    
     log_level_arg = DeclareLaunchArgument( 'log_level', default_value=TextSubstitution(text='INFO') )    
-    serial_preamble_arg = DeclareLaunchArgument('serial_preamble', default_value=TextSubstitution(text= 'RW' ))
-    handle_topic_name_arg = DeclareLaunchArgument('handle_topic_name', default_value=TextSubstitution(text= 'right_wheel' ))
-    handle_frame_id_arg = DeclareLaunchArgument('handle_frame_id', default_value=TextSubstitution(text= 'right_wheel_id' ))
+    serial_preamble_arg = DeclareLaunchArgument('serial_preamble', default_value=TextSubstitution(text= 'LW' ))
+    handle_topic_name_arg = DeclareLaunchArgument('handle_topic_name', default_value=TextSubstitution(text= 'left_wheel' ))
+    handle_frame_id_arg = DeclareLaunchArgument('handle_frame_id', default_value=TextSubstitution(text= 'left_wheel_id' ))
     port_basename_arg = DeclareLaunchArgument('port_basename', default_value=TextSubstitution(text= '/dev/ttyUSB' ))
     data_type_arg = DeclareLaunchArgument('data_type', default_value=TextSubstitution(text= 'int' ))
-    port_name_arg = DeclareLaunchArgument('port_name', default_value=TextSubstitution(text= '/dev/ttyUSB2' ))
+    port_name_arg = DeclareLaunchArgument('port_name', default_value=TextSubstitution(text= '/dev/left_wheel' ))
 
     # Declare defined launch options 
     ld.add_action(log_level_arg)
@@ -49,12 +49,12 @@ def generate_launch_description():
     ld.add_action(port_basename_arg)
     ld.add_action(data_type_arg)
     ld.add_action(port_name_arg)
- 
+    
     # Map arguments to parameters
     robot_state_publisher_node = Node(
         package='walker_arduino',
         executable='usb_conn',
-        name='right_wheel_conn',
+        name='left_wheel_conn',
         output='screen', 
         arguments=['--ros-args', '--log-level', log_level],
         parameters=[
@@ -71,7 +71,7 @@ def generate_launch_description():
     visual_node = Node(
         package='rqt_gui',
         executable='rqt_gui',
-        name='right_wheel_gui',
+        name='left_wheel_gui',
         output='screen', 
         arguments=['--ros-args', '--log-level', log_level]
     )

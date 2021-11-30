@@ -39,7 +39,7 @@ def generate_launch_description():
     handle_frame_id_arg = DeclareLaunchArgument('handle_frame_id', default_value=TextSubstitution(text= 'left_handle_id' ))
     port_basename_arg = DeclareLaunchArgument('port_basename', default_value=TextSubstitution(text= '/dev/ttyUSB' ))
     data_type_arg = DeclareLaunchArgument('data_type', default_value=TextSubstitution(text= 'float' ))
-    port_name_arg = DeclareLaunchArgument('port_name', default_value=TextSubstitution(text= '/dev/ttyUSB0' ))
+    port_name_arg = DeclareLaunchArgument('port_name', default_value=TextSubstitution(text= '/dev/left_handle' ))
 
     # Declare defined launch options 
     ld.add_action(log_level_arg)
