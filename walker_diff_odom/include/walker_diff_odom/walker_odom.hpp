@@ -44,7 +44,7 @@ class WalkerDiffDrive : public rclcpp::Node{
       std::string left_wheel_encoder_topic_name_;
       std::string right_wheel_encoder_topic_name_;
 
-      int ticks_meter_;
+      double ticks_meter_;
       double base_width_;
       std::string base_frame_id_;
       std::string odom_frame_id_;
@@ -72,6 +72,8 @@ class WalkerDiffDrive : public rclcpp::Node{
       rclcpp::Time now_;
       geometry_msgs::msg::TransformStamped transform_;
       nav_msgs::msg::Odometry odom_;
+      walker_msgs::msg::EncoderStamped last_left_data_;
+      walker_msgs::msg::EncoderStamped last_right_data_;
 };
 
 

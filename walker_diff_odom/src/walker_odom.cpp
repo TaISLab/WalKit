@@ -30,6 +30,22 @@ WalkerDiffDrive::WalkerDiffDrive() : Node("diff_tf") {
       this->declare_parameter("wheel_high_wrap", rclcpp::ParameterValue(( encoder_max_ - encoder_min_)*7/10 + encoder_min_));
       this->get_parameter("wheel_high_wrap",  encoder_high_wrap_ );
 
+      //
+      RCLCPP_DEBUG(this->get_logger(), "CONFIGURATION .....................................");
+      RCLCPP_DEBUG(this->get_logger(), "tf_rate_hz: [%3.3f] Hz.", rate_hz_);
+      RCLCPP_DEBUG(this->get_logger(), "odom_topic_name: [%s]", odom_topic_name_.c_str());
+      RCLCPP_DEBUG(this->get_logger(), "left_wheel_encoder_topic_name: [%s]", left_wheel_encoder_topic_name_.c_str());
+      RCLCPP_DEBUG(this->get_logger(), "right_wheel_encoder_topic_name: [%s]", right_wheel_encoder_topic_name_.c_str());
+      RCLCPP_DEBUG(this->get_logger(), "ticks_meter: [%5.4f] ticks", ticks_meter_ );
+      RCLCPP_DEBUG(this->get_logger(), "base_width: [%3.3f] m", base_width_ );
+      RCLCPP_DEBUG(this->get_logger(), "base_frame_id: [%s]",  base_frame_id_.c_str() );
+      RCLCPP_DEBUG(this->get_logger(), "odom_frame_id: [%s]",  odom_frame_id_.c_str() );
+      RCLCPP_DEBUG(this->get_logger(), "encoder_min: [%d] ticks",  encoder_min_ );
+      RCLCPP_DEBUG(this->get_logger(), "encoder_max: [%d] ticks",  encoder_max_ );
+      RCLCPP_DEBUG(this->get_logger(), "wheel_low_wrap: [%d] ticks",  encoder_low_wrap_ );
+      RCLCPP_DEBUG(this->get_logger(), "wheel_high_wrap: [%d] ticks",  encoder_high_wrap_ );
+      RCLCPP_DEBUG(this->get_logger(), ".....................................");
+
       // status vars
       first_reading_ = true;
       // encoder data
@@ -88,7 +104,8 @@ void WalkerDiffDrive::leftEncoderCallback(const walker_msgs::msg::EncoderStamped
             RCLCPP_ERROR_THROTTLE(this->get_logger(), clk, 500, "Error on left encoder [%d]. skipping value", enc);
             return;
         }
-        //RCLCPP_INFO(this->get_logger(), "left encoder [%d]. ", enc);
+        //RCLCPP_DEBUG(this->get_logger(), "left encoder [%d]. ", enc);
+      last_left_data_ = *left_enc_msg;      
 
 
         if ((enc < encoder_low_wrap_) && (prev_lencoder_ > encoder_high_wrap_)){
@@ -104,7 +121,6 @@ void WalkerDiffDrive::leftEncoderCallback(const walker_msgs::msg::EncoderStamped
 }
 
 void WalkerDiffDrive::rightEncoderCallback(const walker_msgs::msg::EncoderStamped::ConstSharedPtr right_enc_msg)  {
-
         // Right encoder
         int enc = right_enc_msg->encoder;
         if (enc<0){
@@ -112,7 +128,9 @@ void WalkerDiffDrive::rightEncoderCallback(const walker_msgs::msg::EncoderStampe
             RCLCPP_ERROR_THROTTLE(this->get_logger(), clk, 500, "Error on right encoder [%d]. skipping value", enc);
             return;
         }
-        //RCLCPP_INFO(this->get_logger(), "right encoder [%d]. ", enc);
+        enc = encoder_max_- enc; // right encoder works counterclock-wise
+        //RCLCPP_DEBUG(this->get_logger(), "right encoder [%d]. ", enc);
+      last_right_data_ = *right_enc_msg;
 
 
        if ((enc < encoder_low_wrap_) && (prev_rencoder_ > encoder_high_wrap_)){
@@ -130,6 +148,7 @@ void WalkerDiffDrive::rightEncoderCallback(const walker_msgs::msg::EncoderStampe
 
 void WalkerDiffDrive::update(){
 
+    if ((first_reading_) || (left_ != enc_left_) || (right_ != enc_right_)) {
         now_ = this->get_clock()->now();
         rclcpp::Duration diff = now_ - then_;
         then_ = now_;
@@ -140,8 +159,16 @@ void WalkerDiffDrive::update(){
         double d;
         double th;
 
-        RCLCPP_INFO(this->get_logger(), "Updating. [%3.2f, %3.2f]",left_, right_);
- 
+        RCLCPP_DEBUG(this->get_logger(), "\n\nUpdating. Total ticks L[%4.0f] - R[%4.0f]",left_, right_);
+
+        // RCLCPP_DEBUG(this->get_logger(), "Times L[%d s %d ns] - R[%d s %d ns] ", last_right_data_.header.stamp.sec, last_right_data_.header.stamp.nanosec, last_right_data_.header.stamp.sec, last_right_data_.header.stamp.nanosec  );
+        // double time_diff   =  (last_right_data_.header.stamp.sec - last_left_data_.header.stamp.sec) * 1e9;
+        // time_diff += (last_right_data_.header.stamp.nanosec - last_left_data_.header.stamp.nanosec) ;
+        // time_diff = std::fabs(time_diff);
+        // RCLCPP_DEBUG(this->get_logger(), "Enc dif time [%3.3f] ns", time_diff );
+
+
+
         // calculate odometry
         if (first_reading_){
             first_reading_ = false;
@@ -150,16 +177,21 @@ void WalkerDiffDrive::update(){
             d_right = (right_ - enc_right_) / ticks_meter_;
         }
 
+        RCLCPP_DEBUG(this->get_logger(), "Dist increase L[%3.4f] - R[%3.4f] = [%3.4f]", d_left, d_right, d_left - d_right );
+
         enc_left_ = left_;
         enc_right_ = right_;
 
         // traveled distance is the average of the wheels 
         d = (d_left + d_right) / 2.0;
+
         // this approximation works (in radians) for small angles
         th = (d_right - d_left) / base_width_;
         // calculate velocities
         dx_ = d / elapsed;
         dr_ = th / elapsed;
+
+        RCLCPP_DEBUG(this->get_logger(), "travelled dist increase [%3.4f m, %3.4f deg]",d, th*180/3.1415);
 
         if (d != 0){
             // calculate distance traveled in x and y
@@ -172,6 +204,8 @@ void WalkerDiffDrive::update(){
         if (th != 0){
             th_ = th_ + th;
         }
+
+        RCLCPP_DEBUG(this->get_logger(), "New position [%3.4f, %3.4f, %3.4f deg]", x_, y_, th_*180/3.1415);
 
         // update transform info
         transform_.header.stamp = now_;        
@@ -203,4 +237,5 @@ void WalkerDiffDrive::update(){
         odom_.twist.twist.angular.z = dr_;
         odom_publisher_->publish(odom_);
     }
+}
 

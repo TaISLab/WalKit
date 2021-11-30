@@ -42,9 +42,9 @@ def generate_launch_description():
     tf_rate_hz_arg = DeclareLaunchArgument('tf_rate_hz', default_value=TextSubstitution(text="10.0"))
     odom_topic_name_arg = DeclareLaunchArgument('odom_topic_name', default_value=TextSubstitution(text="odom"))
     left_wheel_encoder_topic_name_arg = DeclareLaunchArgument('left_wheel_encoder_topic_name', default_value=TextSubstitution(text="left_wheel"))
-    right_wheel_encoder_topic_name_arg = DeclareLaunchArgument('right_wheel_encoder_topic_name', default_value=TextSubstitution(text="left_wheel"))
-    ticks_meter_arg = DeclareLaunchArgument('ticks_meter', default_value=TextSubstitution(text="76694")) # small wheels have 17mm diam. and 4096 ticks )
-    base_width_arg = DeclareLaunchArgument('base_width', default_value=TextSubstitution(text="0.57"))
+    right_wheel_encoder_topic_name_arg = DeclareLaunchArgument('right_wheel_encoder_topic_name', default_value=TextSubstitution(text="right_wheel"))
+    ticks_meter_arg = DeclareLaunchArgument('ticks_meter', default_value=TextSubstitution(text="74072.5")) # In theory 76694, as small wheels have 17mm diam. and 4096 ticks )
+    base_width_arg = DeclareLaunchArgument('base_width', default_value=TextSubstitution(text="0.489")) # In theory 0.57
     base_frame_id_arg = DeclareLaunchArgument('base_frame_id', default_value=TextSubstitution(text="base_link"))
     odom_frame_id_arg = DeclareLaunchArgument('odom_frame_id', default_value=TextSubstitution(text="odom"))
     encoder_min_arg = DeclareLaunchArgument('encoder_min', default_value=TextSubstitution(text="0"))
