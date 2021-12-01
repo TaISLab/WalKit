@@ -1,0 +1,24 @@
+- git:
+    uri: https://github.com/TaISLab/WalKit.git
+    local-name: WalKit
+    version: foxy
+
+- git:
+    uri: https://github.com/TaISLab/aws-robomaker-hospital-world.git
+    local-name: aws-robomaker-hospital-world
+    version: ros2
+
+- git:
+    uri: https://github.com/TaISLab/leap_motion.git
+    local-name: leap_motion
+    version: foxy
+
+- git:
+    uri: https://github.com/TaISLab/rplidar_ros.git
+    local-name: rplidar_ros2
+    version: ros2
+
+- git:
+    uri: https://github.com/TaISLab/bwt901cl_pkg.git
+    local-name: bwt901cl_pkg
+    version: foxy
