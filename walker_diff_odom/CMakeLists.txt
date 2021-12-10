@@ -37,6 +37,7 @@ ament_export_include_directories(include)
 ## Declare cpp executables
 # ..................................................................
 add_executable(walker_odom_node 
+  src/circular_buffer.cpp
 	src/walker_odom_node.cpp
 	src/walker_odom.cpp
 )

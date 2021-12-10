@@ -5,6 +5,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <cmath>
 
 #include "rclcpp/rclcpp.hpp"
 
@@ -16,6 +17,8 @@
 #include <nav_msgs/msg/odometry.hpp>
 
 #include "std_msgs/msg/string.hpp"
+
+#include "walker_diff_odom/circular_buffer.hpp"
 
 using std::placeholders::_1;
 
@@ -54,7 +57,12 @@ class WalkerDiffDrive : public rclcpp::Node{
       int encoder_high_wrap_;
 
       // internal data
+      CircularBuffer left_buffer_;
+      CircularBuffer right_buffer_;
+      
       bool first_reading_;
+      bool new_left_;
+      bool new_right_;
       double enc_left_;
       double enc_right_;
       double left_;

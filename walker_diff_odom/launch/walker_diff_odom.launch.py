@@ -37,9 +37,9 @@ def generate_launch_description():
     wheel_high_wrap = LaunchConfiguration('wheel_high_wrap')
 
     # Map these variables to Arguments: can be set from the command line or a default will be used
-    log_level_launch_arg = DeclareLaunchArgument("log_level", default_value=TextSubstitution(text="DEBUG"))
+    log_level_launch_arg = DeclareLaunchArgument("log_level", default_value=TextSubstitution(text="INFO"))
     
-    tf_rate_hz_arg = DeclareLaunchArgument('tf_rate_hz', default_value=TextSubstitution(text="10.0"))
+    tf_rate_hz_arg = DeclareLaunchArgument('tf_rate_hz', default_value=TextSubstitution(text="60.0"))
     odom_topic_name_arg = DeclareLaunchArgument('odom_topic_name', default_value=TextSubstitution(text="odom"))
     left_wheel_encoder_topic_name_arg = DeclareLaunchArgument('left_wheel_encoder_topic_name', default_value=TextSubstitution(text="left_wheel"))
     right_wheel_encoder_topic_name_arg = DeclareLaunchArgument('right_wheel_encoder_topic_name', default_value=TextSubstitution(text="right_wheel"))

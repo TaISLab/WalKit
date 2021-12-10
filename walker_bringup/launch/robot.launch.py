@@ -225,7 +225,20 @@ def generate_launch_description():
     ld.add_action(odometry_launch)
 
     # lidar ...........................................................................
-    print("WALKER LIDAR YET TO BE INCLUDED...\n")
+    lidar_node= Node(
+            package='rplidar_ros2',
+            executable='rplidar_scan_publisher',
+            name='rplidar_scan_publisher',
+            parameters=[{'serial_port': _lidar_serial_port, 
+                         'serial_baudrate': lidar_serial_baudrate, 
+                         'frame_id': lidar_frame_id,
+                         'inverted': lidar_inverted, 
+                         'angle_compensate': lidar_angle_compensate}],
+            output='screen')
+
+
+
+
 
 
     # state publisher
