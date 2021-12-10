@@ -13,16 +13,17 @@ windows:
   - name: sensors
     tags: ['arduino', 'sensors', 'robot', 'nav']
     panes:
-      - ros2 run bwt901cl_pkg imu_bwt901cl
       - ros2 launch rplidar_ros2  rplidar_launch.py inverted:=true
+      - ros2 launch walker_bringup laser_filter.launch.py
+      - ros2 run bwt901cl_pkg imu_bwt901cl      
       - ros2 launch walker_diff_odom walker_diff_odom.launch.py
   - name: crappy_description
     tags: ['arduino', 'sensors', 'robot', 'nav']
     panes:
-      - ros2 run tf2_ros static_transform_publisher 0.55  0     0.320 1.52 0    0 base_footprint laser  # z is lower...
-      - ros2 run tf2_ros static_transform_publisher 0.55  0     0.474 0    0    0 base_footprint witmotion
-      - ros2 run tf2_ros static_transform_publisher 0     0.276 0.075 0    0    0 base_footprint left_wheel_id
-      - ros2 run tf2_ros static_transform_publisher 0    -0.276 0.075 0    3.14 0 base_footprint right_wheel_id
-      - ros2 run tf2_ros static_transform_publisher 0.31  0.24  0.245 0    0    0 base_footprint left_handle_id
-      - ros2 run tf2_ros static_transform_publisher 0.31 -0.24  0.245 0    0    0 base_footprint right_handle_id
-      - ros2 run tf2_ros static_transform_publisher 0     0     0.075 0    0    0 base_footprint base_footprint      
+      - ros2 run tf2_ros static_transform_publisher 0.55  0     0.210 0    0    3.14 base_footprint laser  # z is lower...
+      - ros2 run tf2_ros static_transform_publisher 0.55  0     0.474 0    0    0    base_footprint witmotion
+      - ros2 run tf2_ros static_transform_publisher 0     0.276 0.075 0    0    0    base_footprint left_wheel_id
+      - ros2 run tf2_ros static_transform_publisher 0    -0.276 0.075 0    0    3.14 base_footprint right_wheel_id
+      - ros2 run tf2_ros static_transform_publisher 0.31  0.24  0.245 0    0    0    base_footprint left_handle_id
+      - ros2 run tf2_ros static_transform_publisher 0.31 -0.24  0.245 0    0    0    base_footprint right_handle_id
+      - ros2 run tf2_ros static_transform_publisher 0     0     0.075 0    0    0    base_footprint base_link 

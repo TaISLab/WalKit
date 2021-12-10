@@ -186,7 +186,7 @@ void WalkerDiffDrive::rightEncoderCallback(const walker_msgs::msg::EncoderStampe
         //auto& clk = *this->get_clock();
         //RCLCPP_ERROR_THROTTLE(this->get_logger(), clk, 500, "RIGHT: Raw [%d], Smooth [%d], loops [%3.0f]", enc_raw, enc, rmult_);
 
-        right_ = 1.0 * ((encoder_max_ - enc)  + rmult_ * (encoder_max_ - encoder_min_));
+        right_ = -1.0 * ((enc)  + rmult_ * (encoder_max_ - encoder_min_)); // sign change is due to wheel being counterclock wise
         prev_rencoder_ = enc;
 
         //auto& clk = *this->get_clock();
@@ -210,7 +210,7 @@ void WalkerDiffDrive::update(){
         double d;
         double th;
  
-        // RCLCPP_ERROR(this->get_logger(), "\n\nUpdating. Total ticks L[%4.0f] - R[%4.0f]",left_, right_);
+        //RCLCPP_ERROR(this->get_logger(), "\n\nUpdating. Total ticks L[%4.0f] - R[%4.0f]",left_, right_);
 
         // RCLCPP_ERROR(this->get_logger(),"Times L[%d s %d ns] - R[%d s %d ns] ", last_right_data_.header.stamp.sec, last_right_data_.header.stamp.nanosec, last_right_data_.header.stamp.sec, last_right_data_.header.stamp.nanosec  );
         // double time_diff   =  (last_right_data_.header.stamp.sec - last_left_data_.header.stamp.sec) * 1e9;
