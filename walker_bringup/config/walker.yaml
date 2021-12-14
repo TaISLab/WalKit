@@ -4,21 +4,21 @@ init_cmd: |
   source ~/workspace/walker_ws/install/setup.bash
 windows:
   - name: arduino
-    tags: ['arduino', 'sensors', 'robot', 'nav']
+    tags: ['core', 'arduino']
     panes:
       - ros2 launch walker_arduino left_handle.launch.py
       - ros2 launch walker_arduino right_handle.launch.py
       - ros2 launch walker_arduino left_wheel.launch.py
       - ros2 launch walker_arduino right_wheel.launch.py
   - name: sensors
-    tags: ['arduino', 'sensors', 'robot', 'nav']
+    tags: ['core', 'sensors']
     panes:
       - ros2 launch rplidar_ros2  rplidar_launch.py inverted:=true
       - ros2 launch walker_bringup laser_filter.launch.py
       - ros2 run bwt901cl_pkg imu_bwt901cl      
       - ros2 launch walker_diff_odom walker_diff_odom.launch.py
   - name: crappy_description
-    tags: ['arduino', 'sensors', 'robot', 'nav']
+    tags: ['core', 'description']
     panes:
       - ros2 run tf2_ros static_transform_publisher 0.55  0     0.210 0    0    3.14 base_footprint laser  # z is lower...
       - ros2 run tf2_ros static_transform_publisher 0.55  0     0.474 0    0    0    base_footprint witmotion
@@ -28,8 +28,7 @@ windows:
       - ros2 run tf2_ros static_transform_publisher 0.31 -0.24  0.245 0    0    0    base_footprint right_handle_id
       - ros2 run tf2_ros static_transform_publisher 0     0     0.075 0    0    0    base_footprint base_link 
   - name: record
-    init: False
-    tags: ['arduino', 'sensors', 'robot', 'nav']
+    tags: ['record']
     panes:
       - ros2 launch walker_bringup bag_recorder.launch.py
 
