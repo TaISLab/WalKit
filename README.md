@@ -94,8 +94,8 @@ Now we can clone and compile this (and some other related) repo(s). Note we are 
 mkdir -p ~/walker_ws/src
 cd ~/walker_ws/src
 git clone https://github.com/TaISLab/WalKit.git -b foxy
-cp WalKit/walker.rosinstall .
-sudo apt-get install python-rosinstall
+cp WalKit/walker.rosinstall .rosinstall
+sudo apt-get install python3-rosinstall
 wstool update
 # init may not be needed
 sudo rosdep init
