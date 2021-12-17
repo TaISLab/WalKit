@@ -27,3 +27,8 @@
     uri: https://github.com/TaISLab/ros2_leg_detector.git
     local-name: ros2_leg_detector
     version: foxy    
+
+- git:
+    uri: https://github.com/ros-perception/laser_filters.git
+    local-name: laser_filters
+    version: 2.0.0    
