@@ -22,3 +22,8 @@
     uri: https://github.com/TaISLab/bwt901cl_pkg.git
     local-name: bwt901cl_pkg
     version: foxy
+
+- git:
+    uri: https://github.com/TaISLab/ros2_leg_detector.git
+    local-name: ros2_leg_detector
+    version: foxy    
