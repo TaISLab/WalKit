@@ -126,6 +126,7 @@ Package 'aws_robomaker_hospital_world' will take a  long time (>6min!) to downlo
     - bwt901cl_pkg: IMU package.   
     - leap_motion: stereo camera package (DOES NOT WORK WITH arm64)  
     - rplidar_ros2: RPLidar A1 package. 
+    - laser_filters: For some reason they are not available as binaries in foxy.
 
 
 <p align="right">(<a href="#top">back to top</a>)</p>
