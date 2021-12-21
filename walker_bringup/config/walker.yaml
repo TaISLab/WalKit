@@ -32,8 +32,13 @@ windows:
     panes:
       - ros2 run tf2_ros static_transform_publisher 0.22  0.080 0.450  1.9  3.14  -0.55 base_footprint leap_camera_left
       - ros2 run tf2_ros static_transform_publisher 0.31 -0.080 0.450  1.9  3.14  -0.55 base_footprint leap_camera_right
+  - name: web
+    tags: ['web']
+    panes:
+      - ros2 launch rosbridge_server rosbridge_websocket_launch.xml
+      - cd ~/workspace/walker_ws/src/WalKit/walker_web_gui/gui; python3 -m http.server
   - name: gait_analysis
-    tags: ['core', 'gait']
+    tags: ['gait']
     panes:
       - ros2 launch leg_detector leg_detector.launch.py
   - name: record
