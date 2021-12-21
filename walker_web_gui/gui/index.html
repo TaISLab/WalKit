@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  .slidecontainer {
+    width: 100%;
+  }
+  
+  .slider {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 25px;
+    background: #d3d3d3;
+    outline: none;
+    opacity: 0.7;
+    -webkit-transition: .2s;
+    transition: opacity .2s;
+  }
+  
+  .slider:hover {
+    opacity: 1;
+  }
+  
+  .slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 25px;
+    height: 25px;
+    background: #04AA6D;
+    cursor: pointer;
+  }
+  
+  .slider::-moz-range-thumb {
+    width: 25px;
+    height: 25px;
+    background: #04AA6D;
+    cursor: pointer;
+  }
+</style>
+
+<script type="text/javascript" src="http://static.robotwebtools.org/roslibjs/current/roslib.min.js"></script>
+<script type="text/javascript" src="https://requirejs.org/docs/release/2.3.5/minified/require.js"></script>
+
+
+<script type="text/javascript" type="text/javascript">
+  var ros = new ROSLIB.Ros({
+    url : 'ws://192.168.0.178:9090'
+  });
+
+  ros.on('connection', function() {
+    document.getElementById("status").innerHTML = "Connected";
+  });
+
+  ros.on('error', function(error) {
+    document.getElementById("status").innerHTML = "Error";
+  });
+
+  ros.on('close', function() {
+    document.getElementById("status").innerHTML = "Closed";
+  });
+
+
+  var right_handle_listener = new ROSLIB.Topic({
+    ros : ros,
+    name : '/right_handle',
+    messageType : 'walker_msgs/msg/ForceStamped'
+  });
+
+  right_handle_listener.subscribe(function(m) {
+    document.getElementById("right_handle_force").innerHTML = m.force;
+  });
+
+  var left_handle_listener = new ROSLIB.Topic({
+    ros : ros,
+    name : '/left_handle',
+    messageType : 'walker_msgs/msg/ForceStamped'
+  });
+
+  left_handle_listener.subscribe(function(m) {
+    document.getElementById("left_handle_force").innerHTML = m.force;
+  });
+
+
+  user_listener = new ROSLIB.Topic({
+    ros : ros,
+    name : "/user_desc",
+    messageType : 'std_msgs/String',
+    latch : true
+  });
+
+  user = function () {
+    var user_info = new ROSLIB.Message({
+      data: document.getElementById("ageValue").innerHTML + ':' +
+            document.getElementById("heightValue").innerHTML + ':' +
+            document.getElementById("WeightValue").innerHTML + ':' 
+    });
+    user_listener.publish(user_info);
+  }
+
+
+  function execShellCommand(cmd) {
+    var child = require ('child_process');
+    const exec = child.exec;
+    return new Promise((resolve, reject) => {
+      exec(cmd, (error, stdout, stderr) => {
+        if (error) {
+          console.warn(error);
+        }
+          resolve(stdout? stdout : stderr);
+      });
+    });
+  }
+  
+
+  async function asyncCall() {
+    console.log('calling');
+    const result = await execShellCommand('java -version');
+    console.log(result);
+    // expected output: "resolved"
+  }
+
+  asyncCall();
+
+</script>
+</head>
+
+<body>
+  <h1>Simple ROS User Interface</h1>
+  <p>Connection status: <span id="status"></span></p>
+  <p>Last left handle force: <span id="left_handle_force"></span></p>
+  <p>Last right handle force: <span id="right_handle_force"></span></p>
+  
+  <!-- ********************** USER CONFIGURATION **********************  -->
+
+  <!-- AGE  -->
+  <div class="slidecontainer">
+    <p>Age: <span id="ageValue"></span> years</p>
+    <input type="range" min="1" max="100" value="50" class="slider" id="ageRange">
+  </div>
+  
+  <script>
+      var slider_a = document.getElementById("ageRange");
+      var output_a = document.getElementById("ageValue");
+      output_a.innerHTML = slider_a.value;
+      
+      slider_a.oninput = function() {
+        output_a.innerHTML = this.value;
+        user();
+      }
+  </script>
+
+  <!-- Height  -->
+  <div class="slidecontainer">
+    <p>Height: <span id="heightValue"></span> cm.</p>
+    <input type="range" min="120" max="210" value="175" class="slider" id="heightRange">
+  </div>
+
+  <script>
+    var slider_h = document.getElementById("heightRange");
+    var output_h = document.getElementById("heightValue");
+    output_h.innerHTML = slider_h.value;
+    
+    slider_h.oninput = function() {
+      output_h.innerHTML = this.value;
+      user();
+    }
+  </script>
+
+  <!-- Weight  -->
+  <div class="slidecontainer">
+    <p>Weight: <span id="WeightValue"></span> Kg.</p>
+    <input type="range" min="20" max="210" value="92" class="slider" id="WeightRange">
+  </div>
+
+  <script>
+    var slider_w = document.getElementById("WeightRange");
+    var output_w = document.getElementById("WeightValue");
+    output_w.innerHTML = slider_w.value;
+    
+    slider_w.oninput = function() {
+      output_w.innerHTML = this.value;
+      user();
+    }
+  </script>
+
+
+</body>
+</html>
