@@ -40,7 +40,7 @@ windows:
   - name: gait_analysis
     tags: ['gait']
     panes:
-      - ros2 launch leg_detector leg_detector.launch.py
+      - ros2 launch step_detector step_detector.launch.py
   - name: record
     tags: ['record']
     panes:
