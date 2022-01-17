@@ -103,8 +103,12 @@ rosdep update
 rosdep install --from-paths . --ignore-packages-from-source --rosdistro foxy -y
 colcon build --symlink-install
 ```
+If you are compiling on the Raspberry Pi, consider being gentle on the  compilation and use the following instead of regular colcon command:
+```
+MAKEFLAGS='-j1 -l1' colcon build --executor sequential --symlink-install
+```
 
-Package 'aws_robomaker_hospital_world' will take a  long time (>6min!) to download all the models. Consider getting a good coffee.
+Also, package 'aws_robomaker_hospital_world' will take a  long time (>6min!) to download all the models. Consider getting a good coffee in the meantime.
 
 ### Packages
 
