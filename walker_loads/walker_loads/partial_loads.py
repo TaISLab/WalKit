@@ -87,8 +87,11 @@ class PartialLoads(Node):
                     self.right_leg_load = 0
                     self.left_leg_load = self.leg_load
                 else:
-                    self.right_leg_load = 0.5 * self.leg_load
-                    self.left_leg_load = 0.5 * self.leg_load
+                    # both leg standing. We can't be sure about how much on each one!
+                    self.right_leg_load = -1 #0.5 * self.leg_load
+                    self.left_leg_load =  -1 #0.5 * self.leg_load
+                    self.get_logger().warn("Both leg support detected, unable to distribute relative loads.")    
+
                 msg = Float64MultiArray()
                 msg.data.append(self.left_leg_load)
                 msg.data.append(self.right_leg_load)
