@@ -203,6 +203,8 @@ Project Link: [https://github.com/TaISLab/WalKit/tree/foxy](https://github.com/T
 
 This work is funded by [Programa Proyectos RETOS del Ministerio de Ciencia, Innovación y Universidades (SAVIA: Sistema de Autonomía Variable para movIlidad Asistida, Ref: RTI2018-096701-B-C21)](http://www.grupoisis.uma.es/index.php?option=com_jresearch&view=project&task=show&id=208&Itemid=18&lang=es) at Málaga University, Spain
 
+[Plan Propio de la Universidad de Málaga (E3-PROYECTOS DE PRUEBA DE CONCEPTO (E3/02/18))](https://www.uma.es/servicio-de-investigacion/cms/menu/plan-propio-de-investigacion/?set_language=en) at Málaga University, Spain
+
 This great readme is based on [Othneil Drew](https://github.com/othneildrew/Best-README-Template)'s README template.
 
 <p align="right">(<a href="#top">back to top</a>)</p>
