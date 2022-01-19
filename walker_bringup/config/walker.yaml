@@ -13,14 +13,14 @@ windows:
   - name: sensors
     tags: ['core']
     panes:
-      - ros2 launch rplidar_ros2  rplidar_launch.py inverted:=false ## what happened with the inverted here??
+      - ros2 launch rplidar_ros2  rplidar_launch.py inverted:=true
       - ros2 launch walker_bringup laser_filter.launch.py
       - ros2 run bwt901cl_pkg imu_bwt901cl      
       - ros2 launch walker_diff_odom walker_diff_odom.launch.py
   - name: crappy_description1
     tags: ['core']
     panes:
-      - ros2 run tf2_ros static_transform_publisher 0.55  0     0.210 0    0    3.14 base_footprint laser  # z is lower...
+      - ros2 run tf2_ros static_transform_publisher 0.55  0     0.210 0    0    0    base_footprint laser  # z is lower...
       - ros2 run tf2_ros static_transform_publisher 0.55  0     0.474 0    0    0    base_footprint witmotion
       - ros2 run tf2_ros static_transform_publisher 0     0.276 0.075 0    0    0    base_footprint left_wheel_id
       - ros2 run tf2_ros static_transform_publisher 0    -0.276 0.075 0    0    3.14 base_footprint right_wheel_id
@@ -35,6 +35,7 @@ windows:
   - name: web
     tags: ['core']
     panes:
+    # poner id
       - ros2 launch rosbridge_server rosbridge_websocket_launch.xml
       - cd ~/workspace/walker_ws/src/WalKit/walker_web_gui/gui; python3 -m http.server
   - name: gait_analysis
@@ -46,7 +47,7 @@ windows:
     tags: ['core']
     panes:
       - ros2 launch step_detector plot_steps.launch.py      
-      - ros2 run walker_plot plot_forces.py      # should add params and launch file ...
+      - ros2 run walker_plot plot_forces      # should add params and launch file ...
       - ros2 run walker_loads plot_loads.py      # should add params and launch file ...
   - name: record
     tags: ['record']
