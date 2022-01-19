@@ -76,7 +76,8 @@ class PartialLoads(Node):
                 self.right_speed = self.steps_msg.steps[1].speed
                 self.speed_diff = self.left_speed - self.right_speed
             else:
-                self.get_logger().error("Leg data incomplete [" + str(len(msg.steps)) + "]")    
+                pass
+                #self.get_logger().error("Leg data incomplete [" + str(len(msg.steps)) + "]")    
     
     def timer_callback(self):
         if ( (self.left_handle_msg is not None) and  (self.right_handle_msg is not None) and  (self.steps_msg is not None) ):
@@ -99,7 +100,8 @@ class PartialLoads(Node):
                 self.steps_msg.steps[1].load = self.right_leg_load
                 self.loads_pub.publish(msg)
         else:
-            self.get_logger().error("Not all data received yet ...")                
+            pass
+            #self.get_logger().error("Not all data received yet ...")                
 
 def main(args=None):
     rclpy.init(args=args)
