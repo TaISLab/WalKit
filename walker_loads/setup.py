@@ -20,7 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'partial_loads = walker_loads.partial_loads:main'
+            'partial_loads = walker_loads.partial_loads:main','plot_loads = walker_loads.plot_loads:main',
         ],
     },
 )

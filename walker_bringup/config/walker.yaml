@@ -4,21 +4,21 @@ init_cmd: |
   source ~/workspace/walker_ws/install/setup.bash
 windows:
   - name: arduino
-    tags: ['core', 'arduino']
+    tags: ['core']
     panes:
       - ros2 launch walker_arduino left_handle.launch.py
       - ros2 launch walker_arduino right_handle.launch.py
       - ros2 launch walker_arduino left_wheel.launch.py
       - ros2 launch walker_arduino right_wheel.launch.py
   - name: sensors
-    tags: ['core', 'sensors']
+    tags: ['core']
     panes:
-      - ros2 launch rplidar_ros2  rplidar_launch.py inverted:=true
+      - ros2 launch rplidar_ros2  rplidar_launch.py inverted:=false ## what happened with the inverted here??
       - ros2 launch walker_bringup laser_filter.launch.py
       - ros2 run bwt901cl_pkg imu_bwt901cl      
       - ros2 launch walker_diff_odom walker_diff_odom.launch.py
   - name: crappy_description1
-    tags: ['core', 'description']
+    tags: ['core']
     panes:
       - ros2 run tf2_ros static_transform_publisher 0.55  0     0.210 0    0    3.14 base_footprint laser  # z is lower...
       - ros2 run tf2_ros static_transform_publisher 0.55  0     0.474 0    0    0    base_footprint witmotion
@@ -28,19 +28,26 @@ windows:
       - ros2 run tf2_ros static_transform_publisher 0.31 -0.24  0.245 0    0    0    base_footprint right_handle_id
       - ros2 run tf2_ros static_transform_publisher 0     0     0.075 0    0    0    base_footprint base_link 
   - name: crappy_description2
-    tags: ['core', 'description']
+    tags: ['core']
     panes:
       - ros2 run tf2_ros static_transform_publisher 0.22  0.080 0.450  1.9  3.14  -0.55 base_footprint leap_camera_left
       - ros2 run tf2_ros static_transform_publisher 0.31 -0.080 0.450  1.9  3.14  -0.55 base_footprint leap_camera_right
   - name: web
-    tags: ['web']
+    tags: ['core']
     panes:
       - ros2 launch rosbridge_server rosbridge_websocket_launch.xml
       - cd ~/workspace/walker_ws/src/WalKit/walker_web_gui/gui; python3 -m http.server
   - name: gait_analysis
-    tags: ['gait']
+    tags: ['core']
     panes:
       - ros2 launch step_detector step_detector.launch.py
+      - ros2 run walker_loads partial_loads      # should add params and launch file ...
+  - name: visualization
+    tags: ['core']
+    panes:
+      - ros2 launch step_detector plot_steps.launch.py      
+      - ros2 run walker_plot plot_forces.py      # should add params and launch file ...
+      - ros2 run walker_loads plot_loads.py      # should add params and launch file ...
   - name: record
     tags: ['record']
     panes:

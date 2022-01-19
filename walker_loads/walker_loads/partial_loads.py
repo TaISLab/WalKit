@@ -41,7 +41,7 @@ class PartialLoads(Node):
         self.left_leg_load = 0
 
         # ROS stuff
-        self.loads_pub = self.create_publisher(Float64MultiArray, self.loads_topic_name, 10)
+        self.loads_pub = self.create_publisher(StepArray, self.loads_topic_name, 10)
 
         self.left_handle_sub = self.create_subscription(ForceStamped, self.left_handle_topic_name, self.handle_lc, 10) 
         self.right_handle_sub = self.create_subscription(ForceStamped, self.right_handle_topic_name, self.handle_lc, 10) 
@@ -82,19 +82,21 @@ class PartialLoads(Node):
         if ( (self.left_handle_msg is not None) and  (self.right_handle_msg is not None) and  (self.steps_msg is not None) ):
                 if (self.speed_diff>self.speed_delta):
                     self.right_leg_load = self.leg_load
-                    self.left_leg_load = 0
+                    self.left_leg_load = 0.0
                 elif (self.speed_diff<-self.speed_delta):
-                    self.right_leg_load = 0
+                    self.right_leg_load = 0.0
                     self.left_leg_load = self.leg_load
                 else:
                     # both leg standing. We can't be sure about how much on each one!
-                    self.right_leg_load = -1 #0.5 * self.leg_load
-                    self.left_leg_load =  -1 #0.5 * self.leg_load
+                    self.right_leg_load = -1.0 #0.5 * self.leg_load
+                    self.left_leg_load =  -1.0 #0.5 * self.leg_load
                     self.get_logger().warn("Both leg support detected, unable to distribute relative loads.")    
 
-                msg = Float64MultiArray()
-                msg.data.append(self.left_leg_load)
-                msg.data.append(self.right_leg_load)
+                # Build msg and publish
+                msg = self.steps_msg
+                #self.get_logger().warn("Weight distribution on legs L(" + str(self.left_leg_load) + ") - R(" + str(self.right_leg_load) + ")")
+                self.steps_msg.steps[0].load = self.left_leg_load
+                self.steps_msg.steps[1].load = self.right_leg_load
                 self.loads_pub.publish(msg)
         else:
             self.get_logger().error("Not all data received yet ...")                
