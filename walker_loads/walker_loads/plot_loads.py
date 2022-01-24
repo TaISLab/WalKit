@@ -9,6 +9,8 @@ from std_msgs.msg import String
 from numpy import interp
 from squaternion import Quaternion
 import matplotlib.pyplot as plt
+from visualization_msgs.msg import Marker
+from scipy import interpolate
 
 class LoadPlotter(Node):
 
@@ -23,7 +25,7 @@ class LoadPlotter(Node):
 
         self.markers_namespace = 'steps_load'
         self.markers_lifetime_s = 1.
-        self.force_scale_factor = 100.0
+        self.force_scale_factor = 10.0
 
         # Here is the Marker to be published in RViz
         self.colormap = plt.get_cmap('jet')
@@ -32,6 +34,9 @@ class LoadPlotter(Node):
         self.weight_points = [0, 1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20] # measurement points in kg
         self.left_handle_points = [2.7, 46.7, 81.8, 138.5, 193.1, 255.01, 334.6, 430.9, 474.1, 551, 612.1, 669.7] # handle
         self.right_handle_points = [0.025, 42.13, 68.2, 139.2, 223.8, 290.5, 346.5, 447.2, 481.7, 559.5, 640.1, 662.8] # handle
+
+        self.interp_fr = interpolate.interp1d(self.right_handle_points, self.weight_points, fill_value = "extrapolate")
+        self.interp_fl = interpolate.interp1d(self.left_handle_points, self.weight_points, fill_value = "extrapolate")   
 
         # base markers
         
@@ -76,10 +81,10 @@ class LoadPlotter(Node):
     def handle_lc(self, msg):
         if ('right' in msg.header.frame_id ):
             self.right_handle_msg = msg          
-            self.right_handle_weight = interp(msg.force, self.right_handle_points, self.weight_points, left=0)
+            self.right_handle_weight = self.interp_fr(msg.force)
         elif ('left' in msg.header.frame_id):
             self.left_handle_msg = msg
-            self.left_handle_weight  = interp(msg.force, self.left_handle_points, self.weight_points, left=0) 
+            self.left_handle_weight  = self.interp_fl(msg.force)
         else:
             self.get_logger().error("Don't know which handle are you talking [" + msg.header.frame_id + "]")    
             return                
@@ -102,14 +107,13 @@ class LoadPlotter(Node):
 
             # When we have an unknown weight distribution, load is set to -1 
             if (self.loads_msg.steps[0].load>=0) and (self.loads_msg.steps[1].load>=0):
-                marker_left  = self.fill_in_marker(msg, 0)
-                marker_left_text  = self.fill_in_text_marker(msg, 0)
-                marker_right = self.fill_in_marker(msg, 1)
-                marker_right_text = self.fill_in_text_marker(msg, 1)
-
+                marker_left  = self.fill_in_marker(self.loads_msg, 0)
                 self.marker_pub_.publish(marker_left)
+                marker_left_text  = self.fill_in_text_marker(self.loads_msg, 0)
                 self.marker_pub_.publish(marker_left_text)
+                marker_right = self.fill_in_marker(self.loads_msg, 1)
                 self.marker_pub_.publish(marker_right)
+                marker_right_text = self.fill_in_text_marker(self.loads_msg, 1)
                 self.marker_pub_.publish(marker_right_text)
 
                 # TODO: Plot weight centroid using handle forces ...
@@ -128,20 +132,26 @@ class LoadPlotter(Node):
         # marker.pose.orientation.y = quat[2]
         # marker.pose.orientation.z = quat[3]
 
+        if (index==0):
+            marker.type = marker.SPHERE  # left
+        else:
+            marker.type = marker.CUBE
+
         # set id
-        marke.id = index
+        marker.id = index
         # Set position
         marker.header.frame_id = stepArrayMsg.header.frame_id        
         marker.pose.position = stepArrayMsg.steps[index].leg.position        
-        marker.pose.position.z = 1
+        marker.pose.position.z = 1.0
 
         # Set colors
-        col_value = float(stepArrayMsg.steps[index].force)/ float(3.0*self.force_scale_factor)
+        col_value = float(stepArrayMsg.steps[index].speed)/ float(3.0*self.force_scale_factor)
         col_value = max( min(col_value,1.0), 0.0 )        
         color = self.colormap(col_value)
 
         marker.color.a = stepArrayMsg.steps[index].leg.confidence
         marker.color.r, marker.color.g, marker.color.b, dummy = color
+
         return marker
 
     def fill_in_text_marker(self, stepArrayMsg, index):
@@ -149,15 +159,21 @@ class LoadPlotter(Node):
         marker = self.text_marker_ref
 
         # set id
-        marke.id = index
-        
+        marker.id = index
+
         # Set position
         marker.header.frame_id = stepArrayMsg.header.frame_id        
         marker.pose.position = stepArrayMsg.steps[index].leg.position        
-        marker.pose.position.z = 1
+        marker.pose.position.z = 1.0
 
-        marker.color.a = 1
+        marker.color.a = 1.0
         #marker.color.r, marker.color.g, marker.color.b, dummy = (1,1,1,1)
+        marker.scale.x = 0.05
+        marker.scale.y = 0.05
+        marker.scale.z = 0.05
+        marker.color.r = 1.0
+        marker.color.g = 1.0
+        marker.color.b = 1.0
 
         #set text
         if (index==0):
