@@ -5,23 +5,54 @@ from rclpy.node import Node
 from walker_msgs.msg import ForceStamped, StepStamped 
 from std_msgs.msg import Float64MultiArray, String
 from scipy import interpolate
+import yaml
+from ament_index_python.packages import get_package_share_directory
+import os
+
 
 class PartialLoads(Node):
 
     def __init__(self):
         super().__init__('partial_loads')
-        self.loads_topic_name = '/loads'
-        self.left_handle_topic_name = '/left_handle'
-        self.right_handle_topic_name= '/right_handle'
-        self.steps_topic_name= '/detected_step'
-        self.user_desc_topic_name= '/user_desc'
-        self.period = 0.1
-        self.speed_delta = 0.005
+        self.declare_parameters(
+            namespace='',
+            parameters=[
+                ('handle_calibration_file', os.path.join(get_package_share_directory('walker_loads'), "config", "params.yaml") ),
+                ('left_loads_topic_name', '/left_loads'),
+                ('right_loads_topic_name', '/right_loads'),
+                ('left_handle_topic_name', '/left_handle'),
+                ('right_handle_topic_name', '/right_handle'),
+                ('left_steps_topic_name', '/left_step'),
+                ('right_steps_topic_name', '/right_step'),
+                ('user_desc_topic_name', '/user_desc'),
+                ('period', 0.1),
+                ('speed_delta', 0.05),
+                ('force_calibration.weight_points', None),
+                ('force_calibration.left_handle_points', None),
+                ('force_calibration.right_handle_points', None)
+            ])
 
-        self.weight_points = [0, 1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20] # measurement points in kg
-        self.left_handle_points = [2.7, 46.7, 81.8, 138.5, 193.1, 255.01, 334.6, 430.9, 474.1, 551, 612.1, 669.7] # handle
-        self.right_handle_points = [0.025, 42.13, 68.2, 139.2, 223.8, 290.5, 346.5, 447.2, 481.7, 559.5, 640.1, 662.8] # handle
 
+        self.left_loads_topic_name = self.get_parameter('left_loads_topic_name').value
+        self.right_loads_topic_name = self.get_parameter('right_loads_topic_name').value
+        self.left_handle_topic_name = self.get_parameter('left_handle_topic_name').value
+        self.right_handle_topic_name= self.get_parameter('right_handle_topic_name').value
+        self.left_steps_topic_name= self.get_parameter('left_steps_topic_name').value
+        self.right_steps_topic_name= self.get_parameter('right_steps_topic_name').value
+        self.user_desc_topic_name= self.get_parameter('user_desc_topic_name').value
+        self.period = self.get_parameter('period').value
+        self.speed_delta = self.get_parameter('speed_delta').value
+        self.handle_calibration_file = self.get_parameter('handle_calibration_file').value
+
+        with open(self.handle_calibration_file, 'r') as stream:
+            try:
+                parsed_yaml=yaml.safe_load(stream)
+                self.weight_points = parsed_yaml['weight_points']        
+                self.left_handle_points = parsed_yaml['left_handle_points']
+                self.right_handle_points = parsed_yaml['right_handle_points']
+            except yaml.YAMLError as exc:
+                print(exc)
+        
         self.fr = interpolate.interp1d(self.right_handle_points, self.weight_points, fill_value = "extrapolate")
         self.fl = interpolate.interp1d(self.left_handle_points,  self.weight_points, fill_value = "extrapolate")
 
@@ -41,14 +72,14 @@ class PartialLoads(Node):
         self.leg_load = 0
 
         # ROS stuff
-        self.left_load_pub  = self.create_publisher(StepStamped, self.loads_topic_name + "_left",  10)
-        self.right_load_pub = self.create_publisher(StepStamped, self.loads_topic_name + "_right", 10)
+        self.left_load_pub  = self.create_publisher(StepStamped, self.left_loads_topic_name,  10)
+        self.right_load_pub = self.create_publisher(StepStamped, self.right_loads_topic_name, 10)
 
         self.left_handle_sub = self.create_subscription(ForceStamped, self.left_handle_topic_name, self.handle_lc, 10) 
         self.right_handle_sub = self.create_subscription(ForceStamped, self.right_handle_topic_name, self.handle_lc, 10) 
 
-        self.left_steps_sub = self.create_subscription(StepStamped, self.steps_topic_name + "_left",  self.l_steps_lc, 10) 
-        self.right_steps_sub = self.create_subscription(StepStamped, self.steps_topic_name + "_right", self.r_steps_lc, 10)
+        self.left_steps_sub = self.create_subscription(StepStamped, self.left_steps_topic_name,  self.l_steps_lc, 10) 
+        self.right_steps_sub = self.create_subscription(StepStamped, self.right_steps_topic_name, self.r_steps_lc, 10)
 
         self.user_desc_sub = self.create_subscription(String, self.user_desc_topic_name, self.user_desc_lc, 10) 
         self.tmr = self.create_timer(self.period, self.timer_callback)

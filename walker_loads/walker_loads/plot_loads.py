@@ -16,16 +16,35 @@ class LoadPlotter(Node):
 
     def __init__(self):
         super().__init__('load_plotter')
-        self.loads_topic_name = '/loads'
-        self.left_handle_topic_name = '/left_handle'
-        self.right_handle_topic_name= '/right_handle'
-        self.user_desc_topic_name= '/user_desc'
-        self.period = 0.1
-        self.markers_topic_name = '/markers'
 
-        self.markers_namespace = 'steps_load'
-        self.markers_lifetime_s = 1.
-        self.force_scale_factor = 3.0
+
+        self.declare_parameters(
+            namespace='',
+            parameters=[
+                ('left_loads_topic_name', '/left_loads'),
+                ('right_loads_topic_name', '/right_loads'),
+                ('left_handle_topic_name', '/left_handle'),
+                ('right_handle_topic_name', '/right_handle'),
+                ('user_desc_topic_name', '/user_desc'),
+                ('markers_topic_name', '/markers'),
+                ('markers_namespace', 'steps_load'),
+                ('markers_lifetime_s', 1.0),
+                ('speed_scale_factor', 9.0),
+                ('load_scale_factor', 10.0),
+            ])
+
+
+        self.left_loads_topic_name = self.get_parameter('left_loads_topic_name').value
+        self.right_loads_topic_name = self.get_parameter('right_loads_topic_name').value
+        self.left_handle_topic_name = self.get_parameter('left_handle_topic_name').value
+        self.right_handle_topic_name= self.get_parameter('right_handle_topic_name').value
+        self.user_desc_topic_name= self.get_parameter('user_desc_topic_name').value
+        self.markers_topic_name = self.get_parameter('markers_topic_name').value
+        self.markers_namespace =  self.get_parameter('markers_namespace').value
+        self.markers_lifetime_s = self.get_parameter('markers_lifetime_s').value
+        self.speed_scale_factor = self.get_parameter('speed_scale_factor').value
+        self.load_scale_factor =  self.get_parameter('load_scale_factor').value
+        self.weight_u = 100
 
         # Here is the Marker to be published in RViz
         self.colormap = plt.get_cmap('jet')
@@ -61,11 +80,17 @@ class LoadPlotter(Node):
         self.leg_load = 0
 
         # ROS stuff
-        self.left_loads_sub  = self.create_subscription(StepStamped, self.loads_topic_name + "_left",  self.l_loads_lc, 10) 
-        self.right_loads_sub = self.create_subscription(StepStamped, self.loads_topic_name + "_right", self.r_loads_lc, 10) 
+        self.user_desc_sub = self.create_subscription(String, self.user_desc_topic_name, self.user_desc_lc, 10) 
+        self.left_loads_sub  = self.create_subscription(StepStamped, self.left_loads_topic_name ,  self.l_loads_lc, 10) 
+        self.right_loads_sub = self.create_subscription(StepStamped, self.right_loads_topic_name , self.r_loads_lc, 10) 
         self.marker_pub_ = self.create_publisher(Marker, self.markers_topic_name, 10)
 
         self.get_logger().info("load plotter started")  
+
+    def user_desc_lc(self, msg):
+        user_fields = msg.data.split(':')
+        if len(user_fields)>2:
+            self.weight_u = user_fields[2]
 
     def l_loads_lc(self, msg):
         self.loads_lc(msg,0)
@@ -112,12 +137,12 @@ class LoadPlotter(Node):
         marker.pose.position.z = 0.5
 
         # Set scale according to load
-        marker.scale.x = marker.scale.y = marker.scale.z = max(0.01,stepStMsg.load/1000.0)
+        marker.scale.x = marker.scale.y = marker.scale.z = max(0.01, self.load_scale_factor * stepStMsg.load/ self.weight_u)
         #self.get_logger().error("plotting scale: " + str(marker.scale.x) )    
 
         # Set colors
         speed_mod = pow(stepStMsg.speed.x * stepStMsg.speed.x + stepStMsg.speed.y * stepStMsg.speed.y + stepStMsg.speed.z * stepStMsg.speed.z , 0.5)
-        col_value = float(speed_mod) / float(3.0*self.force_scale_factor)
+        col_value = float(speed_mod) / float(self.speed_scale_factor)
         col_value = max( min(col_value,1.0), 0.0 )        
         color = self.colormap(col_value)
 

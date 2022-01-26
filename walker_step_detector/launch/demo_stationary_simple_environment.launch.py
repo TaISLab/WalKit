@@ -8,10 +8,11 @@ import launch
 import os
 
 step_detector_path = get_package_share_directory('walker_step_detector')
+partial_loads_path = get_package_share_directory('walker_loads')
 rosbag_uri = os.path.join( os.getenv("HOME") , "bagsFolder", "20211214-142719-bag")
 forest_file_path = os.path.join( step_detector_path, "config", "trained_step_detector_res_0.33.yaml")
 rviz2_config_path = os.path.join( step_detector_path, "config", "demo_stationary_simple_environment.rviz") 
-
+handle_calibration_file = os.path.join(partial_loads_path, "config", "params.yaml") 
 
 def generate_launch_description():
 
@@ -83,7 +84,20 @@ def generate_launch_description():
     partial_load_legs_node = Node(
         package="walker_loads",
         executable="partial_loads",
-        name="partial_load_legs"
+        name="partial_load_legs",
+        parameters= [
+                     {'handle_calibration_file': handle_calibration_file},
+                     {'loads_topic_name': '/loads'},
+                     {'loads_topic_name': '/loads'},
+                     {'left_handle_topic_name': '/left_handle'},
+                     {'right_handle_topic_name': '/right_handle'},
+                     {'left_steps_topic_name': '/left_step'},
+                     {'right_steps_topic_name': '/right_step'},
+                     {'user_desc_topic_name': '/user_desc'},
+                     {'period': 0.1},
+                     {'speed_delta': 0.05}
+                    ],
+        on_exit=launch.actions.Shutdown()
     )
 
     # View loads on legs
