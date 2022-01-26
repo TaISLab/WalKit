@@ -4,7 +4,7 @@ from rclpy.node import Node
 
 from walker_msgs.msg import ForceStamped 
 from std_msgs.msg import Float64MultiArray
-from leg_detector_msgs.msg import StepArray
+from walker_msgs.msg import StepStamped
 from std_msgs.msg import String
 from numpy import interp
 from squaternion import Quaternion
@@ -25,18 +25,10 @@ class LoadPlotter(Node):
 
         self.markers_namespace = 'steps_load'
         self.markers_lifetime_s = 1.
-        self.force_scale_factor = 10.0
+        self.force_scale_factor = 3.0
 
         # Here is the Marker to be published in RViz
         self.colormap = plt.get_cmap('jet')
-
-        # Constants from callibration
-        self.weight_points = [0, 1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20] # measurement points in kg
-        self.left_handle_points = [2.7, 46.7, 81.8, 138.5, 193.1, 255.01, 334.6, 430.9, 474.1, 551, 612.1, 669.7] # handle
-        self.right_handle_points = [0.025, 42.13, 68.2, 139.2, 223.8, 290.5, 346.5, 447.2, 481.7, 559.5, 640.1, 662.8] # handle
-
-        self.interp_fr = interpolate.interp1d(self.right_handle_points, self.weight_points, fill_value = "extrapolate")
-        self.interp_fl = interpolate.interp1d(self.left_handle_points, self.weight_points, fill_value = "extrapolate")   
 
         # base markers
         
@@ -69,60 +61,34 @@ class LoadPlotter(Node):
         self.leg_load = 0
 
         # ROS stuff
-        self.left_handle_sub = self.create_subscription(ForceStamped, self.left_handle_topic_name, self.handle_lc, 10) 
-        self.right_handle_sub = self.create_subscription(ForceStamped, self.right_handle_topic_name, self.handle_lc, 10) 
-        self.loads_sub = self.create_subscription(StepArray, self.loads_topic_name, self.loads_lc, 10) 
-        self.user_desc_sub = self.create_subscription(String, self.user_desc_topic_name, self.user_desc_lc, 10) 
-        self.tmr = self.create_timer(self.period, self.timer_callback)
+        self.left_loads_sub  = self.create_subscription(StepStamped, self.loads_topic_name + "_left",  self.l_loads_lc, 10) 
+        self.right_loads_sub = self.create_subscription(StepStamped, self.loads_topic_name + "_right", self.r_loads_lc, 10) 
         self.marker_pub_ = self.create_publisher(Marker, self.markers_topic_name, 10)
 
-        self.get_logger().info("load detector started")  
+        self.get_logger().info("load plotter started")  
 
-    def handle_lc(self, msg):
-        if ('right' in msg.header.frame_id ):
-            self.right_handle_msg = msg          
-            self.right_handle_weight = self.interp_fr(msg.force)
-        elif ('left' in msg.header.frame_id):
-            self.left_handle_msg = msg
-            self.left_handle_weight  = self.interp_fl(msg.force)
-        else:
-            self.get_logger().error("Don't know which handle are you talking [" + msg.header.frame_id + "]")    
-            return                
-        self.leg_load = self.weight - self.left_handle_weight - self.right_handle_weight
+    def l_loads_lc(self, msg):
+        self.loads_lc(msg,0)
 
-    def user_desc_lc(self, msg):
-        user_fields = msg.data.split(':')
-        if len(user_fields)>2:
-            self.weight = user_fields[2]
+    def r_loads_lc(self, msg):
+        self.loads_lc(msg,1)
 
-    def loads_lc(self, msg):
-            if len(msg.steps) == 2:
-                self.loads_msg = msg                            
-            else:
-                self.get_logger().error("Leg data incomplete [" + str(len(msg.steps)) + "]")    
-    
-    def timer_callback(self):
-        if ( (self.left_handle_msg is not None) and  (self.right_handle_msg is not None) and  (self.loads_msg is not None) ):
-            # We plot here an shere where we have a load
-
-            # When we have an unknown weight distribution, load is set to -1 
-            if (self.loads_msg.steps[0].load>=0) and (self.loads_msg.steps[1].load>=0):
-                marker_left  = self.fill_in_marker(self.loads_msg, 0)
-                self.marker_pub_.publish(marker_left)
-                marker_left_text  = self.fill_in_text_marker(self.loads_msg, 0)
-                self.marker_pub_.publish(marker_left_text)
-                marker_right = self.fill_in_marker(self.loads_msg, 1)
+    def loads_lc(self, msg,id):
+        if (id == 1):
+                marker_right = self.fill_in_marker(msg, 1)
                 self.marker_pub_.publish(marker_right)
-                marker_right_text = self.fill_in_text_marker(self.loads_msg, 1)
+                marker_right_text = self.fill_in_text_marker(msg, 1)
                 self.marker_pub_.publish(marker_right_text)
-
-                # TODO: Plot weight centroid using handle forces ...
-            else:
-                self.get_logger().warn("Unknown weight distribution on legs L(" + str(self.loads_msg.steps[0].load) + ") - R(" + str(self.loads_msg.steps[1].load) + ")")
+        elif (id == 0):
+                marker_left  = self.fill_in_marker(msg, 0)
+                self.marker_pub_.publish(marker_left)
+                marker_left_text  = self.fill_in_text_marker(msg, 0)
+                self.marker_pub_.publish(marker_left_text)                
         else:
-            self.get_logger().error("Not all data received yet ...") 
+            self.get_logger().error("Don't know about which step are you talking [" + id + "]")    
+            return            
     
-    def fill_in_marker(self, stepArrayMsg, index):
+    def fill_in_marker(self, stepStMsg, index):
 
         marker = self.marker_ref        
         # I don't need this...
@@ -139,22 +105,31 @@ class LoadPlotter(Node):
 
         # set id
         marker.id = index
+
         # Set position
-        marker.header.frame_id = stepArrayMsg.header.frame_id        
-        marker.pose.position = stepArrayMsg.steps[index].leg.position        
-        marker.pose.position.z = 1.0
+        marker.header = stepStMsg.position.header
+        marker.pose.position = stepStMsg.position.point
+        marker.pose.position.z = 0.5
+
+        # Set scale according to load
+        marker.scale.x = marker.scale.y = marker.scale.z = max(0.01,stepStMsg.load/1000.0)
+        #self.get_logger().error("plotting scale: " + str(marker.scale.x) )    
 
         # Set colors
-        col_value = float(stepArrayMsg.steps[index].speed)/ float(3.0*self.force_scale_factor)
+        speed_mod = pow(stepStMsg.speed.x * stepStMsg.speed.x + stepStMsg.speed.y * stepStMsg.speed.y + stepStMsg.speed.z * stepStMsg.speed.z , 0.5)
+        col_value = float(speed_mod) / float(3.0*self.force_scale_factor)
         col_value = max( min(col_value,1.0), 0.0 )        
         color = self.colormap(col_value)
 
-        marker.color.a = stepArrayMsg.steps[index].leg.confidence
+        marker.color.a = stepStMsg.confidence
         marker.color.r, marker.color.g, marker.color.b, dummy = color
+
+
+
 
         return marker
 
-    def fill_in_text_marker(self, stepArrayMsg, index):
+    def fill_in_text_marker(self, stepStMsg, index):
 
         marker = self.text_marker_ref
 
@@ -162,9 +137,9 @@ class LoadPlotter(Node):
         marker.id = index
 
         # Set position
-        marker.header.frame_id = stepArrayMsg.header.frame_id        
-        marker.pose.position = stepArrayMsg.steps[index].leg.position        
-        marker.pose.position.z = 1.0
+        marker.header = stepStMsg.position.header
+        marker.pose.position = stepStMsg.position.point
+        marker.pose.position.z = 0.5
 
         marker.color.a = 1.0
         #marker.color.r, marker.color.g, marker.color.b, dummy = (1,1,1,1)
