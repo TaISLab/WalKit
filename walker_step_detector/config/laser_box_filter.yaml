@@ -2,7 +2,7 @@ scan_to_scan_filter_chain:
   ros__parameters:
     filter1:
       name: box_filter
-      type: laser_filters/LaserScanBoxFilter
+      type: walker_laser_filter/LaserScanInboxFilter
       params:
         box_frame: base_link
         remove_outside: true
