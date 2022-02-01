@@ -30,7 +30,7 @@ class LoadPlotter(Node):
                 ('markers_namespace', 'steps_load'),
                 ('markers_lifetime_s', 1.0),
                 ('speed_scale_factor', 9.0),
-                ('load_scale_factor', 10.0),
+                ('load_scale_factor', 5.0),
             ])
 
 
@@ -134,16 +134,18 @@ class LoadPlotter(Node):
         # Set position
         marker.header = stepStMsg.position.header
         marker.pose.position = stepStMsg.position.point
-        marker.pose.position.z = 0.5
+        marker.pose.position.z = 0.005
 
         # Set scale according to load
-        marker.scale.x = marker.scale.y = marker.scale.z = max(0.01, self.load_scale_factor * stepStMsg.load/ self.weight_u)
-        #self.get_logger().error("plotting scale: " + str(marker.scale.x) )    
+        load_value = max(0.15, self.load_scale_factor * stepStMsg.load/ self.weight_u) 
+        #marker.scale.x = marker.scale.y = marker.scale.z = load_value
+        marker.scale.x = marker.scale.y = marker.scale.z = 0.15
 
         # Set colors
         speed_mod = pow(stepStMsg.speed.x * stepStMsg.speed.x + stepStMsg.speed.y * stepStMsg.speed.y + stepStMsg.speed.z * stepStMsg.speed.z , 0.5)
         col_value = float(speed_mod) / float(self.speed_scale_factor)
-        col_value = max( min(col_value,1.0), 0.0 )        
+        #col_value = max( min(col_value,1.0), 0.0 )        
+        col_value = max( min(stepStMsg.load/ self.weight_u,1.0), 0.0 )        
         color = self.colormap(col_value)
 
         marker.color.a = stepStMsg.confidence
@@ -164,7 +166,7 @@ class LoadPlotter(Node):
         # Set position
         marker.header = stepStMsg.position.header
         marker.pose.position = stepStMsg.position.point
-        marker.pose.position.z = 0.5
+        marker.pose.position.z = 0.005
 
         marker.color.a = 1.0
         #marker.color.r, marker.color.g, marker.color.b, dummy = (1,1,1,1)

@@ -1,9 +1,0 @@
-<class_libraries>
-    <library path="walker_laser_filter">
-      <class name="walker_laser_filter/LaserScanInboxFilter" type="walker_laser_filter::LaserScanInboxFilter"  base_class_type="filters::FilterBase<sensor_msgs::msg::LaserScan>">
-          <description>
-	            This is a filter that removes points in a laser scan outside of a cartesian box.
-          </description>
-      </class>
-    </library>
-</class_libraries>

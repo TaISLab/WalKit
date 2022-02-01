@@ -41,14 +41,14 @@ windows:
   - name: gait_analysis
     tags: ['core']
     panes:
-      - ros2 launch step_detector step_detector.launch.py
+      - ros2 launch walker_step_detector step_detector.launch.py
       - ros2 run walker_loads partial_loads      # should add params and launch file ...
   - name: visualization
     tags: ['core']
     panes:
-      - ros2 launch step_detector plot_steps.launch.py      
+      - ros2 launch walker_step_detector plot_steps.launch.py      
       - ros2 run walker_plot plot_forces      # should add params and launch file ...
-      - ros2 run walker_loads plot_loads.py      # should add params and launch file ...
+      - ros2 run walker_loads plot_loads      # should add params and launch file ... squaternion python3-matplotlib
   - name: record
     tags: ['record']
     panes:

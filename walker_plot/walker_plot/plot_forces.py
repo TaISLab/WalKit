@@ -57,10 +57,10 @@ class ForcePlotter(Node):
     def listener_callback(self, msg):
         hand_marker = self.arrow_base
         len_value = float(msg.force)/ float(10.0*self.force_scale_factor)
-        len_value = max( min(len_value,1.0), 0.0 )
+        len_value = max( min(len_value,1.0), 0.001 )
 
         col_value = float(msg.force)/ float(3.0*self.force_scale_factor)
-        col_value = max( min(col_value,1.0), 0.0 )        
+        col_value = max( min(col_value,1.0), 0.001 )        
         color = self.colormap(col_value)
 
         #print("raw:[" + str(msg.force) + "], \t" + 
