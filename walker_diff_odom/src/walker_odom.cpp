@@ -126,8 +126,9 @@ void WalkerDiffDrive::leftEncoderCallback(const walker_msgs::msg::EncoderStamped
 
         // get a usable value from encoder
         if (enc_raw<0){
-            auto& clk = *this->get_clock();
-            RCLCPP_ERROR_THROTTLE(this->get_logger(), clk, 500, "Error on left encoder [%d]. Using prev value", enc_raw);
+            //auto& clk = *this->get_clock();
+            //RCLCPP_ERROR_THROTTLE(this->get_logger(), clk, 500, "Error on left encoder [%d]. Using prev value", enc_raw);
+            RCLCPP_ERROR(this->get_logger(), "Error on left encoder [%d]. Using prev value", enc_raw);
             enc_raw = left_buffer_.getLast();
         }
         last_left_data_ = *left_enc_msg;      
@@ -171,8 +172,9 @@ void WalkerDiffDrive::rightEncoderCallback(const walker_msgs::msg::EncoderStampe
 
         // get a usable value from encoder
         if (enc_raw<0){
-            auto& clk = *this->get_clock();
-            RCLCPP_ERROR_THROTTLE(this->get_logger(), clk, 500, "Error on right encoder [%d]. Using prev value", enc_raw);
+            //auto& clk = *this->get_clock();
+            //RCLCPP_ERROR_THROTTLE(this->get_logger(), clk, 500, "Error on right encoder [%d]. Using prev value", enc_raw);
+            RCLCPP_ERROR(this->get_logger(), "Error on right encoder [%d]. Using prev value", enc_raw);
             enc_raw = right_buffer_.getLast();
         }
         last_right_data_ = *right_enc_msg;      
@@ -311,9 +313,13 @@ void WalkerDiffDrive::update(){
         // d = (d_right + d_left)/2;  // distance increment: distance travelled since last reading  
         // th = (d_right - d_left)/base_width_; // theta increment: angle difference from last reading                
 
+        // missing distances on each side
+        float missing_r = right_buffer_.getCount() /ticks_meter_;
+        float missing_l = left_buffer_.getCount() /ticks_meter_;
+
         // covariance in wheels
-        Ed(0,0) = kr *abs(d_right);
-        Ed(1,1) = kl *abs(d_left);
+        Ed(0,0) = kr *(abs(d_right) + missing_r);
+        Ed(1,1) = kl *(abs(d_left) + missing_l);
 
         // update position Jacobian
         Fp(0,2) = -d * sin(th_ + th/2);

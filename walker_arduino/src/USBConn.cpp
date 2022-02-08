@@ -27,6 +27,10 @@ HandlePublisher::HandlePublisher() : Node("handle_publisher"){
         this->declare_parameter<std::string>( "port_name",  "") ; 
         this->get_parameter("port_name", port_name_ );
 
+        this->declare_parameter<double>( "rate_hz",  50) ; 
+        this->get_parameter("rate_hz", rate_hz_ );
+        
+
         if (data_type_.compare("int")==0) {
             encoder_publisher_ = this->create_publisher<walker_msgs::msg::EncoderStamped>(topic_name_, 10);
         } else if (data_type_.compare("float")==0) {
@@ -65,6 +69,27 @@ HandlePublisher::HandlePublisher() : Node("handle_publisher"){
         // Set the number of stop bits.
         serial_stream_.SetStopBits(StopBits::STOP_BITS_1) ;
 
+        int period_ms = 1000.0 / rate_hz_;
+        update_timer_ = this->create_wall_timer(std::chrono::milliseconds(period_ms), std::bind(&HandlePublisher::do_publish, this));
+
+}
+
+void HandlePublisher::do_publish(){
+    if (can_publish_){
+        // send data
+        try {
+            if (data_type_.compare("float")==0) {
+                force_publisher_->publish(f_measurement_);
+            } else if (data_type_.compare("int")==0) {
+                encoder_publisher_->publish(e_measurement_);
+            }
+
+        } catch (const rclcpp::exceptions::RCLError &e) {
+            RCLCPP_ERROR( this->get_logger(), "unexpectedly failed with %s", e.what());
+        }
+        can_publish_ = false;
+    }
+
 }
 
 HandlePublisher::~HandlePublisher(){
@@ -78,11 +103,8 @@ void HandlePublisher::start(){
         char rc;
         std::stringstream ss;
         std::string data;
-        
-        walker_msgs::msg::ForceStamped f_measurement;
-        walker_msgs::msg::EncoderStamped e_measurement;
-    
-        f_measurement.header.frame_id = e_measurement.header.frame_id = frame_id_;
+            
+        f_measurement_.header.frame_id = e_measurement_.header.frame_id = frame_id_;
         RCLCPP_INFO(this->get_logger(), "Publishing handle measurements from port [%s] at topic [%s]", port_name_.c_str(), topic_name_.c_str());
 
         if ((!std::filesystem::exists(port_name_)) || (!serial_stream_.IsOpen())){
@@ -98,32 +120,20 @@ void HandlePublisher::start(){
                     ss << rc;
                 } else {
                     data = ss.str();
-                    f_measurement.header.stamp = e_measurement.header.stamp = this->get_clock()->now();
+                    f_measurement_.header.stamp = e_measurement_.header.stamp = this->get_clock()->now();
                     // remove preamble and cast data to number:
                     
                     if (data_type_.compare("float")==0) {
-                        f_measurement.force = std::stof(data.substr(preamble_.length()));
-                        RCLCPP_DEBUG(this->get_logger(), "data is: [%3.2f]", f_measurement.force);
+                        f_measurement_.force = std::stof(data.substr(preamble_.length()));
+                        RCLCPP_DEBUG(this->get_logger(), "data is: [%3.2f]", f_measurement_.force);
                     } else if (data_type_.compare("int")==0) {
-                        e_measurement.encoder = std::stoi(data.substr(preamble_.length()));
-                        RCLCPP_DEBUG(this->get_logger(), "data is: [%d]", e_measurement.encoder);
-                    }
-
-                    // send data
-                    try {
-                        if (data_type_.compare("float")==0) {
-                            force_publisher_->publish(f_measurement);
-                        } else if (data_type_.compare("int")==0) {
-                            encoder_publisher_->publish(e_measurement);
-                        }
-
-                    } catch (const rclcpp::exceptions::RCLError &e) {
-                        RCLCPP_ERROR( this->get_logger(), "unexpectedly failed with %s", e.what());
+                        e_measurement_.encoder = std::stoi(data.substr(preamble_.length()));
+                        RCLCPP_DEBUG(this->get_logger(), "data is: [%d]", e_measurement_.encoder);
                     }
 
                     // clear stream and carry on
                     ss.str(std::string());
-
+                    can_publish_ = true;
                 }
             }
 

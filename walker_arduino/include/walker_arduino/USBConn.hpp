@@ -50,6 +50,21 @@ class HandlePublisher : public rclcpp::Node
 
     std::string data_type_;
 
+    // desired publishing rate
+    double rate_hz_;
+
+    // publishing timer
+    rclcpp::TimerBase::SharedPtr update_timer_;
+
+    // new data available for publishing
+    bool can_publish_;
+
+    // last float measurement
+    walker_msgs::msg::ForceStamped f_measurement_;
+
+    // last int measurement
+    walker_msgs::msg::EncoderStamped e_measurement_;
+
     // char ending each data packet
     char endMarker_ ;
 
@@ -57,6 +72,7 @@ class HandlePublisher : public rclcpp::Node
     ~HandlePublisher();
     void start();
 
+    void do_publish();
     std::string get_serial_port(std::string preamble, int highest_port) ;
 
 }; // END HandlePublisher Class

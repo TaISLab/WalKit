@@ -46,8 +46,12 @@ int CircularBuffer::getLast(){
             ans = 0;
           }
         }
-
+        getLastCounter = getLastCounter + 1;
         return ans;
+}
+
+int CircularBuffer::getCount(){         
+        return getLastCounter ;
 }
 
 void CircularBuffer::clear(){ 
@@ -55,4 +59,5 @@ void CircularBuffer::clear(){
     is_full_ = false;
     sum_ = 0;
     stored_vals_ = std::vector<int>(stored_vals_.size(), 0.0);
+    getLastCounter = 0;
 }
