@@ -30,6 +30,11 @@ WalkerDiffDrive::WalkerDiffDrive() : Node("diff_tf") {
       this->declare_parameter("wheel_high_wrap", rclcpp::ParameterValue(( encoder_max_ - encoder_min_)*7/10 + encoder_min_));
       this->get_parameter("wheel_high_wrap",  encoder_high_wrap_ );
 
+      this->declare_parameter("noise_right", rclcpp::ParameterValue(0.01) );
+      this->get_parameter("noise_right", kr );
+      this->declare_parameter("noise_left", rclcpp::ParameterValue(0.01) );
+      this->get_parameter("noise_left", kl );
+
       //
       RCLCPP_DEBUG(this->get_logger(), "CONFIGURATION .....................................");
       RCLCPP_DEBUG(this->get_logger(), "tf_rate_hz: [%3.3f] Hz.", rate_hz_);
@@ -73,6 +78,14 @@ WalkerDiffDrive::WalkerDiffDrive() : Node("diff_tf") {
 
       right_buffer_ = CircularBuffer(10);
       left_buffer_ = CircularBuffer(10);
+
+      // Init constant part from matrixes used in covariance calculus        
+      Fp = MatrixXf::Identity(3, 3);
+      Ed = MatrixXf::Zero(2, 2);
+      Fd(2,0) = 1/base_width_;
+      Fd(2,1) = -1/base_width_;            
+      // Sensible (and random) low init value ...
+      Ep =  0.001*MatrixXf::Identity(3, 3);
 
       // ros objects
       RCLCPP_DEBUG(this->get_logger(), "Creating publishers/subscribers. ");
@@ -228,15 +241,13 @@ void WalkerDiffDrive::update(){
             d_right = (right_ - enc_right_) / ticks_meter_;
         }
 
-
-
         // RCLCPP_ERROR(this->get_logger(), "Dist increase L[%3.4f] - R[%3.4f] = [%3.4f]", d_left, d_right, d_left - d_right );
 
         enc_left_ = left_;
         enc_right_ = right_;
 
         // traveled distance is the average of the wheels 
-        d = (d_left + d_right) / 2.0;
+        d = (d_right + d_left ) / 2.0;
 
         // this approximation works (in radians) for small angles
         th = (d_right - d_left ) / base_width_;
@@ -289,6 +300,49 @@ void WalkerDiffDrive::update(){
         odom_.twist.twist.linear.x = dx_;
         odom_.twist.twist.linear.y = 0.0;
         odom_.twist.twist.angular.z = dr_;
+
+        // covariance update:    
+        // Variables recap:
+        // base_width_ ; // distance betweeen wheels
+        // th_ ; // theta: current angle
+        // d_right ; //right wheel distance increment
+        // d_left ; //left wheel distance increment
+
+        // d = (d_right + d_left)/2;  // distance increment: distance travelled since last reading  
+        // th = (d_right - d_left)/base_width_; // theta increment: angle difference from last reading                
+
+        // covariance in wheels
+        Ed(0,0) = kr *abs(d_right);
+        Ed(1,1) = kl *abs(d_left);
+
+        // update position Jacobian
+        Fp(0,2) = -d * sin(th_ + th/2);
+        Fp(1,2) = d * cos(th_ + th/2);  
+
+        // update wheel - position Jacobian
+        Fd(0,0) = ( cos(th_ + th/2 )/ 2) - ( sin(th_ + th/2 ) * d/ 2*base_width_); 
+        Fd(0,1) = ( cos(th_ + th/2 )/ 2) + ( sin(th_ + th/2 ) * d/ 2*base_width_); 
+        Fd(1,0) = ( sin(th_ + th/2 )/ 2) + ( cos(th_ + th/2 ) * d/ 2*base_width_);
+        Fd(1,1) = ( sin(th_ + th/2 )/ 2) - ( cos(th_ + th/2 ) * d/ 2*base_width_);
+        
+        // Update position covariance: 
+        Ep = Fp * Ep * Fp.transpose() + Fd * Ed * Fd.transpose();
+
+        //map values into ros covariance matrix
+        // mfc: maybe this is not correct ...
+        odom_.pose.covariance[0]  = Ep(0,0); // xx
+        odom_.pose.covariance[1]  = Ep(0,1); // xy        
+        odom_.pose.covariance[5]  = Ep(0,2); // xth
+        
+        odom_.pose.covariance[6]  = Ep(1,0); // yx
+        odom_.pose.covariance[7]  = Ep(1,1); // yy
+        odom_.pose.covariance[11] = Ep(1,2); // yth
+        
+        odom_.pose.covariance[30] = Ep(2,0); // thx
+        odom_.pose.covariance[31] = Ep(2,1); // thy
+        odom_.pose.covariance[35] = Ep(2,2); // thth
+
+        // and publish
         odom_publisher_->publish(odom_);
     }
 }

@@ -6,6 +6,8 @@
 #include <memory>
 #include <string>
 #include <cmath>
+#include <eigen3/Eigen/Core>
+#include <iostream>
 
 #include "rclcpp/rclcpp.hpp"
 
@@ -21,6 +23,8 @@
 #include "walker_diff_odom/circular_buffer.hpp"
 
 using std::placeholders::_1;
+using namespace std;
+using namespace Eigen;
 
 class WalkerDiffDrive : public rclcpp::Node{
   public:
@@ -76,6 +80,19 @@ class WalkerDiffDrive : public rclcpp::Node{
       double th_;
       double dx_;
       double dr_;
+      double kr ;   // noise factor in right wheel   
+      double kl ;   // noise factor in left wheel  
+
+      // matrixes used in covariance calculus
+      // Ed wheel covariance 
+      Matrix<float, 2, 2> Ed; 
+      // Fp position Jacobian
+      Matrix<float, 3, 3> Fp;
+      // Fd wheel - position Jacobian      
+      Matrix<float, 3, 2> Fd;
+      // Ep position covariance
+      Matrix<float, 3, 3> Ep;
+
       rclcpp::Time then_;
       rclcpp::Time now_;
       geometry_msgs::msg::TransformStamped transform_;

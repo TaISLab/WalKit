@@ -20,6 +20,7 @@ find_package(walker_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2 REQUIRED)
+find_package(eigen REQUIRED)
 
 set(dependencies
   rclcpp 
@@ -29,6 +30,7 @@ set(dependencies
   nav_msgs
   tf2_ros
   tf2
+  eigen
   )
 
 include_directories(include)
