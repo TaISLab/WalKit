@@ -5,6 +5,8 @@ WalkerDiffDrive::WalkerDiffDrive() : Node("diff_tf") {
       RCLCPP_DEBUG(this->get_logger(), "Loading params. ");
  
       // read params
+      this->declare_parameter("publish_tf", rclcpp::ParameterValue(false));
+      this->get_parameter("publish_tf", publish_tf_);      
       this->declare_parameter("tf_rate_hz", rclcpp::ParameterValue(10.0));
       this->get_parameter("tf_rate_hz", rate_hz_);
       this->declare_parameter("odom_topic_name", rclcpp::ParameterValue("odom"));
@@ -37,6 +39,7 @@ WalkerDiffDrive::WalkerDiffDrive() : Node("diff_tf") {
 
       //
       RCLCPP_DEBUG(this->get_logger(), "CONFIGURATION .....................................");
+      RCLCPP_DEBUG(this->get_logger(), "publish_tf: [%s]", publish_tf_?"true":"false");
       RCLCPP_DEBUG(this->get_logger(), "tf_rate_hz: [%3.3f] Hz.", rate_hz_);
       RCLCPP_DEBUG(this->get_logger(), "odom_topic_name: [%s]", odom_topic_name_.c_str());
       RCLCPP_DEBUG(this->get_logger(), "left_wheel_encoder_topic_name: [%s]", left_wheel_encoder_topic_name_.c_str());
@@ -98,8 +101,10 @@ WalkerDiffDrive::WalkerDiffDrive() : Node("diff_tf") {
 
       
       odom_publisher_ = this->create_publisher<nav_msgs::msg::Odometry>(odom_topic_name_, rate_hz_);
-      // Initialize the transform broadcaster
-      tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
+      if (publish_tf_){
+         // Initialize the transform broadcaster
+         tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
+      }
 
       int period_ms = 1000.0 / rate_hz_;
       update_timer_ = this->create_wall_timer(std::chrono::milliseconds(period_ms), std::bind(&WalkerDiffDrive::update, this));
@@ -274,21 +279,22 @@ void WalkerDiffDrive::update(){
 
         //RCLCPP_ERROR(this->get_logger(), "New position [%3.4f, %3.4f, %3.4f deg]", x_, y_, th_*180/3.1415);
 
-        // update transform info
-        transform_.header.stamp = now_;        
-        transform_.transform.translation.x = x_;
-        transform_.transform.translation.y = y_;
-        transform_.transform.translation.z = 0.0;
-        tf2::Quaternion q;
-        q.setRPY(0, 0, th_);
-        transform_.transform.rotation.x = q.x();
-        transform_.transform.rotation.y = q.y();
-        transform_.transform.rotation.z = q.z();
-        transform_.transform.rotation.w = q.w();
+        if (publish_tf_){
+            // update transform info
+            transform_.header.stamp = now_;        
+            transform_.transform.translation.x = x_;
+            transform_.transform.translation.y = y_;
+            transform_.transform.translation.z = 0.0;
+            tf2::Quaternion q;
+            q.setRPY(0, 0, th_);
+            transform_.transform.rotation.x = q.x();
+            transform_.transform.rotation.y = q.y();
+            transform_.transform.rotation.z = q.z();
+            transform_.transform.rotation.w = q.w();
 
-        // Send the transformation
-        tf_broadcaster_->sendTransform(transform_);
-
+            // Send the transformation
+            tf_broadcaster_->sendTransform(transform_);
+        }
         // And same with Odometry
         odom_.header.stamp = now_;
         odom_.pose.pose.position.x = x_;

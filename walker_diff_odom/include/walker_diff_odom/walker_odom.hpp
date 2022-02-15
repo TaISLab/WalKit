@@ -46,6 +46,7 @@ class WalkerDiffDrive : public rclcpp::Node{
       rclcpp::Subscription<walker_msgs::msg::EncoderStamped>::SharedPtr sub_right_;
 
       //parameters
+      bool publish_tf_;
       double rate_hz_;
       std::string odom_topic_name_;
       std::string left_wheel_encoder_topic_name_;

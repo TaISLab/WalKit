@@ -31,4 +31,14 @@
 - git:
     uri: https://github.com/TaISLab/laser_filters.git
     local-name: laser_filters
-    version: ros2
+    version: ros2    
+
+- git:
+    uri: https://github.com/TaISLab/ros2_laser_scan_matcher.git
+    local-name: ros2_laser_scan_matcher
+    version: main
+
+- git:
+    uri: https://github.com/AlexKaravaev/csm.git
+    local-name: csm
+    version: ros2_csm_eigen    

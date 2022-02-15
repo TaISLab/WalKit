@@ -1,4 +1,3 @@
-from turtle import right
 import rclpy
 from rclpy.node import Node
 
