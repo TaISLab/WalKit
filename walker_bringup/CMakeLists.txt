@@ -12,8 +12,13 @@ endif()
 find_package(ament_cmake REQUIRED)
 
 
-install(DIRECTORY launch param script config scripts
+install(DIRECTORY launch param script config
   DESTINATION share/${PROJECT_NAME}/
+)
+
+install(PROGRAMS
+  scripts/record_service.py
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 ament_package()

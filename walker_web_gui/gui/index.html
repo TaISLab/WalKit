@@ -61,6 +61,10 @@
     color: black;
 }
 
+.user_id_class {
+    font-size: 3rem;
+}
+
 .toggle {
     margin:0 0 0 2rem;
     position: relative;
@@ -107,6 +111,8 @@ input:checked + .roundbutton {
 input:checked + .roundbutton:before  {
     transform: translate(2.6rem, 0);
 }
+
+input { font-size: 40px; }
 
 
 </style>
@@ -198,34 +204,55 @@ input:checked + .roundbutton:before  {
   function startRecord() {
       var cmdlineClient = new ROSLIB.Service({
         ros : ros,
-        name : '/start_record',
-        serviceType : 'std_srvs/srv/Empty'
+        name : '/rosbag_record',
+        serviceType : 'std_srvs/srv/SetBool'
       });
 
-      var request = new ROSLIB.ServiceRequest({});
 
-      cmdlineClient.callService(request, function(result) {
-        console.log('Result for service call on '
+    var request = new ROSLIB.ServiceRequest({
+      data : true
+    });
+
+    cmdlineClient.callService(request, function(result) {
+      var outputtext = document.getElementById('record_tag_status');
+        
+      if (result.message){
+        outputtext.innerHTML = "Grabando!";
+      }
+
+      console.log('Result for service call on '
           + cmdlineClient.name
-          + 'done ');
-      });      
+          + ': '
+          + result.message);
+    });      
   };
 
   function stopRecord() {
       var cmdlineClient = new ROSLIB.Service({
         ros : ros,
-        name : '/stop_record',
-        serviceType : 'std_srvs/srv/Empty'
+        name : '/rosbag_record',
+        serviceType : 'std_srvs/srv/SetBool'
       });
 
-      var request = new ROSLIB.ServiceRequest({});
 
-      cmdlineClient.callService(request, function(result) {
-        console.log('Result for service call on '
+    var request = new ROSLIB.ServiceRequest({
+      data : false
+    });
+
+    cmdlineClient.callService(request, function(result) {
+      var outputtext = document.getElementById('record_tag_status');
+        
+      if (result.message){
+        outputtext.innerHTML = "Detenido!";
+      }
+
+      console.log('Result for service call on '
           + cmdlineClient.name
-          + 'done ');
-      });      
+          + ': '
+          + result.message);
+    });      
   };
+
 
 </script>
 </head>
@@ -239,11 +266,11 @@ input:checked + .roundbutton:before  {
   <p>Right wheel encoder: <span id="right_wheel_encoder"></span></p>
 
   <!-- ********************** USER CONFIGURATION **********************  -->
-
-  <!-- ID -->
+  <br>
+ <hr size="3" noshade> 
   <div id="user_id_div" class="user_id_class">
     User id:  
-    <input type="text" id="user_id" value="Manuel">
+    <input type="text" id="user_id" value="Manuel" size="15" >
   </div>
 
   <!-- Gender -->
@@ -317,6 +344,9 @@ input:checked + .roundbutton:before  {
     }
   </script>
 
+ <!-- ********************** Control CONFIGURATION **********************  -->
+ <br>
+ <hr size="3" noshade> 
   <div id="record_tag_id" class="record_tag_class">
     <label class="toggle">
       <input id="record_tog" type="checkbox">
@@ -328,15 +358,12 @@ input:checked + .roundbutton:before  {
 
   <script>
     var input = document.getElementById('record_tog');
-    var outputtext = document.getElementById('record_tag_status');
 
     input.addEventListener('change',function(){
           if(this.checked) {
             startRecord();
-            outputtext.innerHTML = "Grabando!";
           } else {
             stopRecord();
-            outputtext.innerHTML = "Detenido!";
           }
     });
   </script>

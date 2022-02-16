@@ -36,7 +36,7 @@ windows:
   - name: web
     tags: ['core']
     panes:
-    # poner id
+      - ros2 run walker_bringup record_service.py
       - ros2 launch rosbridge_server rosbridge_websocket_launch.xml
       - cd ~/workspace/walker_ws/src/WalKit/walker_web_gui/gui; python3 -m http.server
   - name: gait_analysis
