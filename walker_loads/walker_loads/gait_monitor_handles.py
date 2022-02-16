@@ -266,8 +266,8 @@ class GaitMonitorHand(Node):
 
     def distance_between(self, end_vec0, start_vec0):
     
-        end_vec = end_vec0.copy()
-        start_vec = start_vec0.copy()
+        end_vec = np.array(end_vec0)
+        start_vec = np.array(start_vec0)
 
         # difference between vectors should be positive, 
         # hence first value on end_vec should be bigger
@@ -278,10 +278,10 @@ class GaitMonitorHand(Node):
         lstart = len(start_vec)
         # remove tailing end_vec point
         if lend > lstart:
-            end_vec = end_vec[0:lstart-1]
+            end_vec = end_vec[0:lstart]
         # remove tailing start_vec point
         if lstart > lend:
-            start_vec = start_vec[0:lend-1]
+            start_vec = start_vec[0:lend]
 
         # now we can operate
         diff_v = end_vec - start_vec

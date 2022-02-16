@@ -47,12 +47,14 @@ class GaitMonitorSp(Node):
         self.global_frame_id = self.get_parameter('global_frame_id').value
         
         # stored data
+        self.is_left_load = False
         self.left_loads = []
         self.left_stride_times = []
         self.left_step_times = []
         self.left_stride_lenghts = []
         self.left_step_lenghts = []
 
+        self.is_right_load = False
         self.right_loads = []
         self.right_stride_times = []
         self.right_step_times = []
@@ -99,16 +101,25 @@ class GaitMonitorSp(Node):
 
 
     def left_loads_cb(self, msg):
-        self.update_stats(msg, self.left_loads, self.right_loads, 
-                self.left_stride_times, self.left_stride_lenghts, self.left_step_times, self.left_step_lenghts)
+        if (msg.load>0):
+            if not self.is_left_load:
+                self.update_stats(msg, self.left_loads, self.right_loads, 
+                    self.left_stride_times, self.left_stride_lenghts, self.left_step_times, self.left_step_lenghts)
+            self.is_left_load = True
+        else:
+            self.is_left_load = False
 
     def right_loads_cb(self, msg):
-        self.update_stats(msg, self.right_loads, self.left_loads, 
-                self.right_stride_times, self.right_stride_lenghts, self.right_step_times, self.right_step_lenghts)
+        if (msg.load>0):
+            if not self.is_right_load:
+                self.update_stats(msg, self.right_loads, self.left_loads, 
+                    self.right_stride_times, self.right_stride_lenghts, self.right_step_times, self.right_step_lenghts)
+            self.is_right_load = True
+        else:
+            self.is_right_load = False
 
     # mfc: note to self: as all parameters are lists, it will modify its content after return.
     def update_stats(self, msg, leg_loads, opposite_loads, leg_stride_times, leg_stride_lenghts, leg_step_times, leg_step_lenghts):
-        if (msg.load>0):
             leg_loads.append( msg)
             # If we have at least two steps
             if (len(leg_loads)>1):

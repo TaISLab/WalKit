@@ -278,6 +278,10 @@ void WalkerDiffDrive::update(){
 
 
         //RCLCPP_ERROR(this->get_logger(), "New position [%3.4f, %3.4f, %3.4f deg]", x_, y_, th_*180/3.1415);
+        
+        // we use quaternions in msgs
+        tf2::Quaternion q;
+        q.setRPY(0, 0, th_);
 
         if (publish_tf_){
             // update transform info
@@ -285,8 +289,6 @@ void WalkerDiffDrive::update(){
             transform_.transform.translation.x = x_;
             transform_.transform.translation.y = y_;
             transform_.transform.translation.z = 0.0;
-            tf2::Quaternion q;
-            q.setRPY(0, 0, th_);
             transform_.transform.rotation.x = q.x();
             transform_.transform.rotation.y = q.y();
             transform_.transform.rotation.z = q.z();
