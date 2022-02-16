@@ -123,7 +123,7 @@ input { font-size: 40px; }
 
 <script type="text/javascript" type="text/javascript">
   var ros = new ROSLIB.Ros({
-    url : 'ws://192.168.1.178:9090'
+    url : 'ws://192.168.1.135:9090'
   });
 
   ros.on('connection', function() {
@@ -137,7 +137,6 @@ input { font-size: 40px; }
   ros.on('close', function() {
     document.getElementById("status").innerHTML = "Closed";
   });
-
 
   var right_handle_listener = new ROSLIB.Topic({
     ros : ros,

@@ -89,7 +89,7 @@ class PartialLoads(Node):
     def user_desc_lc(self, msg):
         user_fields = msg.data.split(':')
         if len(user_fields)>2:
-            self.weight = user_fields[2]
+            self.weight = int(user_fields[2])
 
     def l_steps_lc(self, msg):
         self.steps_lc(msg,0)

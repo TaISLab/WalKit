@@ -1,7 +1,7 @@
 session: walker_ros2
 init_cmd: |
   # Any initial config/command goes here:
-  source ~/workspace/walker_ws/install/setup.bash
+  source ~/workspace/walker_ws/install/setup.bash & source ~/workspace/walker_ws/install/setup.sh
 windows:
   - name: arduino
     tags: ['core']
