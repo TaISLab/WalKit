@@ -3,10 +3,26 @@
 <head>
 <meta charset="utf-8" />
 <style>
-  .slidecontainer {
-    width: 100%;
+  h1 {
+    font-size: 60px;
+  }
+
+  h2 {
+    font-size: 20px;
   }
   
+  p {
+    font-size: 12px;
+  }
+
+  .slidecontainer {
+    width: 90%;
+  }
+  
+  .slidecontainer p {
+    font-size: 45px;
+  }
+
   .slider {
     -webkit-appearance: none;
     width: 100%;
@@ -37,6 +53,62 @@
     background: #04AA6D;
     cursor: pointer;
   }
+
+  .record_tag_class {
+    font-size: 2rem;
+    font-family: sans-serif;
+    padding: 2rem 0 2rem 2rem;
+    color: black;
+}
+
+.toggle {
+    margin:0 0 0 2rem;
+    position: relative;
+    display: inline-block;
+    width: 6rem;
+    height: 3.4rem;
+}
+
+.toggle input {
+    display: none;
+}
+
+.roundbutton {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    width: 100%;
+    background-color: #33455e;
+    display: block;
+    transition: all 0.3s;
+    border-radius: 3.4rem;
+    cursor: pointer;
+}
+
+.roundbutton:before {
+    position: absolute;
+    content: "";
+    height: 2.4rem;
+    width: 2.5rem;
+    border-radius: 100%;
+    display: block;
+    left: 0.5rem;
+    bottom: 0.5rem;
+    background-color: white;
+    transition: all 0.3s;
+}
+
+input:checked + .roundbutton {
+    background-color: #FF6E48;
+}
+
+input:checked + .roundbutton:before  {
+    transform: translate(2.6rem, 0);
+}
+
+
 </style>
 
 <script type="text/javascript" src="http://static.robotwebtools.org/roslibjs/current/roslib.min.js"></script>
@@ -45,7 +117,7 @@
 
 <script type="text/javascript" type="text/javascript">
   var ros = new ROSLIB.Ros({
-    url : 'ws://192.168.0.178:9090'
+    url : 'ws://192.168.1.178:9090'
   });
 
   ros.on('connection', function() {
@@ -81,6 +153,25 @@
     document.getElementById("left_handle_force").innerHTML = m.force;
   });
 
+  var left_wheel_listener = new ROSLIB.Topic({
+    ros : ros,
+    name : '/left_wheel',
+    messageType : 'walker_msgs/msg/EncoderStamped'
+  });
+
+  left_wheel_listener.subscribe(function(m) {
+    document.getElementById("left_wheel_encoder").innerHTML = m.encoder;
+  });
+
+  var right_wheel_listener = new ROSLIB.Topic({
+    ros : ros,
+    name : '/right_wheel',
+    messageType : 'walker_msgs/msg/EncoderStamped'
+  });
+
+  right_wheel_listener.subscribe(function(m) {
+    document.getElementById("right_wheel_encoder").innerHTML = m.encoder;
+  });
 
   user_listener = new ROSLIB.Topic({
     ros : ros,
@@ -93,45 +184,87 @@
     var user_info = new ROSLIB.Message({
       data: document.getElementById("ageValue").innerHTML + ':' +
             document.getElementById("heightValue").innerHTML + ':' +
-            document.getElementById("WeightValue").innerHTML + ':' 
+            document.getElementById("WeightValue").innerHTML + ':' +
+            document.getElementById("user_id").value + ':' +
+            document.getElementById('gender_tag_status').innerHTML
     });
     user_listener.publish(user_info);
   }
+ 
+  // Calling a service
+  // -----------------
 
 
-  function execShellCommand(cmd) {
-    var child = require ('child_process');
-    const exec = child.exec;
-    return new Promise((resolve, reject) => {
-      exec(cmd, (error, stdout, stderr) => {
-        if (error) {
-          console.warn(error);
-        }
-          resolve(stdout? stdout : stderr);
+  function startRecord() {
+      var cmdlineClient = new ROSLIB.Service({
+        ros : ros,
+        name : '/start_record',
+        serviceType : 'std_srvs/srv/Empty'
       });
-    });
-  }
-  
 
-  async function asyncCall() {
-    console.log('calling');
-    const result = await execShellCommand('java -version');
-    console.log(result);
-    // expected output: "resolved"
-  }
+      var request = new ROSLIB.ServiceRequest({});
 
-  asyncCall();
+      cmdlineClient.callService(request, function(result) {
+        console.log('Result for service call on '
+          + cmdlineClient.name
+          + 'done ');
+      });      
+  };
+
+  function stopRecord() {
+      var cmdlineClient = new ROSLIB.Service({
+        ros : ros,
+        name : '/stop_record',
+        serviceType : 'std_srvs/srv/Empty'
+      });
+
+      var request = new ROSLIB.ServiceRequest({});
+
+      cmdlineClient.callService(request, function(result) {
+        console.log('Result for service call on '
+          + cmdlineClient.name
+          + 'done ');
+      });      
+  };
 
 </script>
 </head>
 
 <body>
-  <h1>Simple ROS User Interface</h1>
+  <h1>Walk-it ROS2 User Interface</h1>
   <p>Connection status: <span id="status"></span></p>
-  <p>Last left handle force: <span id="left_handle_force"></span></p>
-  <p>Last right handle force: <span id="right_handle_force"></span></p>
-  
+  <p>Left handle force: <span id="left_handle_force"></span></p>
+  <p>Right handle force: <span id="right_handle_force"></span></p>
+  <p>Left wheel encoder: <span id="left_wheel_encoder"></span></p>
+  <p>Right wheel encoder: <span id="right_wheel_encoder"></span></p>
+
   <!-- ********************** USER CONFIGURATION **********************  -->
+
+  <!-- ID -->
+  <div id="user_id_div" class="user_id_class">
+    User id:  
+    <input type="text" id="user_id" value="Manuel">
+  </div>
+
+  <!-- Gender -->
+  <div id="gender_id" class="gender_tog_class">
+    <label class="toggle">
+      <input id="gender_tog" type="checkbox">
+      <span class="roundbutton"></span>
+    </label>
+    Género <span id="gender_tag_status">Masculino</span>
+  </div>
+
+  <script>
+    document.getElementById('gender_tog').onclick = function() {
+      var outputtext = document.getElementById('gender_tag_status');
+          if(this.checked) {
+            outputtext.innerHTML = "Femenino";
+          } else {
+            outputtext.innerHTML = "Masculino";
+          }
+    };
+  </script>
 
   <!-- AGE  -->
   <div class="slidecontainer">
@@ -184,6 +317,29 @@
     }
   </script>
 
+  <div id="record_tag_id" class="record_tag_class">
+    <label class="toggle">
+      <input id="record_tog" type="checkbox">
+      <span class="roundbutton"></span>
+    </label>
+    Rosbag esta <span id="record_tag_status">Detenido</span>
+  </div>
+
+
+  <script>
+    var input = document.getElementById('record_tog');
+    var outputtext = document.getElementById('record_tag_status');
+
+    input.addEventListener('change',function(){
+          if(this.checked) {
+            startRecord();
+            outputtext.innerHTML = "Grabando!";
+          } else {
+            stopRecord();
+            outputtext.innerHTML = "Detenido!";
+          }
+    });
+  </script>
 
 </body>
 </html>
