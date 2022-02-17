@@ -117,13 +117,13 @@ input { font-size: 40px; }
 
 </style>
 
-<script type="text/javascript" src="http://static.robotwebtools.org/roslibjs/current/roslib.min.js"></script>
-<script type="text/javascript" src="https://requirejs.org/docs/release/2.3.5/minified/require.js"></script>
+<script type="text/javascript" src="static.robotwebtools.org/roslibjs/current/roslib.min.js"></script>
+<script type="text/javascript" src="requirejs.org/docs/release/2.3.5/minified/require.js"></script>
 
 
 <script type="text/javascript" type="text/javascript">
   var ros = new ROSLIB.Ros({
-    url : 'ws://192.168.1.135:9090'
+    url : 'ws://localhost:9090'
   });
 
   ros.on('connection', function() {
