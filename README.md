@@ -105,7 +105,7 @@ colcon build --symlink-install
 ```
 If you are compiling on the Raspberry Pi, consider being gentle on the  compilation and use the following instead of regular colcon command:
 ```
-MAKEFLAGS='-j1 -l1' colcon build --executor sequential --symlink-install
+MAKEFLAGS='-j1 -l1' colcon build --executor sequential --symlink-install --allow-overriding ros2bag rosbag2 rosbag2_compression rosbag2_cpp rosbag2_storage rosbag2_storage_default_plugins rosbag2_transport shared_queues_vendor sqlite3_vendor zstd_vendor
 ```
 
 Also, package 'aws_robomaker_hospital_world' will take a  long time (>6min!) to download all the models. Consider getting a good coffee in the meantime.
@@ -131,6 +131,7 @@ Also, package 'aws_robomaker_hospital_world' will take a  long time (>6min!) to 
     - leap_motion: stereo camera package (DOES NOT WORK WITH arm64)  
     - rplidar_ros2: RPLidar A1 package. 
     - laser_filters: For some reason they are not available as binaries in foxy.
+    - rosbag2: Foxy binary has serious performance issues. Recording with leap_motion was severely affected if binary was used.
 
 
 <p align="right">(<a href="#top">back to top</a>)</p>
