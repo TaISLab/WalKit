@@ -266,7 +266,9 @@ input { font-size: 40px; }
 
   <!-- ********************** USER CONFIGURATION **********************  -->
   <br>
- <hr size="3" noshade> 
+  <hr size="3" noshade> 
+  
+  <!-- user id -->
   <div id="user_id_div" class="user_id_class">
     User id:  
     <input type="text" id="user_id" value="Manuel" size="15" >
@@ -289,6 +291,7 @@ input { font-size: 40px; }
           } else {
             outputtext.innerHTML = "Masculino";
           }
+          user();
     };
   </script>
 
@@ -360,6 +363,7 @@ input { font-size: 40px; }
 
     input.addEventListener('change',function(){
           if(this.checked) {
+            user();
             startRecord();
           } else {
             stopRecord();
