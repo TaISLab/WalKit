@@ -21,7 +21,7 @@ windows:
     panes:
       - ros2 launch walker_bringup laser_filter.launch.py
       - ros2 launch ros2_laser_scan_matcher demo_lsm.launch.py
-      # - ros2 launch leap_motion camera.launch.py # not supported in arm64 # check service leapd
+      - ros2 launch leap_motion camera.launch.py
   - name: crappy_description1
     tags: ['core']
     panes:
@@ -57,5 +57,5 @@ windows:
   - name: record
     tags: ['record']
     panes:
-      - ros2 launch walker_bringup bag_recorder.launch.py
+      - ros2 launch walker_bringup bag_recorder.launch.py --topic_list  /left_handle /left_wheel /odom /odom_lscm /right_handle /right_wheel /scan_filtered /sensor/bwt901cl/Angle /sensor/bwt901cl/Imu /sensor/bwt901cl/MagneticField /sensor/bwt901cl/Temperature /tf /tf_static /detected_step_left /detected_step_right /left_loads /right_loads /user_desc /points2
 

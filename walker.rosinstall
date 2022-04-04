@@ -42,3 +42,7 @@
     uri: https://github.com/AlexKaravaev/csm.git
     local-name: csm
     version: ros2_csm_eigen    
+- git:
+    uri: https://github.com/ros2/rosbag2.git
+    local-name: rosbag2
+    version: foxy-future
