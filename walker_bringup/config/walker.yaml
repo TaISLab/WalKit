@@ -21,7 +21,7 @@ windows:
     panes:
       - ros2 launch walker_bringup laser_filter.launch.py
       - ros2 launch ros2_laser_scan_matcher demo_lsm.launch.py
-      # - ros2 launch leap_motion camera.launch.py # not supported in arm64
+      # - ros2 launch leap_motion camera.launch.py # not supported in arm64 # check service leapd
   - name: crappy_description1
     tags: ['core']
     panes:
