@@ -54,6 +54,7 @@
 // Local Headers
 #include "walker_step_detector/cluster_features.h"
 #include "walker_step_detector/laser_processor.h"
+#include "walker_step_detector/legs_tracker.h"
 
 // Custom Messages related Headers
 #include "walker_msgs/msg/step_stamped.hpp"
@@ -156,14 +157,14 @@ private:
     double marker_display_lifetime_;
     int max_detected_clusters_;
 
-    walker_msgs::msg::StepStamped prev_step_r_;
-    walker_msgs::msg::StepStamped prev_step_l_;
-
     //create the publisher and subscribers
     std::string  detected_steps_topic_name_;
     rclcpp::Publisher<walker_msgs::msg::StepStamped>::SharedPtr left_detected_step_pub_;
     rclcpp::Publisher<walker_msgs::msg::StepStamped>::SharedPtr right_detected_step_pub_;
     rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;
+
+    // Tracker assigns scan clusters to legs and keeps track of them
+    LegsTracker kalman_tracker;
 
     /**
      * @brief Clusters the scan according to euclidian distance, 
@@ -189,40 +190,31 @@ private:
 */
         // Find out the time that should be used for tfs
         bool transform_available;
-        rclcpp::Clock tf_time;
-        rclcpp::Time tf_time1;
+        rclcpp::Time tf_time;
         
         // Use time from scan header
         if (use_scan_header_stamp_for_tfs_) 
         {
-            tf_time1 = scan->header.stamp;
+            tf_time = scan->header.stamp;
 
             try {
-                buffer_->lookupTransform(fixed_frame_, scan->header.frame_id, tf_time1, rclcpp::Duration(1.0));
-                transform_available = buffer_->canTransform(fixed_frame_, scan->header.frame_id, tf_time1);              
+                buffer_->lookupTransform(fixed_frame_, scan->header.frame_id, tf_time, rclcpp::Duration(1.0));
+                transform_available = buffer_->canTransform(fixed_frame_, scan->header.frame_id, tf_time);              
             } catch(tf2::TransformException &e) {
                 RCLCPP_WARN(this->get_logger(), "No tf available");
                 transform_available = false;
                 
             }
         } else {
-
             // Otherwise just use the latest tf available
-            
-            tf_time.now();
-            transform_available = buffer_->canTransform(fixed_frame_, scan->header.frame_id, tf_time1);
+            transform_available = buffer_->canTransform(fixed_frame_, scan->header.frame_id, tf_time);
         }
-
-        // Store all processes legs in a set ordered according to their relative distance to the laser scanner
-        std::set<walker_msgs::msg::StepStamped, CompareSteps> step_set;
 
         if(!transform_available) {
             RCLCPP_WARN(this->get_logger(), "Not publishing detected legs because no tf was available");
         } else {
-
             // Iterate through all clusters
-            for (std::list<laser_processor::SampleSet*>::iterator cluster = processor.getClusters().begin();cluster != processor.getClusters().end(); cluster++)
-            {
+            for (std::list<laser_processor::SampleSet*>::iterator cluster = processor.getClusters().begin();cluster != processor.getClusters().end(); cluster++) {
                 // Cluster position in laser frame
                 geometry_msgs::msg::PointStamped position;
                 position.header = scan->header;
@@ -260,8 +252,7 @@ private:
                     #endif
 
                     // Consider only clusters that have a confidence greater than detection_threshold_
-                    if (probability_of_leg > detection_threshold_)
-                    {
+                    if (probability_of_leg > detection_threshold_){
                         // Transform cluster position to fixed frame
                         // This should always be successful because we've checked earlier if a tf was available
                         bool transform_successful_2;
@@ -274,58 +265,23 @@ private:
                         }
 
                         if (transform_successful_2) {
-                            // Add detected cluster to set of detected leg clusters, along with its relative position to the laser scanner
-                            walker_msgs::msg::StepStamped new_step;
-                            new_step.position = position;
-                            new_step.confidence = probability_of_leg;
-                            step_set.insert(new_step);
+                            // keep track of potential detections
+                            kalman_tracker.add_detection(position, probability_of_leg);
                         }
-
                     }
                     
                 }
             }
         }
 
-        // Publish detected legs to /detected_steps 
-        // They are ordered in step_set from closest to the laser scanner to furthest
-        walker_msgs::msg::StepStamped step_l, step_r;
-        
-        if (step_set.size() > 1)
-        {
-            step_l = *std::next(step_set.begin(), 0);
-            step_r = *std::next(step_set.begin(), 1);            
-            
-            // we should have (left.y < right.y)
-            if (step_l.position.point.y>step_r.position.point.y){
-                step_l = *std::next(step_set.begin(), 1); 
-                step_r = *std::next(step_set.begin(), 0);
-            }
-        }
-        else if (step_set.size() == 1)
-        {
-            step_l = *std::next(step_set.begin(), 0);
-            step_r.confidence = 0;
-            // left should have y<0
-            if (step_l.position.point.y>0) {
-                step_r = *std::next(step_set.begin(), 0);
-                step_l.confidence = 0;
-            }
-        } else if (step_set.size() == 0) {
-                step_l.confidence = 0;
-                step_r.confidence = 0;
-        }
 
-        // get speeds
-        step_r.speed = get_speed(step_r, prev_step_r_);
-        step_l.speed = get_speed(step_l, prev_step_l_);
-        step_r.tracked = (step_r.confidence!=0) && (prev_step_r_.confidence!=0);
-        step_l.tracked = (step_l.confidence!=0) && (prev_step_l_.confidence!=0);
-        
-        // save data for next iteration
-        prev_step_l_ = step_l;
-        prev_step_r_ = step_r;
+        // get steps from Kalman set
+        walker_msgs::msg::StepStamped step_r;
+        walker_msgs::msg::StepStamped step_l;
 
+        kalman_tracker.get_steps(&step_r, &step_l);
+
+        // publish lets
         right_detected_step_pub_->publish(step_r);
         left_detected_step_pub_->publish(step_l);
         cvReleaseMat(&tmp_mat);
@@ -338,49 +294,6 @@ private:
 
     }
 
-    geometry_msgs::msg::Point get_speed(walker_msgs::msg::StepStamped step, walker_msgs::msg::StepStamped prev_step){
-        
-        double inc_x, inc_y, inc_z, inc_t, st, pst;
-        geometry_msgs::msg::Point vel;
-        vel.x = vel.y = vel.z = 0;
-
-        if ((step.confidence!=0) && (prev_step.confidence!=0)){
-            
-            st = step.position.header.stamp.sec + step.position.header.stamp.nanosec*1e-9;
-            pst = prev_step.position.header.stamp.sec + prev_step.position.header.stamp.nanosec*1e-9;
-
-            if ( (st>0) && (pst>0) && (st!=pst) ) {
-                inc_t = st - pst;
-
-                inc_x = step.position.point.x - prev_step.position.point.x;
-                inc_y = step.position.point.y - prev_step.position.point.y;
-                inc_z = step.position.point.z - prev_step.position.point.z;
-
-                vel.x = inc_x / inc_t;
-                vel.y = inc_y / inc_t;
-                vel.z = inc_z / inc_t;                        
-            }
-            
-        }
-     
-        return vel;
-    }
-
-
-    /**
-         * @brief Comparison class to order Legs according to their relative distance to the laser scanner
-        **/
-    class CompareSteps
-    {
-    public:
-        bool operator()(const walker_msgs::msg::StepStamped &a, const walker_msgs::msg::StepStamped &b)
-        {
-
-            float rel_dist_a = pow(a.position.point.x * a.position.point.x + a.position.point.y * a.position.point.y, 1. / 2.);
-            float rel_dist_b = pow(b.position.point.x * b.position.point.x + b.position.point.y * b.position.point.y, 1. / 2.);
-            return rel_dist_a < rel_dist_b;
-        }
-    };
 };
 
 int main(int argc, char **argv)
