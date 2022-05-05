@@ -21,7 +21,8 @@
 
         walker_msgs::msg::StepStamped pred_step, measure_step;
         
-
+        pred_step.tracked = false;
+        pred_step.confidence = curr_step.confidence;
         // Predict state for current time-step using the filters
         u.dt() = ti-t;
 
@@ -30,6 +31,8 @@
         // option 1: add closest detection to kalman filter
         if (step_set.size() > 0) {
             measure_step = *std::next(step_set.begin(), 0);
+            
+            pred_step.confidence = measure_step.confidence;
 
             PositionMeasurement position;
             position.pos_x() = measure_step.position.point.x;
@@ -37,6 +40,8 @@
 
             // Update EKF using measurement
             ekf_state = ekf_x.update(pm, position);
+            pred_step.tracked = true;
+            
         }
 
         PositionMeasurement pred_position = pm.h(ekf_state);
@@ -46,17 +51,15 @@
         pred_step.position.header = curr_step.position.header;
         
         // correct time
-
+        ros::Duration time_inc = ros::Duration(u.dt());
+        rclcpp::Time old_time = rclcpp::Time(curr_step.position.header.timestamp);
+        rclcpp::Time new_time = old_time + time_inc;
+        pred_step.position.header = new_time;
 
 
         // get speeds
         pred_step.speed = get_speed(pred_step, curr_step);
         
-        // are they tracked or just predicted ?
-        pred_step.tracked = ;
-        pred_step.confidence = ;
-
-
         // cleaning: my new reference is this one
         curr_step = pred_step;
 

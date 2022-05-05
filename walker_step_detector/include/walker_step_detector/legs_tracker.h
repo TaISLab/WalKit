@@ -4,6 +4,8 @@
 
 // Custom Messages related Headers
 #include "walker_msgs/msg/step_stamped.hpp"
+#include <walker_step_detector/track_leg.h>
+
 
     class LegsTracker{   
 

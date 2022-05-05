@@ -1,18 +1,9 @@
-
 #include <walker_step_detector/legs_tracker.h>
 
     LegsTracker::LegsTracker(){
-            /* constructor:
-            - Crear 4 filtros: dx,dy, ix,iy
-            - Posiciones iniciales en 0
-
-
-            */
-
     }
 
-    LegsTracker::~LegsTracker(){
-        
+    LegsTracker::~LegsTracker(){        
     }
 
     void LegsTracker::add_detection( geometry_msgs::msg::PointStamped position, float probability){

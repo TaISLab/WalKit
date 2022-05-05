@@ -5,11 +5,11 @@
 // Custom Messages related Headers
 #include "walker_msgs/msg/step_stamped.hpp"
 
-#include "walker_step_detector/SystemModelLeg.hpp"
-#include "walker_step_detector/PositionMeasurementModelLeg.hpp"
+#include "kalman/ExtendedKalmanFilter.hpp"
+#include "kalman/UnscentedKalmanFilter.hpp"
 
-#include <walker_step_detector/ExtendedKalmanFilter.hpp>
-#include <walker_step_detector/UnscentedKalmanFilter.hpp>
+#include "kalman/SystemModelLeg.hpp"
+#include "kalman/PositionMeasurementModelLeg.hpp"
 
 
 // Some type shortcuts
