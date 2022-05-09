@@ -20,7 +20,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'plot_forces = walker_plot.plot_forces:main'
+            'plot_forces = walker_plot.plot_forces:main',
+            'plot_active_area = walker_plot.plot_active_area:main',
         ],
     },
 )

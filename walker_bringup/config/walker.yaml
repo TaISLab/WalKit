@@ -21,20 +21,17 @@ windows:
     panes:
       - ros2 launch walker_bringup laser_filter.launch.py
       - ros2 launch ros2_laser_scan_matcher demo_lsm.launch.py
-      # - ros2 launch leap_motion camera.launch.py # not supported in arm64 # check service leapd
   - name: crappy_description1
     tags: ['core']
     panes:
-      - ros2 run tf2_ros static_transform_publisher 0.55  0     0.210 0    0    0    base_footprint laser  # z is lower...
+      - ros2 run tf2_ros static_transform_publisher 0     0     0.075 0    0    0    base_footprint base_link
       - ros2 run tf2_ros static_transform_publisher 0.55  0     0.474 0    0    0    base_footprint witmotion
-      - ros2 run tf2_ros static_transform_publisher 0.31  0.24  0.850 0    0    0    base_footprint left_handle_id
-      - ros2 run tf2_ros static_transform_publisher 0.31 -0.24  0.850 0    0    0    base_footprint right_handle_id
-      - ros2 run tf2_ros static_transform_publisher 0     0     0.075 0    0    0    base_footprint base_link 
+      - ros2 run tf2_ros static_transform_publisher 0.55  0     0.210 0    0    0    base_footprint laser  # z is lower...
   - name: crappy_description2
     tags: ['core']
     panes:
-      - ros2 run tf2_ros static_transform_publisher 0.22  0.080 0.450  1.9  3.14  -0.55 base_footprint leap_camera_left
-      - ros2 run tf2_ros static_transform_publisher 0.31 -0.080 0.450  1.9  3.14  -0.55 base_footprint leap_camera_right
+      - ros2 run tf2_ros static_transform_publisher 0.31  0.24  0.850 0    0    0    base_footprint left_handle_id
+      - ros2 run tf2_ros static_transform_publisher 0.31 -0.24  0.850 0    0    0    base_footprint right_handle_id 
       - ros2 run tf2_ros static_transform_publisher 0     0.276 0.075 0    0    0    base_footprint left_wheel_id
       - ros2 run tf2_ros static_transform_publisher 0    -0.276 0.075 0    0    3.14 base_footprint right_wheel_id
   - name: web
