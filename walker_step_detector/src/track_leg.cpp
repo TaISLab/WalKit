@@ -1,12 +1,20 @@
 
 #include <walker_step_detector/track_leg.h>
 
-    TrackLeg::TrackLeg();
+    TrackLeg::TrackLeg(rclcpp::Node *node_){
+        node = node_;
+        t = 0;
+    }
+
+    TrackLeg::TrackLeg(){
+        t = 0;
+    }
             
-    ~TrackLeg::TrackLeg();
+    TrackLeg::~TrackLeg(){
+    }
 
     void TrackLeg::add( walker_msgs::msg::StepStamped step){
-        step_set.insert(step);
+        step_list.push_back(step);
     }
 
     walker_msgs::msg::StepStamped TrackLeg::get_step(){
@@ -14,23 +22,37 @@
     }
 
     int TrackLeg::size(){
-        return step_set.size();
+        return step_list.size();
     }
 
     walker_msgs::msg::StepStamped TrackLeg::predict_step(double ti){
 
         walker_msgs::msg::StepStamped pred_step, measure_step;
-        
+        // Control input
+        Control u;
+
         pred_step.tracked = false;
         pred_step.confidence = curr_step.confidence;
+        
         // Predict state for current time-step using the filters
         u.dt() = ti-t;
 
         auto ekf_state = ekf.predict(sys, u);
 
-        // option 1: add closest detection to kalman filter
-        if (step_set.size() > 0) {
-            measure_step = *std::next(step_set.begin(), 0);
+        // option 1: consider closest detection 
+        //           to current step position as
+        //           kalman filter measurement
+        if (step_list.size() > 0) {
+            // find closest to current step position
+            double d = 99999;
+            double min_dist = 99999;
+            for (auto st : step_list) {
+                d = CompareSteps::dist(curr_step, st);
+                if (d<min_dist){
+                    min_dist = d;
+                    measure_step = st;
+                }
+            }
             
             pred_step.confidence = measure_step.confidence;
 
@@ -39,7 +61,7 @@
             position.pos_y() = measure_step.position.point.x;        
 
             // Update EKF using measurement
-            ekf_state = ekf_x.update(pm, position);
+            ekf_state = ekf.update(pm, position);
             pred_step.tracked = true;
             
         }
@@ -51,10 +73,10 @@
         pred_step.position.header = curr_step.position.header;
         
         // correct time
-        ros::Duration time_inc = ros::Duration(u.dt());
-        rclcpp::Time old_time = rclcpp::Time(curr_step.position.header.timestamp);
+        rclcpp::Duration time_inc = rclcpp::Duration(u.dt());
+        rclcpp::Time old_time = rclcpp::Time(curr_step.position.header.stamp);
         rclcpp::Time new_time = old_time + time_inc;
-        pred_step.position.header = new_time;
+        pred_step.position.header.stamp = new_time;
 
 
         // get speeds
@@ -63,16 +85,16 @@
         // cleaning: my new reference is this one
         curr_step = pred_step;
 
-        // new set will be built around new center
-        step_set = std::set<walker_msgs::msg::StepStamped, CompareSteps(curr_step)>;
+        // new list, forget previous potential detections ...
+        step_list.clear();     
 
+        // store last prediction time    
+        t = ti;
         return pred_step;
     }
 
 
-
-
-    geometry_msgs::msg::Point get_speed(walker_msgs::msg::StepStamped step, walker_msgs::msg::StepStamped prev_step){
+    geometry_msgs::msg::Point TrackLeg::get_speed(walker_msgs::msg::StepStamped step, walker_msgs::msg::StepStamped prev_step){
         
         double inc_x, inc_y, inc_z, inc_t, st, pst;
         geometry_msgs::msg::Point vel;
@@ -94,11 +116,11 @@
                 vel.y = inc_y / inc_t;
                 vel.z = inc_z / inc_t;                        
             }else{
-                printf("")    
+                RCLCPP_ERROR(node->get_logger(), "get_speed: Problem with stamps");    
             }
             
         } else {
-            printf("")
+            RCLCPP_ERROR(node->get_logger(), "get_speed: Problem with confidences");
         }
      
         return vel;

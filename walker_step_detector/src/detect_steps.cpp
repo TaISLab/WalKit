@@ -278,8 +278,9 @@ private:
         // get steps from Kalman set
         walker_msgs::msg::StepStamped step_r;
         walker_msgs::msg::StepStamped step_l;
+        double t = (this->now()).nanoseconds();
 
-        kalman_tracker.get_steps(&step_r, &step_l);
+        kalman_tracker.get_steps(&step_r, &step_l, t);
 
         // publish lets
         right_detected_step_pub_->publish(step_r);

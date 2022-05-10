@@ -1,6 +1,8 @@
 #ifndef TRACKLEG_HH
 #define TRACKLEG_HH
 
+#include<set>
+#include <rclcpp/rclcpp.hpp>
 
 // Custom Messages related Headers
 #include "walker_msgs/msg/step_stamped.hpp"
@@ -10,6 +12,7 @@
 
 #include "kalman/SystemModelLeg.hpp"
 #include "kalman/PositionMeasurementModelLeg.hpp"
+#include "walker_step_detector/compare_steps.h"
 
 
 // Some type shortcuts
@@ -25,6 +28,8 @@ typedef Leg::PositionMeasurementModel<T> PositionModel;
 
         public:
             TrackLeg();
+
+            TrackLeg(rclcpp::Node *node_);
             
             ~TrackLeg();
 
@@ -34,17 +39,20 @@ typedef Leg::PositionMeasurementModel<T> PositionModel;
 
             int size();
 
-            walker_msgs::msg::StepStamped TrackLeg::predict_step(double t);
+            walker_msgs::msg::StepStamped predict_step(double t);
+
+            geometry_msgs::msg::Point get_speed(walker_msgs::msg::StepStamped step, walker_msgs::msg::StepStamped prev_step);
 
         private:
-            // set where we store laser detections that could be an step detection
-            std::set<walker_msgs::msg::StepStamped, CompareSteps> step_set;
+            // vector where we store laser detections that could be an step detection
+            std::vector<walker_msgs::msg::StepStamped> step_list;
 
             walker_msgs::msg::StepStamped curr_step;
 
             // last update time
             double t;
 
+            rclcpp::Node *node;
 
             // Extended Kalman Filter
             Kalman::ExtendedKalmanFilter<State> ekf;

@@ -32,9 +32,6 @@ find_package(nav_msgs REQUIRED)
 find_package(message_filters REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(kalman REQUIRED)
-
-MESSAGE( WARNING "xxxx: ")
 
 set (OpenCV_DIR /usr/local/include)
 include_directories(include ${OpenCV_INCLUDE_DIR})
@@ -42,19 +39,22 @@ include_directories(include ${OpenCV_INCLUDE_DIR})
 ament_export_include_directories(include)
 ament_export_dependencies(
     rclcpp
-    kalman
 )
 
 # detect_steps executable
 add_executable (detect_steps
                 src/detect_steps.cpp
                 src/laser_processor.cpp
-                src/cluster_features.cpp
+                src/cluster_features.cpp                
+                src/compare_steps.cpp
+                src/legs_tracker.cpp
+                src/track_leg.cpp
                 include/walker_step_detector/laser_processor.h
                 include/walker_step_detector/cluster_features.h
                 )
-target_link_libraries(detect_steps kalman ${catkin_LIBRARIES})
-ament_target_dependencies(detect_steps rclcpp walker_msgs OpenCV sensor_msgs geometry_msgs tf2 tf2_geometry_msgs tf2_ros visualization_msgs kalman) 
+
+target_link_libraries(detect_steps ${catkin_LIBRARIES})
+ament_target_dependencies(detect_steps rclcpp walker_msgs OpenCV sensor_msgs geometry_msgs tf2 tf2_geometry_msgs tf2_ros visualization_msgs) 
 
 install (TARGETS
 detect_steps

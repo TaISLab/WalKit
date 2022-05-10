@@ -2,6 +2,7 @@
 #define LEGSTRACKER_HH
 
 
+#include <rclcpp/rclcpp.hpp>
 // Custom Messages related Headers
 #include "walker_msgs/msg/step_stamped.hpp"
 #include <walker_step_detector/track_leg.h>
@@ -12,17 +13,18 @@
         public:
             LegsTracker();
             
+            LegsTracker(rclcpp::Node *node_);
+            
             ~LegsTracker();
 
             void add_detection( geometry_msgs::msg::PointStamped position, float probability);
 
-            void get_steps(walker_msgs::msg::StepStamped* step_r, walker_msgs::msg::StepStamped* step_l);
+            void get_steps(walker_msgs::msg::StepStamped* step_r, walker_msgs::msg::StepStamped* step_l, double t);
 
         private:
             TrackLeg l_tracker;
             TrackLeg r_tracker;
-
-
+            rclcpp::Node *node;
     };
 
 

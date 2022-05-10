@@ -1,6 +1,12 @@
 #include <walker_step_detector/legs_tracker.h>
 
+
     LegsTracker::LegsTracker(){
+
+    }
+
+    LegsTracker::LegsTracker(rclcpp::Node *node_){
+        node = node_;
     }
 
     LegsTracker::~LegsTracker(){        
@@ -10,14 +16,14 @@
 
         walker_msgs::msg::StepStamped new_step, right_step, left_step;
         new_step.position = position;
-        new_step.confidence = probability_of_leg;
+        new_step.confidence = probability;
 
         right_step = r_tracker.get_step();
         left_step = l_tracker.get_step();
 
-        if (CompareSteps.dist(right_step, left_step)>0) {
+        if (CompareSteps::dist(right_step, left_step)>0) {
             // add to closer feet
-            if (CompareSteps.dist(new_step, left_step) < CompareSteps.dist(new_step, right_step)){
+            if (CompareSteps::dist(new_step, left_step) < CompareSteps::dist(new_step, right_step)){
                 l_tracker.add(new_step);
             } else{
                 r_tracker.add(new_step);

@@ -22,7 +22,6 @@
   <depend>nav_msgs</depend>
   <depend>message_filters</depend>
   <depend>scipy</depend>
-  <depend>kalman</depend>
   
   <!-- This dependency should point to 4.2 -->
   <depend>libopencv-dev</depend>
