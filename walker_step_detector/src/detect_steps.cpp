@@ -42,7 +42,9 @@
 #include <tf2/transform_datatypes.h> 
 #include <sensor_msgs/msg/laser_scan.hpp>
 #include <geometry_msgs/msg/point_stamped.hpp>
-#include <memory>
+#include <geometry_msgs/msg/point_stamped.hpp>
+#include <visualization_msgs/msg/marker.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
 
 // OpenCV related Headers
 #include <opencv2/core/core.hpp>
@@ -55,17 +57,25 @@
 #include "walker_step_detector/cluster_features.h"
 #include "walker_step_detector/laser_processor.h"
 #include "walker_step_detector/legs_tracker.h"
+#include "walker_step_detector/color_tools.h"
 
 // Custom Messages related Headers
 #include "walker_msgs/msg/step_stamped.hpp"
 
 #include <fstream>
+#include <memory>
+//#include <ctime>
+//#include <cstdlib>
+
+using namespace std::chrono_literals;
+
 
 class DetectSteps : public rclcpp::Node
 {
 public:
-    DetectSteps() : Node("detect_steps")
+    DetectSteps() : Node("detect_steps"),kalman_tracker(this)
     {
+        //srand (static_cast <unsigned> (time(0)));
 
         //Get ROS parameters
         std::string forest_file;
@@ -119,6 +129,9 @@ public:
 
         left_detected_step_pub_ = this->create_publisher<walker_msgs::msg::StepStamped>(detected_steps_topic_name_ + "_left", 20);
         right_detected_step_pub_ = this->create_publisher<walker_msgs::msg::StepStamped>(detected_steps_topic_name_ + "_right", 20);
+        //marker_pub_ = this->create_publisher<visualization_msgs::msg::Marker>("clusters", 5);
+        markers_array_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("clusters", 20);
+
         this->scan_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(scan_topic, default_qos, std::bind(&DetectSteps::laserCallback, this, std::placeholders::_1));
 
         buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
@@ -162,9 +175,188 @@ private:
     rclcpp::Publisher<walker_msgs::msg::StepStamped>::SharedPtr left_detected_step_pub_;
     rclcpp::Publisher<walker_msgs::msg::StepStamped>::SharedPtr right_detected_step_pub_;
     rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;
+    //rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub_;
+    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr markers_array_pub_;
+    rclcpp::TimerBase::SharedPtr timer_;
 
     // Tracker assigns scan clusters to legs and keeps track of them
     LegsTracker kalman_tracker;
+
+
+    visualization_msgs::msg::Marker get_center_marker( laser_processor::SampleSet* cluster, int id ){
+        // Number of points
+        //int num_points = cluster->size();
+        
+        std::string frame_id = "laser";
+        std::string ns = "laser";
+        
+        double alph = 0.9;
+
+        double r = 1.0;
+        double g = 0;
+        double b = 0;
+        //RCLCPP_INFO(this->get_logger(), "color: %2.2f, %2.2f, %2.2f ", r,g,b);
+        double size = 0.05;
+
+        visualization_msgs::msg::Marker marker;
+
+        marker.header.frame_id = frame_id;
+        marker.header.stamp = rclcpp::Clock().now();
+        marker.lifetime = rclcpp::Duration(0.0);
+
+        marker.ns = ns;
+        marker.id = id;
+        marker.action = visualization_msgs::msg::Marker::ADD;
+        marker.type = visualization_msgs::msg::Marker::SPHERE;
+
+        marker.pose.position = cluster->getPosition();
+             
+        marker.pose.orientation.w = 1;
+
+        // SPHERE markers use scale for diameter in each axis
+        marker.scale.x = size;
+        marker.scale.y = size;
+        marker.scale.z = size;
+
+        // random color for each cluster
+
+        marker.color.r = r;
+        marker.color.g = g;
+        marker.color.b = b;
+        marker.color.a = alph;
+
+
+
+
+        //marker_pub_->publish(marker);
+        return marker;
+    }
+
+    visualization_msgs::msg::Marker get_marker(const laser_processor::SampleSet* cluster, int id ){
+        // Number of points
+        //int num_points = cluster->size();
+        
+        std::string frame_id = "laser";
+        std::string ns = "laser";
+        
+        double alph = 0.8;
+        RGB rgb0 = pick_one_of_n(id, 50);  // doubt ill get more than 50 clusters
+
+        double r = rgb0.r; // static_cast <double> (rand()) / static_cast <double> (RAND_MAX);
+        double g = rgb0.g; // static_cast <double> (rand()) / static_cast <double> (RAND_MAX);
+        double b = rgb0.b; // static_cast <double> (rand()) / static_cast <double> (RAND_MAX);
+        //RCLCPP_INFO(this->get_logger(), "color: %2.2f, %2.2f, %2.2f ", r,g,b);
+        double width = 0.02;
+        double height = 0.02;
+        double laser_z = 0.0;
+
+        visualization_msgs::msg::Marker marker;
+
+        marker.header.frame_id = frame_id;
+        marker.header.stamp = rclcpp::Clock().now();
+        marker.lifetime = rclcpp::Duration(0.0);
+
+        marker.ns = ns;
+        marker.id = id;
+        marker.action = visualization_msgs::msg::Marker::ADD;
+        marker.type = visualization_msgs::msg::Marker::POINTS;
+
+        marker.pose.position.x = 0;
+        marker.pose.position.y = 0;
+        marker.pose.position.z = 0;        
+        marker.pose.orientation.w = 1;
+
+        // POINTS markers use x and y scale for width/height respectively
+        marker.scale.x = width;
+        marker.scale.y = height;
+
+        // random color for each cluster
+
+        marker.color.r = r;
+        marker.color.g = g;
+        marker.color.b = b;
+        marker.color.a = alph;
+
+
+        // Create the vertices for the points 
+        for (auto sample : *cluster){
+            geometry_msgs::msg::Point p;
+            p.x = sample->x;
+            p.y = sample->y;
+            p.z = laser_z;
+
+            marker.points.push_back(p);
+
+        }
+
+        //marker_pub_->publish(marker);
+        return marker;
+    }
+
+    void delete_all(){
+        // Number of points
+        //int num_points = cluster->size();
+        
+        std::string frame_id = "laser";
+        std::string ns = "laser";
+        
+        visualization_msgs::msg::Marker marker;
+
+        marker.header.frame_id = frame_id;
+        marker.header.stamp = rclcpp::Clock().now();
+        marker.lifetime = rclcpp::Duration(0.0);
+
+        marker.ns = ns;
+        marker.action = visualization_msgs::msg::Marker::DELETEALL;
+
+        marker.pose.position.x = 0;
+        marker.pose.position.y = 0;
+        marker.pose.position.z = 0;        
+        marker.pose.orientation.w = 1;
+
+        visualization_msgs::msg::MarkerArray marker_array;
+        marker_array.markers.push_back(marker);
+        markers_array_pub_->publish(marker_array);
+        //timer_->cancel();
+        //RCLCPP_ERROR(this->get_logger(), "Cleaned XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+}
+
+    void publish_clusters(std::list<laser_processor::SampleSet*> clusters){
+
+        delete_all();
+        visualization_msgs::msg::MarkerArray marker_array;
+        int id = 0;
+        for (auto cluster: clusters){
+            visualization_msgs::msg::Marker mark_i = get_marker(cluster, id++);
+            marker_array.markers.push_back(mark_i);
+            visualization_msgs::msg::Marker center_mark_i = get_center_marker(cluster, id++);
+            marker_array.markers.push_back(center_mark_i);
+        }
+
+        markers_array_pub_->publish(marker_array);
+        //timer_ = create_wall_timer(200ms, std::bind(&DetectSteps::delete_all, this));
+
+    }
+
+    void publish_cluster(laser_processor::SampleSet* cluster){
+
+        delete_all();
+        visualization_msgs::msg::MarkerArray marker_array;
+        static int sid = 0;
+
+        visualization_msgs::msg::Marker mark_i = get_marker(cluster, sid++);
+        marker_array.markers.push_back(mark_i);
+        visualization_msgs::msg::Marker center_mark_i = get_center_marker(cluster, sid++);
+        center_mark_i.color.r = 0;
+        center_mark_i.color.b = 1;
+        marker_array.markers.push_back(center_mark_i);
+
+
+        markers_array_pub_->publish(marker_array);
+        //timer_ = create_wall_timer(200ms, std::bind(&DetectSteps::delete_all, this));
+
+    }
+
 
     /**
      * @brief Clusters the scan according to euclidian distance, 
@@ -174,20 +366,16 @@ private:
      */
     void laserCallback(const sensor_msgs::msg::LaserScan::SharedPtr scan)
     {
-        laser_processor::ScanProcessor processor(*scan);
-        processor.splitConnected(cluster_dist_euclid_);
-        processor.removeLessThan(min_points_per_cluster_);
-        
         // OpenCV matrix needed to use the OpenCV random forest classifier
         CvMat* tmp_mat = cvCreateMat(1, feat_count_, CV_32FC1);
 
         walker_msgs::msg::StepStamped left_detected_step;
         walker_msgs::msg::StepStamped right_detected_step;
-/*
-        left_detected_step.position.header.frame_id = scan->header.frame_id;
-        left_detected_step.position.header.stamp = scan->header.stamp;
-        right_detected_step.position.header = left_detected_step.position.header;
-*/
+
+        laser_processor::ScanProcessor processor(*scan);
+        processor.splitConnected(cluster_dist_euclid_);
+        processor.removeLessThan(min_points_per_cluster_);
+
         // Find out the time that should be used for tfs
         bool transform_available;
         rclcpp::Time tf_time;
@@ -214,6 +402,8 @@ private:
             RCLCPP_WARN(this->get_logger(), "Not publishing detected legs because no tf was available");
         } else {
             // Iterate through all clusters
+            RCLCPP_ERROR(this->get_logger(), "Found %d clusters", processor.size());
+            publish_clusters(processor.getClusters());
             for (std::list<laser_processor::SampleSet*>::iterator cluster = processor.getClusters().begin();cluster != processor.getClusters().end(); cluster++) {
                 // Cluster position in laser frame
                 geometry_msgs::msg::PointStamped position;
@@ -232,7 +422,7 @@ private:
 
                 // Only consider clusters within max_distance
                 if (rel_dist < max_detect_distance_) {
-
+                    //plot_cluster(*cluster);
                     // Classify cluster using random forest classifier
                     std::vector<float> f = cf_.calcClusterFeatures(*cluster, *scan);
                     for (int k = 0; k < feat_count_; k++)
@@ -253,6 +443,7 @@ private:
 
                     // Consider only clusters that have a confidence greater than detection_threshold_
                     if (probability_of_leg > detection_threshold_){
+                        publish_cluster(*cluster);
                         // Transform cluster position to fixed frame
                         // This should always be successful because we've checked earlier if a tf was available
                         bool transform_successful_2;
@@ -294,6 +485,8 @@ private:
         RCLCPP_INFO(this->get_logger(), "Pose %s: %3.3f, %3.3f (%3.3f)", text.c_str(), step.position.point.x, step.position.point.y, step.confidence);
 
     }
+
+
 
 };
 

@@ -11,7 +11,7 @@
     class LegsTracker{   
 
         public:
-            LegsTracker();
+            //LegsTracker();
             
             LegsTracker(rclcpp::Node *node_);
             

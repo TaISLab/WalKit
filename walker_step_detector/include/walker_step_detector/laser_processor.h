@@ -150,6 +150,11 @@ namespace laser_processor
             * @param thresh Euclidian distance threshold for clustering
             */
             void splitConnected(float thresh);
+
+            /**
+            * @brief Get number of clusters
+            */
+            int size(){ return clusters_.size(); };            
     };
 }
 

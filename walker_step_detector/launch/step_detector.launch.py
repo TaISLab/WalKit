@@ -34,7 +34,8 @@ def generate_launch_description():
             executable="detect_steps",
             name="detect_steps",
             parameters= [
-                {"scan_topic" : "/scan_filtered2"},
+                {"scan_topic" : "/scan_filtered"},
+                #{"scan_topic" : "/scan_filtered2"},
                 {"fixed_frame" : "laser"},
                 {"forest_file" : forest_file_path},
                 {"detection_threshold": 0.01},
@@ -44,11 +45,13 @@ def generate_launch_description():
                 {"max_detect_distance": 0.45},
                 {"use_scan_header_stamp_for_tfs": False},
                 {"max_detected_clusters": 2}
-            ]
+            ],
+        remappings=[ ("detected_step_left", "new_left"),
+                     ("detected_step_right", "new_right")]
     )
 
-    ld.add_action(laser_filter2_node)
+    #ld.add_action(laser_filter2_node)
     ld.add_action(detect_steps_node)
-
+    
     return ld 
  

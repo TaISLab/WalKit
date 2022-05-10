@@ -6,9 +6,9 @@
         t = 0;
     }
 
-    TrackLeg::TrackLeg(){
-        t = 0;
-    }
+    // TrackLeg::TrackLeg(){
+    //     t = 0;
+    // }
             
     TrackLeg::~TrackLeg(){
     }
@@ -31,7 +31,9 @@
         // Control input
         Control u;
 
+        // is it a tracked measurement or just a prediction?
         pred_step.tracked = false;
+        // how sure are we this is a "leg"
         pred_step.confidence = curr_step.confidence;
         
         // Predict state for current time-step using the filters
@@ -62,8 +64,9 @@
 
             // Update EKF using measurement
             ekf_state = ekf.update(pm, position);
-            pred_step.tracked = true;
-            
+            pred_step.tracked = true;            
+        } else{
+            RCLCPP_ERROR(node->get_logger(), "No laser measurement available. No EKF update.");
         }
 
         PositionMeasurement pred_position = pm.h(ekf_state);
@@ -78,10 +81,12 @@
         rclcpp::Time new_time = old_time + time_inc;
         pred_step.position.header.stamp = new_time;
 
-
         // get speeds
         pred_step.speed = get_speed(pred_step, curr_step);
         
+        // frame reference
+        pred_step.position.header.frame_id = curr_step.position.header.frame_id;
+
         // cleaning: my new reference is this one
         curr_step = pred_step;
 
@@ -90,6 +95,7 @@
 
         // store last prediction time    
         t = ti;
+
         return pred_step;
     }
 

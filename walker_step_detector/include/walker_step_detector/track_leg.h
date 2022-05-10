@@ -27,7 +27,7 @@ typedef Leg::PositionMeasurementModel<T> PositionModel;
     class TrackLeg{   
 
         public:
-            TrackLeg();
+            //TrackLeg();
 
             TrackLeg(rclcpp::Node *node_);
             
