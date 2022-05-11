@@ -5,7 +5,7 @@
 
     // }
 
-    LegsTracker::LegsTracker(rclcpp::Node *node_):l_tracker(node_),r_tracker(node_){
+    LegsTracker::LegsTracker(rclcpp::Node *node_):l_tracker(node_, "left"),r_tracker(node_, "right"){
         node = node_;
     }
 

@@ -42,7 +42,7 @@ def generate_launch_description():
                 {"cluster_dist_euclid": 0.13},
                 {"min_points_per_cluster":  3},
                 {"detect_distance_frame_id": "base_link"},
-                {"max_detect_distance": 0.45},
+                {"max_detect_distance": 0.75},
                 {"use_scan_header_stamp_for_tfs": False},
                 {"max_detected_clusters": 2}
             ],

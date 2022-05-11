@@ -2,6 +2,9 @@
 #define TRACKLEG_HH
 
 #include<set>
+#include <iostream>
+#include <fstream>
+
 #include <rclcpp/rclcpp.hpp>
 
 // Custom Messages related Headers
@@ -29,7 +32,7 @@ typedef Leg::PositionMeasurementModel<T> PositionModel;
         public:
             //TrackLeg();
 
-            TrackLeg(rclcpp::Node *node_);
+            TrackLeg(rclcpp::Node *node_, std::string name);
             
             ~TrackLeg();
 
@@ -44,6 +47,8 @@ typedef Leg::PositionMeasurementModel<T> PositionModel;
             geometry_msgs::msg::Point get_speed(walker_msgs::msg::StepStamped step, walker_msgs::msg::StepStamped prev_step);
 
         private:
+            std::ofstream myfile;
+
             // vector where we store laser detections that could be an step detection
             std::vector<walker_msgs::msg::StepStamped> step_list;
 

@@ -1,9 +1,10 @@
 
 #include <walker_step_detector/track_leg.h>
 
-    TrackLeg::TrackLeg(rclcpp::Node *node_){
+    TrackLeg::TrackLeg(rclcpp::Node *node_, std::string name){
         node = node_;
         t = 0;
+        myfile.open (name + ".csv");
     }
 
     // TrackLeg::TrackLeg(){
@@ -11,6 +12,7 @@
     // }
             
     TrackLeg::~TrackLeg(){
+        myfile.close();
     }
 
     void TrackLeg::add( walker_msgs::msg::StepStamped step){
@@ -37,7 +39,7 @@
         pred_step.confidence = curr_step.confidence;
         
         // Predict state for current time-step using the filters
-        u.dt() = ti-t;
+        u.dt() = (ti-t)*1e-9;
 
         auto ekf_state = ekf.predict(sys, u);
 
@@ -60,12 +62,16 @@
 
             PositionMeasurement position;
             position.pos_x() = measure_step.position.point.x;
-            position.pos_y() = measure_step.position.point.x;        
+            position.pos_y() = measure_step.position.point.y;        
 
             // Update EKF using measurement
             ekf_state = ekf.update(pm, position);
-            pred_step.tracked = true;            
+            pred_step.tracked = true;   
+            // u,x,y   // predict + update      
+            myfile   << u.dt()     << "," << position.pos_x() << "," << position.pos_y() << std::endl;
         } else{
+            // u,nan,nan // predict -
+            myfile   << u.dt()     << "," << "nan" << "," << "nan" << std::endl;
             RCLCPP_ERROR(node->get_logger(), "No laser measurement available. No EKF update.");
         }
 
