@@ -5,6 +5,23 @@
         node = node_;
         t = 0;
         myfile.open (name + ".csv");
+
+        /*
+                import matplotlib.pyplot as plt  
+                import pandas as pd      
+                import numpy as np    
+
+                data = pd.read_csv('left.csv', na_values='nan', names=['dt', 'x','y'])       
+                data['t'] = np.cumsum(data.dt)
+
+                data = pd.read_csv('right.csv', na_values='nan', names=['dt', 'x','y'])
+                data['t'] = np.cumsum(data.dt)
+
+                plt.plot(data.t, data.x); plt.show()
+                100*np.sum(np.isfinite(data.x))/len(data.x)
+
+
+         */
     }
 
     // TrackLeg::TrackLeg(){
@@ -81,11 +98,8 @@
         pred_step.position.point.y = pred_position.pos_y();
         pred_step.position.header = curr_step.position.header;
         
-        // correct time
-        rclcpp::Duration time_inc = rclcpp::Duration(u.dt());
-        rclcpp::Time old_time = rclcpp::Time(curr_step.position.header.stamp);
-        rclcpp::Time new_time = old_time + time_inc;
-        pred_step.position.header.stamp = new_time;
+        // set prediction time
+        pred_step.position.header.stamp = rclcpp::Time(ti);
 
         // get speeds
         pred_step.speed = get_speed(pred_step, curr_step);
@@ -102,6 +116,7 @@
         // store last prediction time    
         t = ti;
 
+        RCLCPP_ERROR (node->get_logger(), "Pred -- step at  [%3.3f, %3.3f]", pred_step.position.point.x, pred_step.position.point.y);
         return pred_step;
     }
 
@@ -112,28 +127,43 @@
         geometry_msgs::msg::Point vel;
         vel.x = vel.y = vel.z = 0;
 
-        if ((step.confidence!=0) && (prev_step.confidence!=0)){
-            
-            st = step.position.header.stamp.sec + step.position.header.stamp.nanosec*1e-9;
-            pst = prev_step.position.header.stamp.sec + prev_step.position.header.stamp.nanosec*1e-9;
+        // check confidence problems
+        // if (step.confidence==0) {
+        //         RCLCPP_ERROR(node->get_logger(), "get_speed: step confidence == 0 ");    
+        //         return vel;
+        // }
+        // if (prev_step.confidence==0){
+        //         RCLCPP_ERROR(node->get_logger(), "get_speed: prev step confidence == 0 ");    
+        //         return vel;
+        // }
 
-            if ( (st>0) && (pst>0) && (st!=pst) ) {
-                inc_t = st - pst;
+        // check timestamp problems
+        st = step.position.header.stamp.sec + step.position.header.stamp.nanosec*1e-9;
+        pst = prev_step.position.header.stamp.sec + prev_step.position.header.stamp.nanosec*1e-9;
 
-                inc_x = step.position.point.x - prev_step.position.point.x;
-                inc_y = step.position.point.y - prev_step.position.point.y;
-                inc_z = step.position.point.z - prev_step.position.point.z;
-
-                vel.x = inc_x / inc_t;
-                vel.y = inc_y / inc_t;
-                vel.z = inc_z / inc_t;                        
-            }else{
-                RCLCPP_ERROR(node->get_logger(), "get_speed: Problem with stamps");    
-            }
-            
-        } else {
-            RCLCPP_ERROR(node->get_logger(), "get_speed: Problem with confidences");
+        if (st==0) {
+                RCLCPP_ERROR(node->get_logger(), "get_speed: step timestamp == 0 ");    
+                return vel;
         }
+        if (pst==0){
+                RCLCPP_ERROR(node->get_logger(), "get_speed: prev step timestamp == 0 ");    
+                return vel;
+        }
+        if ( st == pst){
+                RCLCPP_ERROR(node->get_logger(), "get_speed: both timestamps are equal ");    
+                return vel;
+        }
+
+        // data is sane.
+        inc_t = st - pst;
+
+        inc_x = step.position.point.x - prev_step.position.point.x;
+        inc_y = step.position.point.y - prev_step.position.point.y;
+        inc_z = step.position.point.z - prev_step.position.point.z;
+
+        vel.x = inc_x / inc_t;
+        vel.y = inc_y / inc_t;
+        vel.z = inc_z / inc_t;                        
      
         return vel;
     }    

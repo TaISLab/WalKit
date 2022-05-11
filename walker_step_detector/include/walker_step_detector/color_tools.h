@@ -2,6 +2,13 @@
 #define COLORTOOL_HH
 
 
+// from https://sashamaps.net/docs/resources/20-colors/
+// convenient 95% accesibility rbg colors 
+#define N_COLORS 22
+const double R_FIXED[N_COLORS] = { 230,  60, 255,   0, 245, 145,  70, 240, 210, 250,   0, 220, 170, 255, 128, 170, 128, 255,   0, 128, 255, 0 };
+const double G_FIXED[N_COLORS] = {  25, 180, 225, 130, 130,  30, 240,  50, 245, 190, 128, 190, 110, 250,   0, 255, 128, 215,   0, 128, 255, 0 };
+const double B_FIXED[N_COLORS] = {  75,  75,  25, 200,  48, 180, 240, 230,  60, 212, 128, 255,  40, 200,   0, 195,   0, 180, 128, 128, 255, 0 };
+
 // from David H. at https://stackoverflow.com/questions/3018313/algorithm-to-convert-rgb-to-hsv-and-hsv-to-rgb-in-range-0-255-for-both
 // checking how to get a random list from https://martin.ankerl.com/2009/12/09/how-to-create-random-colors-programmatically/
 typedef struct {
@@ -126,6 +133,16 @@ RGB pick_one_of_n(double id, double total){
         hsv0.v = 0.95;
         RGB rgb0 = hsv2rgb(hsv0);
         hsv0 = rgb2hsv(rgb0);
+        return rgb0;
+}
+
+RGB pick_one(int id){
+        RGB rgb0;
+        int index = id % N_COLORS;
+        rgb0.r = R_FIXED[index]/ 255.0;
+        rgb0.g = G_FIXED[index]/ 255.0;
+        rgb0.b = B_FIXED[index]/ 255.0;
+
         return rgb0;
 }
 

@@ -92,6 +92,9 @@ public:
         this->declare_parameter("detect_distance_frame_id");
         this->declare_parameter("max_detect_distance");
         this->declare_parameter("use_scan_header_stamp_for_tfs");
+        this->declare_parameter("plot_all_clusters");
+        this->declare_parameter("plot_leg_clusters");
+            
         this->declare_parameter("max_detected_clusters");
         this->declare_parameter("detected_steps_topic_name");
 
@@ -104,6 +107,8 @@ public:
         this->get_parameter_or("detect_distance_frame_id", detect_distance_frame_id_, std::string("base_link"));
         this->get_parameter_or("max_detect_distance", max_detect_distance_, 10.0);
         this->get_parameter_or("use_scan_header_stamp_for_tfs", use_scan_header_stamp_for_tfs_, false);
+        this->get_parameter_or("plot_all_clusters", plot_all_clusters_, false);
+        this->get_parameter_or("plot_leg_clusters", plot_leg_clusters_, false);
         this->get_parameter_or("max_detected_clusters", max_detected_clusters_, -1);
         this->get_parameter_or("detected_steps_topic_name", detected_steps_topic_name_, std::string("/detected_step"));
 
@@ -157,6 +162,8 @@ private:
     int scan_num_;
     int num_prev_markers_published_;
     bool use_scan_header_stamp_for_tfs_;
+    bool plot_all_clusters_;
+    bool plot_leg_clusters_;
 
     rclcpp::Time latest_scan_header_stamp_with_tf_available_;
 
@@ -240,7 +247,8 @@ private:
         std::string ns = "laser";
         
         double alph = 0.8;
-        RGB rgb0 = pick_one_of_n(id, 50);  // doubt ill get more than 50 clusters
+        //RGB rgb0 = pick_one_of_n(id, 50);  // doubt ill get more than 50 clusters
+        RGB rgb0 = pick_one(id); 
 
         double r = rgb0.r; // static_cast <double> (rand()) / static_cast <double> (RAND_MAX);
         double g = rgb0.g; // static_cast <double> (rand()) / static_cast <double> (RAND_MAX);
@@ -323,7 +331,7 @@ private:
 
     void publish_clusters(std::list<laser_processor::SampleSet*> clusters){
 
-        delete_all();
+        //delete_all();
         visualization_msgs::msg::MarkerArray marker_array;
         int id = 0;
         for (auto cluster: clusters){
@@ -338,15 +346,15 @@ private:
 
     }
 
-    void publish_cluster(laser_processor::SampleSet* cluster){
+    void publish_cluster(laser_processor::SampleSet* cluster, int sid){
 
-        delete_all();
+        //delete_all();
         visualization_msgs::msg::MarkerArray marker_array;
-        static int sid = 0;
 
-        visualization_msgs::msg::Marker mark_i = get_marker(cluster, sid++);
+
+        visualization_msgs::msg::Marker mark_i = get_marker(cluster, sid);
         marker_array.markers.push_back(mark_i);
-        visualization_msgs::msg::Marker center_mark_i = get_center_marker(cluster, sid++);
+        visualization_msgs::msg::Marker center_mark_i = get_center_marker(cluster, sid + 1);
         center_mark_i.color.r = 0;
         center_mark_i.color.b = 1;
         marker_array.markers.push_back(center_mark_i);
@@ -381,10 +389,8 @@ private:
         rclcpp::Time tf_time;
         
         // Use time from scan header
-        if (use_scan_header_stamp_for_tfs_) 
-        {
+        if (use_scan_header_stamp_for_tfs_){
             tf_time = scan->header.stamp;
-
             try {
                 buffer_->lookupTransform(fixed_frame_, scan->header.frame_id, tf_time, rclcpp::Duration(1.0));
                 transform_available = buffer_->canTransform(fixed_frame_, scan->header.frame_id, tf_time);              
@@ -402,8 +408,14 @@ private:
             RCLCPP_WARN(this->get_logger(), "Not publishing detected legs because no tf was available");
         } else {
             // Iterate through all clusters
-            RCLCPP_ERROR(this->get_logger(), "Found %d clusters", processor.size());
-            publish_clusters(processor.getClusters());
+            RCLCPP_ERROR(this->get_logger(), "Found %d clusters", processor.size());            
+            if (plot_all_clusters_ || plot_leg_clusters_){
+                delete_all();
+            }
+            if (plot_all_clusters_){
+                publish_clusters(processor.getClusters());
+            }
+            int id =0;
             for (std::list<laser_processor::SampleSet*>::iterator cluster = processor.getClusters().begin();cluster != processor.getClusters().end(); cluster++) {
                 // Cluster position in laser frame
                 geometry_msgs::msg::PointStamped position;
@@ -422,28 +434,10 @@ private:
 
                 // Only consider clusters within max_distance
                 if (rel_dist < max_detect_distance_) {
-                    //plot_cluster(*cluster);
-                    // Classify cluster using random forest classifier
-                    std::vector<float> f = cf_.calcClusterFeatures(*cluster, *scan);
-                    for (int k = 0; k < feat_count_; k++)
-                        tmp_mat->data.fl[k] = (float)(f[k]);
-                    
-                    #if (CV_VERSION_MAJOR <= 3 || CV_VERSION_MINOR <= 2)
-                        // Output of forest->predict is [-1.0, 1.0] so we scale to reach [0.0, 1.0]
-                        float probability_of_leg = 0.5 * (1.0 + forest->predict(cv::cvarrToMat(tmp_mat)));
-                    #else
-                        // The forest->predict function has been removed in the latest versions of OpenCV so we'll do the calculation explicitly.
-                        RCLCPP_INFO (this->get_logger(), "Checkout 6");
-                        cv::Mat result;
-                        forest->getVotes(cv::cvarrToMat(tmp_mat), result, 0);
-                        int positive_votes = result.at<int>(1, 1);
-                        int negative_votes = result.at<int>(1, 0);
-                        float probability_of_leg = positive_votes / static_cast<double>(positive_votes + negative_votes);
-                    #endif
-
-                    // Consider only clusters that have a confidence greater than detection_threshold_
-                    if (probability_of_leg > detection_threshold_){
-                        publish_cluster(*cluster);
+                        if (plot_leg_clusters_){
+                            publish_cluster(*cluster, id);                            
+                        }                                             
+                        id = id +2;
                         // Transform cluster position to fixed frame
                         // This should always be successful because we've checked earlier if a tf was available
                         bool transform_successful_2;
@@ -457,12 +451,11 @@ private:
 
                         if (transform_successful_2) {
                             // keep track of potential detections
-                            kalman_tracker.add_detection(position, probability_of_leg);
+                            kalman_tracker.add_detection(position, 0.42);
                         }
-                    }
-                    
-                }
+                }                    
             }
+            RCLCPP_ERROR (this->get_logger(), "Legs detected: %d", id/2);
         }
 
 
@@ -485,8 +478,6 @@ private:
         RCLCPP_INFO(this->get_logger(), "Pose %s: %3.3f, %3.3f (%3.3f)", text.c_str(), step.position.point.x, step.position.point.y, step.confidence);
 
     }
-
-
 
 };
 
