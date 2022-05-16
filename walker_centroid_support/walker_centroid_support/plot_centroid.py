@@ -90,7 +90,7 @@ class LoadPlotter(Node):
     def user_desc_lc(self, msg):
         user_fields = msg.data.split(':')
         if len(user_fields)>2:
-            self.weight_u = float(user_fields[2])
+            self.weight_u = user_fields[2]
 
     def l_loads_lc(self, msg):
         self.loads_lc(msg,0)

@@ -30,11 +30,11 @@ class ForcePlotter(Node):
 
         # Position/Orientation mode
         # arrow length
-        self.arrow_base.scale.x = 1e-2
+        self.arrow_base.scale.x = 3e-2
         # arrow width
-        self.arrow_base.scale.y = 1e-2
+        self.arrow_base.scale.y = 3e-2
         # arrow height
-        self.arrow_base.scale.z = 1e-2
+        self.arrow_base.scale.z = 3e-2
         
         self.arrow_base.color.a = 1. 
         self.arrow_base.color.r, self.arrow_base.color.g, self.arrow_base.color.b, dummy = self.colormap(0)

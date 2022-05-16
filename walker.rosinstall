@@ -23,15 +23,15 @@
     local-name: bwt901cl_pkg
     version: foxy
 
-- git:
-    uri: https://github.com/TaISLab/ros2_leg_detector.git
-    local-name: ros2_leg_detector
-    version: foxy    
+#- git:
+#    uri: https://github.com/TaISLab/ros2_leg_detector.git
+#    local-name: ros2_leg_detector
+#    version: foxy    
 
-- git:
-    uri: https://github.com/TaISLab/laser_filters.git
-    local-name: laser_filters
-    version: ros2    
+#- git:
+#    uri: https://github.com/TaISLab/laser_filters.git
+#    local-name: laser_filters
+#    version: ros2    
 
 - git:
     uri: https://github.com/TaISLab/ros2_laser_scan_matcher.git

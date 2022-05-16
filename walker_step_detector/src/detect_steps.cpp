@@ -42,7 +42,9 @@
 #include <tf2/transform_datatypes.h> 
 #include <sensor_msgs/msg/laser_scan.hpp>
 #include <geometry_msgs/msg/point_stamped.hpp>
-#include <memory>
+#include <geometry_msgs/msg/point_stamped.hpp>
+#include <visualization_msgs/msg/marker.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
 
 // OpenCV related Headers
 #include <opencv2/core/core.hpp>
@@ -54,17 +56,26 @@
 // Local Headers
 #include "walker_step_detector/cluster_features.h"
 #include "walker_step_detector/laser_processor.h"
+#include "walker_step_detector/legs_tracker.h"
+#include "walker_step_detector/color_tools.h"
 
 // Custom Messages related Headers
 #include "walker_msgs/msg/step_stamped.hpp"
 
 #include <fstream>
+#include <memory>
+//#include <ctime>
+//#include <cstdlib>
+
+using namespace std::chrono_literals;
+
 
 class DetectSteps : public rclcpp::Node
 {
 public:
-    DetectSteps() : Node("detect_steps")
+    DetectSteps() : Node("detect_steps"),kalman_tracker(this)
     {
+        //srand (static_cast <unsigned> (time(0)));
 
         //Get ROS parameters
         std::string forest_file;
@@ -81,6 +92,9 @@ public:
         this->declare_parameter("detect_distance_frame_id");
         this->declare_parameter("max_detect_distance");
         this->declare_parameter("use_scan_header_stamp_for_tfs");
+        this->declare_parameter("plot_all_clusters");
+        this->declare_parameter("plot_leg_clusters");
+            
         this->declare_parameter("max_detected_clusters");
         this->declare_parameter("detected_steps_topic_name");
 
@@ -93,6 +107,8 @@ public:
         this->get_parameter_or("detect_distance_frame_id", detect_distance_frame_id_, std::string("base_link"));
         this->get_parameter_or("max_detect_distance", max_detect_distance_, 10.0);
         this->get_parameter_or("use_scan_header_stamp_for_tfs", use_scan_header_stamp_for_tfs_, false);
+        this->get_parameter_or("plot_all_clusters", plot_all_clusters_, false);
+        this->get_parameter_or("plot_leg_clusters", plot_leg_clusters_, false);
         this->get_parameter_or("max_detected_clusters", max_detected_clusters_, -1);
         this->get_parameter_or("detected_steps_topic_name", detected_steps_topic_name_, std::string("/detected_step"));
 
@@ -118,6 +134,9 @@ public:
 
         left_detected_step_pub_ = this->create_publisher<walker_msgs::msg::StepStamped>(detected_steps_topic_name_ + "_left", 20);
         right_detected_step_pub_ = this->create_publisher<walker_msgs::msg::StepStamped>(detected_steps_topic_name_ + "_right", 20);
+        //marker_pub_ = this->create_publisher<visualization_msgs::msg::Marker>("clusters", 5);
+        markers_array_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("clusters", 20);
+
         this->scan_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(scan_topic, default_qos, std::bind(&DetectSteps::laserCallback, this, std::placeholders::_1));
 
         buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
@@ -143,6 +162,8 @@ private:
     int scan_num_;
     int num_prev_markers_published_;
     bool use_scan_header_stamp_for_tfs_;
+    bool plot_all_clusters_;
+    bool plot_leg_clusters_;
 
     rclcpp::Time latest_scan_header_stamp_with_tf_available_;
 
@@ -156,14 +177,194 @@ private:
     double marker_display_lifetime_;
     int max_detected_clusters_;
 
-    walker_msgs::msg::StepStamped prev_step_r_;
-    walker_msgs::msg::StepStamped prev_step_l_;
-
     //create the publisher and subscribers
     std::string  detected_steps_topic_name_;
     rclcpp::Publisher<walker_msgs::msg::StepStamped>::SharedPtr left_detected_step_pub_;
     rclcpp::Publisher<walker_msgs::msg::StepStamped>::SharedPtr right_detected_step_pub_;
     rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;
+    //rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub_;
+    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr markers_array_pub_;
+    rclcpp::TimerBase::SharedPtr timer_;
+
+    // Tracker assigns scan clusters to legs and keeps track of them
+    LegsTracker kalman_tracker;
+
+
+    visualization_msgs::msg::Marker get_center_marker( laser_processor::SampleSet* cluster, int id ){
+        // Number of points
+        //int num_points = cluster->size();
+        
+        std::string frame_id = "laser";
+        std::string ns = "laser";
+        
+        double alph = 0.9;
+
+        double r = 1.0;
+        double g = 0;
+        double b = 0;
+        //RCLCPP_INFO(this->get_logger(), "color: %2.2f, %2.2f, %2.2f ", r,g,b);
+        double size = 0.05;
+
+        visualization_msgs::msg::Marker marker;
+
+        marker.header.frame_id = frame_id;
+        marker.header.stamp = rclcpp::Clock().now();
+        marker.lifetime = rclcpp::Duration(0.0);
+
+        marker.ns = ns;
+        marker.id = id;
+        marker.action = visualization_msgs::msg::Marker::ADD;
+        marker.type = visualization_msgs::msg::Marker::SPHERE;
+
+        marker.pose.position = cluster->getPosition();
+             
+        marker.pose.orientation.w = 1;
+
+        // SPHERE markers use scale for diameter in each axis
+        marker.scale.x = size;
+        marker.scale.y = size;
+        marker.scale.z = size;
+
+        // random color for each cluster
+
+        marker.color.r = r;
+        marker.color.g = g;
+        marker.color.b = b;
+        marker.color.a = alph;
+
+
+
+
+        //marker_pub_->publish(marker);
+        return marker;
+    }
+
+    visualization_msgs::msg::Marker get_marker(const laser_processor::SampleSet* cluster, int id ){
+        // Number of points
+        //int num_points = cluster->size();
+        
+        std::string frame_id = "laser";
+        std::string ns = "laser";
+        
+        double alph = 0.8;
+        //RGB rgb0 = pick_one_of_n(id, 50);  // doubt ill get more than 50 clusters
+        RGB rgb0 = pick_one(id); 
+
+        double r = rgb0.r; // static_cast <double> (rand()) / static_cast <double> (RAND_MAX);
+        double g = rgb0.g; // static_cast <double> (rand()) / static_cast <double> (RAND_MAX);
+        double b = rgb0.b; // static_cast <double> (rand()) / static_cast <double> (RAND_MAX);
+        //RCLCPP_INFO(this->get_logger(), "color: %2.2f, %2.2f, %2.2f ", r,g,b);
+        double width = 0.02;
+        double height = 0.02;
+        double laser_z = 0.0;
+
+        visualization_msgs::msg::Marker marker;
+
+        marker.header.frame_id = frame_id;
+        marker.header.stamp = rclcpp::Clock().now();
+        marker.lifetime = rclcpp::Duration(0.0);
+
+        marker.ns = ns;
+        marker.id = id;
+        marker.action = visualization_msgs::msg::Marker::ADD;
+        marker.type = visualization_msgs::msg::Marker::POINTS;
+
+        marker.pose.position.x = 0;
+        marker.pose.position.y = 0;
+        marker.pose.position.z = 0;        
+        marker.pose.orientation.w = 1;
+
+        // POINTS markers use x and y scale for width/height respectively
+        marker.scale.x = width;
+        marker.scale.y = height;
+
+        // random color for each cluster
+
+        marker.color.r = r;
+        marker.color.g = g;
+        marker.color.b = b;
+        marker.color.a = alph;
+
+
+        // Create the vertices for the points 
+        for (auto sample : *cluster){
+            geometry_msgs::msg::Point p;
+            p.x = sample->x;
+            p.y = sample->y;
+            p.z = laser_z;
+
+            marker.points.push_back(p);
+
+        }
+
+        //marker_pub_->publish(marker);
+        return marker;
+    }
+
+    void delete_all(){
+        // Number of points
+        //int num_points = cluster->size();
+        
+        std::string frame_id = "laser";
+        std::string ns = "laser";
+        
+        visualization_msgs::msg::Marker marker;
+
+        marker.header.frame_id = frame_id;
+        marker.header.stamp = rclcpp::Clock().now();
+        marker.lifetime = rclcpp::Duration(0.0);
+
+        marker.ns = ns;
+        marker.action = visualization_msgs::msg::Marker::DELETEALL;
+
+        marker.pose.position.x = 0;
+        marker.pose.position.y = 0;
+        marker.pose.position.z = 0;        
+        marker.pose.orientation.w = 1;
+
+        visualization_msgs::msg::MarkerArray marker_array;
+        marker_array.markers.push_back(marker);
+        markers_array_pub_->publish(marker_array);
+        //timer_->cancel();
+        //RCLCPP_ERROR(this->get_logger(), "Cleaned XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+}
+
+    void publish_clusters(std::list<laser_processor::SampleSet*> clusters){
+
+        //delete_all();
+        visualization_msgs::msg::MarkerArray marker_array;
+        int id = 0;
+        for (auto cluster: clusters){
+            visualization_msgs::msg::Marker mark_i = get_marker(cluster, id++);
+            marker_array.markers.push_back(mark_i);
+            visualization_msgs::msg::Marker center_mark_i = get_center_marker(cluster, id++);
+            marker_array.markers.push_back(center_mark_i);
+        }
+
+        markers_array_pub_->publish(marker_array);
+        //timer_ = create_wall_timer(200ms, std::bind(&DetectSteps::delete_all, this));
+
+    }
+
+    void publish_cluster(laser_processor::SampleSet* cluster, int sid){
+
+        //delete_all();
+        visualization_msgs::msg::MarkerArray marker_array;
+
+
+        visualization_msgs::msg::Marker mark_i = get_marker(cluster, sid);
+        marker_array.markers.push_back(mark_i);
+        visualization_msgs::msg::Marker center_mark_i = get_center_marker(cluster, sid + 1);
+        center_mark_i.color.r = 0;
+        center_mark_i.color.b = 1;
+        marker_array.markers.push_back(center_mark_i);
+
+
+        markers_array_pub_->publish(marker_array);
+        //timer_ = create_wall_timer(200ms, std::bind(&DetectSteps::delete_all, this));
+
+    }
+
 
     /**
      * @brief Clusters the scan according to euclidian distance, 
@@ -173,56 +374,49 @@ private:
      */
     void laserCallback(const sensor_msgs::msg::LaserScan::SharedPtr scan)
     {
-        laser_processor::ScanProcessor processor(*scan);
-        processor.splitConnected(cluster_dist_euclid_);
-        processor.removeLessThan(min_points_per_cluster_);
-        
         // OpenCV matrix needed to use the OpenCV random forest classifier
         CvMat* tmp_mat = cvCreateMat(1, feat_count_, CV_32FC1);
 
         walker_msgs::msg::StepStamped left_detected_step;
         walker_msgs::msg::StepStamped right_detected_step;
-/*
-        left_detected_step.position.header.frame_id = scan->header.frame_id;
-        left_detected_step.position.header.stamp = scan->header.stamp;
-        right_detected_step.position.header = left_detected_step.position.header;
-*/
+
+        laser_processor::ScanProcessor processor(*scan);
+        processor.splitConnected(cluster_dist_euclid_);
+        processor.removeLessThan(min_points_per_cluster_);
+
         // Find out the time that should be used for tfs
         bool transform_available;
-        rclcpp::Clock tf_time;
-        rclcpp::Time tf_time1;
+        rclcpp::Time tf_time;
         
         // Use time from scan header
-        if (use_scan_header_stamp_for_tfs_) 
-        {
-            tf_time1 = scan->header.stamp;
-
+        if (use_scan_header_stamp_for_tfs_){
+            tf_time = scan->header.stamp;
             try {
-                buffer_->lookupTransform(fixed_frame_, scan->header.frame_id, tf_time1, rclcpp::Duration(1.0));
-                transform_available = buffer_->canTransform(fixed_frame_, scan->header.frame_id, tf_time1);              
+                buffer_->lookupTransform(fixed_frame_, scan->header.frame_id, tf_time, rclcpp::Duration(1.0));
+                transform_available = buffer_->canTransform(fixed_frame_, scan->header.frame_id, tf_time);              
             } catch(tf2::TransformException &e) {
                 RCLCPP_WARN(this->get_logger(), "No tf available");
                 transform_available = false;
                 
             }
         } else {
-
             // Otherwise just use the latest tf available
-            
-            tf_time.now();
-            transform_available = buffer_->canTransform(fixed_frame_, scan->header.frame_id, tf_time1);
+            transform_available = buffer_->canTransform(fixed_frame_, scan->header.frame_id, tf_time);
         }
-
-        // Store all processes legs in a set ordered according to their relative distance to the laser scanner
-        std::set<walker_msgs::msg::StepStamped, CompareSteps> step_set;
 
         if(!transform_available) {
             RCLCPP_WARN(this->get_logger(), "Not publishing detected legs because no tf was available");
         } else {
-
             // Iterate through all clusters
-            for (std::list<laser_processor::SampleSet*>::iterator cluster = processor.getClusters().begin();cluster != processor.getClusters().end(); cluster++)
-            {
+            RCLCPP_ERROR(this->get_logger(), "Found %d clusters", processor.size());            
+            if (plot_all_clusters_ || plot_leg_clusters_){
+                delete_all();
+            }
+            if (plot_all_clusters_){
+                publish_clusters(processor.getClusters());
+            }
+            int id =0;
+            for (std::list<laser_processor::SampleSet*>::iterator cluster = processor.getClusters().begin();cluster != processor.getClusters().end(); cluster++) {
                 // Cluster position in laser frame
                 geometry_msgs::msg::PointStamped position;
                 position.header = scan->header;
@@ -240,28 +434,10 @@ private:
 
                 // Only consider clusters within max_distance
                 if (rel_dist < max_detect_distance_) {
-
-                    // Classify cluster using random forest classifier
-                    std::vector<float> f = cf_.calcClusterFeatures(*cluster, *scan);
-                    for (int k = 0; k < feat_count_; k++)
-                        tmp_mat->data.fl[k] = (float)(f[k]);
-                    
-                    #if (CV_VERSION_MAJOR <= 3 || CV_VERSION_MINOR <= 2)
-                        // Output of forest->predict is [-1.0, 1.0] so we scale to reach [0.0, 1.0]
-                        float probability_of_leg = 0.5 * (1.0 + forest->predict(cv::cvarrToMat(tmp_mat)));
-                    #else
-                        // The forest->predict function has been removed in the latest versions of OpenCV so we'll do the calculation explicitly.
-                        RCLCPP_INFO (this->get_logger(), "Checkout 6");
-                        cv::Mat result;
-                        forest->getVotes(cv::cvarrToMat(tmp_mat), result, 0);
-                        int positive_votes = result.at<int>(1, 1);
-                        int negative_votes = result.at<int>(1, 0);
-                        float probability_of_leg = positive_votes / static_cast<double>(positive_votes + negative_votes);
-                    #endif
-
-                    // Consider only clusters that have a confidence greater than detection_threshold_
-                    if (probability_of_leg > detection_threshold_)
-                    {
+                        if (plot_leg_clusters_){
+                            publish_cluster(*cluster, id);                            
+                        }                                             
+                        id = id +2;
                         // Transform cluster position to fixed frame
                         // This should always be successful because we've checked earlier if a tf was available
                         bool transform_successful_2;
@@ -274,58 +450,23 @@ private:
                         }
 
                         if (transform_successful_2) {
-                            // Add detected cluster to set of detected leg clusters, along with its relative position to the laser scanner
-                            walker_msgs::msg::StepStamped new_step;
-                            new_step.position = position;
-                            new_step.confidence = probability_of_leg;
-                            step_set.insert(new_step);
+                            // keep track of potential detections
+                            kalman_tracker.add_detection(position, 0.42);
                         }
-
-                    }
-                    
-                }
+                }                    
             }
+            RCLCPP_ERROR (this->get_logger(), "Legs detected: %d", id/2);
         }
 
-        // Publish detected legs to /detected_steps 
-        // They are ordered in step_set from closest to the laser scanner to furthest
-        walker_msgs::msg::StepStamped step_l, step_r;
-        
-        if (step_set.size() > 1)
-        {
-            step_l = *std::next(step_set.begin(), 0);
-            step_r = *std::next(step_set.begin(), 1);            
-            
-            // we should have (left.y < right.y)
-            if (step_l.position.point.y>step_r.position.point.y){
-                step_l = *std::next(step_set.begin(), 1); 
-                step_r = *std::next(step_set.begin(), 0);
-            }
-        }
-        else if (step_set.size() == 1)
-        {
-            step_l = *std::next(step_set.begin(), 0);
-            step_r.confidence = 0;
-            // left should have y<0
-            if (step_l.position.point.y>0) {
-                step_r = *std::next(step_set.begin(), 0);
-                step_l.confidence = 0;
-            }
-        } else if (step_set.size() == 0) {
-                step_l.confidence = 0;
-                step_r.confidence = 0;
-        }
 
-        // get speeds
-        step_r.speed = get_speed(step_r, prev_step_r_);
-        step_l.speed = get_speed(step_l, prev_step_l_);
-        step_r.tracked = (step_r.confidence!=0) && (prev_step_r_.confidence!=0);
-        step_l.tracked = (step_l.confidence!=0) && (prev_step_l_.confidence!=0);
-        
-        // save data for next iteration
-        prev_step_l_ = step_l;
-        prev_step_r_ = step_r;
+        // get steps from Kalman set
+        walker_msgs::msg::StepStamped step_r;
+        walker_msgs::msg::StepStamped step_l;
+        double t = (this->now()).nanoseconds();
 
+        kalman_tracker.get_steps(&step_r, &step_l, t);
+
+        // publish lets
         right_detected_step_pub_->publish(step_r);
         left_detected_step_pub_->publish(step_l);
         cvReleaseMat(&tmp_mat);
@@ -338,49 +479,6 @@ private:
 
     }
 
-    geometry_msgs::msg::Point get_speed(walker_msgs::msg::StepStamped step, walker_msgs::msg::StepStamped prev_step){
-        
-        double inc_x, inc_y, inc_z, inc_t, st, pst;
-        geometry_msgs::msg::Point vel;
-        vel.x = vel.y = vel.z = 0;
-
-        if ((step.confidence!=0) && (prev_step.confidence!=0)){
-            
-            st = step.position.header.stamp.sec + step.position.header.stamp.nanosec*1e-9;
-            pst = prev_step.position.header.stamp.sec + prev_step.position.header.stamp.nanosec*1e-9;
-
-            if ( (st>0) && (pst>0) && (st!=pst) ) {
-                inc_t = st - pst;
-
-                inc_x = step.position.point.x - prev_step.position.point.x;
-                inc_y = step.position.point.y - prev_step.position.point.y;
-                inc_z = step.position.point.z - prev_step.position.point.z;
-
-                vel.x = inc_x / inc_t;
-                vel.y = inc_y / inc_t;
-                vel.z = inc_z / inc_t;                        
-            }
-            
-        }
-     
-        return vel;
-    }
-
-
-    /**
-         * @brief Comparison class to order Legs according to their relative distance to the laser scanner
-        **/
-    class CompareSteps
-    {
-    public:
-        bool operator()(const walker_msgs::msg::StepStamped &a, const walker_msgs::msg::StepStamped &b)
-        {
-
-            float rel_dist_a = pow(a.position.point.x * a.position.point.x + a.position.point.y * a.position.point.y, 1. / 2.);
-            float rel_dist_b = pow(b.position.point.x * b.position.point.x + b.position.point.y * b.position.point.y, 1. / 2.);
-            return rel_dist_a < rel_dist_b;
-        }
-    };
 };
 
 int main(int argc, char **argv)

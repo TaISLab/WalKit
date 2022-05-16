@@ -1,6 +1,6 @@
 from setuptools import setup
 
-package_name = 'walker_plot'
+package_name = 'walker_py_cluster'
 
 setup(
     name=package_name,
@@ -15,13 +15,12 @@ setup(
     zip_safe=True,
     maintainer='Manuel Fernandez-Carmona',
     maintainer_email='manolofc@gmail.com',
-    description='Plot walker handle forces in rviz',
+    description='Do crappy stuff',
     license='Creative Commons',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'plot_forces = walker_plot.plot_forces:main',
-            'plot_active_area = walker_plot.plot_active_area:main',
+            'cluster_plot = walker_py_cluster.cluster_plot:main',
         ],
     },
 )
