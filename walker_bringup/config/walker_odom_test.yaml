@@ -21,7 +21,7 @@ windows:
     tags: ['core']
     panes:
       - ros2 launch walker_bringup laser_scan_matcher.launch.py 
-#      - ros2 launch walker_bringup robot_localisation_ekf.launch.py # fuses imu+odom+laser odom to improve odom
+#      - ros2 launch walker_bringup robot_localisation_ekf.launch.py #  fuses imu+odom+laser odom to improve odom
 #      - ros2 launch walker_bringup robot_localisation_ukf.launch.py # Like ekf but using unscented filter
 
   - name: crappy_description1

@@ -18,7 +18,7 @@ def generate_launch_description():
             executable='laser_scan_matcher', 
             name='laser_scan_matcher_node',
             parameters=[ekf_param_dir],
-	        output='screen',
-            remappings=[('/scan', '/scan_filtered')]
+	        output='screen'
+            #remappings=[('/scan', '/scan_filtered')]
            )
 ])
