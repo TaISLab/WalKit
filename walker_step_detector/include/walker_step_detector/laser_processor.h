@@ -37,8 +37,6 @@
 
 #include <unistd.h>
 #include <math.h>
-#include <sensor_msgs/msg/laser_scan.hpp>
-#include <sensor_msgs/msg/point_cloud.hpp>
 #include <list>
 #include <set>
 #include <vector>
@@ -47,11 +45,15 @@
 #include <algorithm>
 #include <bullet/LinearMath/btVector3.h>
 
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include "std_msgs/msg/header.hpp"
 #include <tf2_ros/buffer.h>
 
+#include <sensor_msgs/msg/laser_scan.hpp>
+#include <sensor_msgs/msg/point_cloud.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include "std_msgs/msg/header.hpp"
 
+// Custom Messages related Headers
+#include "walker_msgs/msg/step_stamped.hpp"
 
 
 
@@ -160,6 +162,7 @@ namespace laser_processor
             int size(){ return clusters_.size(); };
 
             void removeFar(std::string  dist_frame_id, float max_dist , std_msgs::msg::Header scan_header, std::shared_ptr<tf2_ros::Buffer> tf_buff);
+            std::list<walker_msgs::msg::StepStamped> getCentroids(std::string  fixed_frame_id, std_msgs::msg::Header scan_header, std::shared_ptr<tf2_ros::Buffer> tf_buff);
     };
 }
 

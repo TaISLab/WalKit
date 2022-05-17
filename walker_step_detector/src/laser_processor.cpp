@@ -212,5 +212,32 @@ namespace laser_processor
         }
     }
 
+    std::list<walker_msgs::msg::StepStamped> ScanProcessor::getCentroids(std::string  fixed_frame_id, std_msgs::msg::Header scan_header, std::shared_ptr<tf2_ros::Buffer> tf_buff){
+        std::list<walker_msgs::msg::StepStamped> centroids;
+
+
+        std::list<SampleSet*>::iterator c_iter = clusters_.begin();
+        while (c_iter != clusters_.end()){
+            geometry_msgs::msg::PointStamped position;
+            position.header = scan_header;
+            position.point = (*c_iter)->getPosition();
+
+            // transform
+            try {
+                tf_buff->transform(position, position, fixed_frame_id);
+            } catch (tf2::TransformException &e){
+                //RCLCPP_ERROR (this->get_logger(), "%s", e.what());
+            }
+
+            walker_msgs::msg::StepStamped new_step;
+            new_step.position = position;
+            new_step.confidence = 0.42;  // TODO!
+            centroids.push_back(new_step);
+            
+            ++c_iter;
+        }
+        return centroids;
+    }
+
 } // namespace laser_processor 
 

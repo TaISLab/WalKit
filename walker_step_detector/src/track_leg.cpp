@@ -72,6 +72,9 @@
         // how sure are we this is a "leg"
         pred_step.confidence = curr_step.confidence;
         
+        // where?
+        pred_step.position.header = curr_step.position.header;
+
         // Predict state for current time-step using the filters
         u.dt() = (ti-t)*1e-9;
 
@@ -93,7 +96,8 @@
             }
             
             pred_step.confidence = measure_step.confidence;
-
+            pred_step.position.header = measure_step.position.header;
+            RCLCPP_ERROR(node->get_logger(), "Laser measurement available at %s", measure_step.position.header.frame_id.c_str());
             PositionMeasurement position;
             position.pos_x() = measure_step.position.point.x;
             position.pos_y() = measure_step.position.point.y;        
@@ -113,7 +117,7 @@
 
         pred_step.position.point.x = pred_position.pos_x();
         pred_step.position.point.y = pred_position.pos_y();
-        pred_step.position.header = curr_step.position.header;
+
         
         // set prediction time
         pred_step.position.header.stamp = rclcpp::Time(ti);
@@ -121,9 +125,6 @@
         // get speeds
         pred_step.speed = get_speed(pred_step, curr_step);
         
-        // frame reference
-        pred_step.position.header.frame_id = curr_step.position.header.frame_id;
-
         // cleaning: my new reference is this one
         curr_step = pred_step;
 
@@ -133,7 +134,7 @@
         // store last prediction time    
         t = ti;
 
-        RCLCPP_ERROR (node->get_logger(), "Pred -- step at  [%3.3f, %3.3f]", pred_step.position.point.x, pred_step.position.point.y);
+        RCLCPP_ERROR (node->get_logger(), "Pred -- step at  [%3.3f, %3.3f, (%s)]", pred_step.position.point.x, pred_step.position.point.y, pred_step.position.header.frame_id.c_str());
         return pred_step;
     }
 

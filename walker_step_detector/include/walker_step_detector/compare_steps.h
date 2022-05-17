@@ -13,7 +13,7 @@ class CompareSteps{
         
     //    CompareSteps(walker_msgs::msg::StepStamped origin);
         
-    //    bool operator() ( walker_msgs::msg::StepStamped a, walker_msgs::msg::StepStamped b);
+        bool operator ()(const walker_msgs::msg::StepStamped & a, const walker_msgs::msg::StepStamped & b);
 
         static float dist(walker_msgs::msg::StepStamped a, walker_msgs::msg::StepStamped o);
 

@@ -300,6 +300,52 @@ private:
         return marker;
     }
 
+
+    visualization_msgs::msg::Marker get_marker(const walker_msgs::msg::StepStamped* step, int id ){
+        // Number of points
+        //int num_points = cluster->size();
+        
+        
+        std::string ns = "steps";
+        
+        double alph = 0.8;
+        RGB rgb0 = pick_one(id); 
+
+        double r = rgb0.r; 
+        double g = rgb0.g; 
+        double b = rgb0.b; 
+
+        double width = 0.02;
+        double height = 0.02;
+
+        visualization_msgs::msg::Marker marker;
+
+        marker.header = step->position.header;
+        marker.lifetime = rclcpp::Duration(0.0);
+
+        marker.ns = ns;
+        marker.id = id;
+        marker.action = visualization_msgs::msg::Marker::ADD;
+        marker.type = visualization_msgs::msg::Marker::CUBE;
+
+        marker.pose.position.x = step->position.point.x;
+        marker.pose.position.y = step->position.point.y;
+        marker.pose.position.z = step->position.point.z;        
+        marker.pose.orientation.w = 1;
+
+        marker.scale.x = width;
+        marker.scale.y = height;
+
+        // random color for each cluster
+
+        marker.color.r = r;
+        marker.color.g = g;
+        marker.color.b = b;
+        marker.color.a = alph;
+
+        return marker;
+    }
+
     void delete_all(){
         // Number of points
         //int num_points = cluster->size();
@@ -361,7 +407,16 @@ private:
 
         markers_array_pub_->publish(marker_array);
         //timer_ = create_wall_timer(200ms, std::bind(&DetectSteps::delete_all, this));
+    }
 
+    void publish_leg(walker_msgs::msg::StepStamped step, int sid){
+
+        visualization_msgs::msg::MarkerArray marker_array;
+
+        visualization_msgs::msg::Marker mark_i = get_marker(&step, sid);
+        marker_array.markers.push_back(mark_i);
+
+        markers_array_pub_->publish(marker_array);
     }
 
 
@@ -373,9 +428,6 @@ private:
      */
     void laserCallback(const sensor_msgs::msg::LaserScan::SharedPtr scan)
     {
-        // OpenCV matrix needed to use the OpenCV random forest classifier
-        CvMat* tmp_mat = cvCreateMat(1, feat_count_, CV_32FC1);
-
         walker_msgs::msg::StepStamped left_detected_step;
         walker_msgs::msg::StepStamped right_detected_step;
 
@@ -410,40 +462,23 @@ private:
         } else {            
             // Remove far clusters
             processor.removeFar(detect_distance_frame_id_, max_detect_distance_, scan->header, buffer_);
-            RCLCPP_ERROR(this->get_logger(), "Found %d clusters", processor.size());  
+            RCLCPP_ERROR(this->get_logger(), "Found %d CLOSE clusters", processor.size());  
 
             if (plot_all_clusters_ || plot_leg_clusters_){
                 delete_all();
             }
-            if (plot_all_clusters_){
-                publish_clusters(processor.getClusters());
-            }
+            // if (plot_all_clusters_){
+            //     publish_clusters(processor.getClusters());
+            // }
+            // Remove dubious clusters
+            //processor.removeConfidence(detection_threshold_);
+            // if (plot_leg_clusters_){
+            //     publish_clusters(processor.getClusters());
+            // }
 
-            int id =0;
-            for (std::list<laser_processor::SampleSet*>::iterator cluster = processor.getClusters().begin();cluster != processor.getClusters().end(); cluster++) {
-
-                if (plot_leg_clusters_){
-                    publish_cluster(*cluster, id);                            
-                }                                             
-                id = id +2;
-                // Transform cluster position to fixed frame
-                // This should always be successful because we've checked earlier if a tf was available
-                bool transform_successful_2;
-                try {
-                    buffer_->transform(position, position, fixed_frame_);
-                    transform_successful_2 = true;
-                } catch (tf2::TransformException &e){
-                    RCLCPP_ERROR (this->get_logger(), "%s", e.what());
-                    transform_successful_2 = false;
-                }
-
-                if (transform_successful_2) {
-                    // keep track of potential detections
-                    kalman_tracker.add_detection(position, 0.42);
-                }
-                    
-            }
-            //RCLCPP_ERROR (this->get_logger(), "Legs detected: %d", id/2);
+            std::list<walker_msgs::msg::StepStamped> points = processor.getCentroids(fixed_frame_, scan->header, buffer_);
+            
+            kalman_tracker.add_detections(points);
         }
 
 
@@ -456,8 +491,10 @@ private:
 
         // publish lets
         right_detected_step_pub_->publish(step_r);
+        publish_leg(step_r, 1);
         left_detected_step_pub_->publish(step_l);
-        cvReleaseMat(&tmp_mat);
+        publish_leg(step_l, 2);
+
     }
 
 
