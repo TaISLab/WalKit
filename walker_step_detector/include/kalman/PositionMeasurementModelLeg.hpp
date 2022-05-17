@@ -66,8 +66,8 @@ public:
     M h(const S& x) const
     {
         M measurement;        
-        measurement.pos_x() = x.a_x() * std::sin(x.p_x());
-        measurement.pos_y() = x.a_y() * std::sin(x.p_y());
+        measurement.pos_x() = x.d_x() + x.a_x() * std::sin(x.p_x());
+        measurement.pos_y() = x.d_y() + x.a_y() * std::sin(x.p_y());
       
         return measurement;
     }
@@ -98,11 +98,12 @@ protected:
         this->H( M::POSX, S::AX ) = std::sin(x.p_x());
         this->H( M::POSX, S::FX ) = dosPi * x.a_x() * std::cos(x.p_x()) ;
         this->H( M::POSX, S::PX ) = x.a_x() * std::cos(x.p_x());
+        this->H( M::POSX, S::DX ) = 1;
 
         this->H( M::POSY, S::AY ) = std::sin(x.p_y());
         this->H( M::POSY, S::FY ) = dosPi * x.a_y() * std::cos(x.p_y()) ;
         this->H( M::POSY, S::PY ) = x.a_y() * std::cos(x.p_y());
-
+        this->H( M::POSY, S::DY ) = 1;
     }    
 
 };

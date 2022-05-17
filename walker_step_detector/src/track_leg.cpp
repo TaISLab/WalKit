@@ -4,6 +4,23 @@
     TrackLeg::TrackLeg(rclcpp::Node *node_, std::string name){
         node = node_;
         t = 0;
+
+        // System initial state
+        State x0;
+
+        x0.d_x() = 0.01;   // meters
+        x0.a_x() = 0.15;   // meters
+        x0.f_x() = 0.75;  // hertzs
+        x0.p_x() = 0;     // rads
+
+        x0.d_y() = 0.01;   // meters
+        x0.a_y() = 0.15;   // meters
+        x0.f_y() = 0.75;  // hertzs
+        x0.p_y() = 0;     // rads
+
+        // Init filter with system state
+        ekf.init(x0);    
+
         myfile.open (name + ".csv");
 
         /*

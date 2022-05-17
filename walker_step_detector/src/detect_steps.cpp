@@ -42,7 +42,6 @@
 #include <tf2/transform_datatypes.h> 
 #include <sensor_msgs/msg/laser_scan.hpp>
 #include <geometry_msgs/msg/point_stamped.hpp>
-#include <geometry_msgs/msg/point_stamped.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
@@ -383,11 +382,13 @@ private:
         laser_processor::ScanProcessor processor(*scan);
         processor.splitConnected(cluster_dist_euclid_);
         processor.removeLessThan(min_points_per_cluster_);
+        RCLCPP_ERROR(this->get_logger(), "Found %d clusters", processor.size());            
 
         // Find out the time that should be used for tfs
         bool transform_available;
         rclcpp::Time tf_time;
-        
+        geometry_msgs::msg::PointStamped position;
+
         // Use time from scan header
         if (use_scan_header_stamp_for_tfs_){
             tf_time = scan->header.stamp;
@@ -406,56 +407,43 @@ private:
 
         if(!transform_available) {
             RCLCPP_WARN(this->get_logger(), "Not publishing detected legs because no tf was available");
-        } else {
-            // Iterate through all clusters
-            RCLCPP_ERROR(this->get_logger(), "Found %d clusters", processor.size());            
+        } else {            
+            // Remove far clusters
+            processor.removeFar(detect_distance_frame_id_, max_detect_distance_, scan->header, buffer_);
+            RCLCPP_ERROR(this->get_logger(), "Found %d clusters", processor.size());  
+
             if (plot_all_clusters_ || plot_leg_clusters_){
                 delete_all();
             }
             if (plot_all_clusters_){
                 publish_clusters(processor.getClusters());
             }
+
             int id =0;
             for (std::list<laser_processor::SampleSet*>::iterator cluster = processor.getClusters().begin();cluster != processor.getClusters().end(); cluster++) {
-                // Cluster position in laser frame
-                geometry_msgs::msg::PointStamped position;
-                position.header = scan->header;
-                position.point = (*cluster)->getPosition();
 
-                // transform
-                geometry_msgs::msg::PointStamped position_new;
-                float rel_dist = 4092.0;
+                if (plot_leg_clusters_){
+                    publish_cluster(*cluster, id);                            
+                }                                             
+                id = id +2;
+                // Transform cluster position to fixed frame
+                // This should always be successful because we've checked earlier if a tf was available
+                bool transform_successful_2;
                 try {
-                    buffer_->transform(position, position_new, detect_distance_frame_id_);
-                    rel_dist = pow(position_new.point.x*position_new.point.x + position_new.point.y*position_new.point.y, 1./2.);
+                    buffer_->transform(position, position, fixed_frame_);
+                    transform_successful_2 = true;
                 } catch (tf2::TransformException &e){
                     RCLCPP_ERROR (this->get_logger(), "%s", e.what());
+                    transform_successful_2 = false;
                 }
 
-                // Only consider clusters within max_distance
-                if (rel_dist < max_detect_distance_) {
-                        if (plot_leg_clusters_){
-                            publish_cluster(*cluster, id);                            
-                        }                                             
-                        id = id +2;
-                        // Transform cluster position to fixed frame
-                        // This should always be successful because we've checked earlier if a tf was available
-                        bool transform_successful_2;
-                        try {
-                            buffer_->transform(position, position, fixed_frame_);
-                            transform_successful_2 = true;
-                        } catch (tf2::TransformException &e){
-                            RCLCPP_ERROR (this->get_logger(), "%s", e.what());
-                            transform_successful_2 = false;
-                        }
-
-                        if (transform_successful_2) {
-                            // keep track of potential detections
-                            kalman_tracker.add_detection(position, 0.42);
-                        }
-                }                    
+                if (transform_successful_2) {
+                    // keep track of potential detections
+                    kalman_tracker.add_detection(position, 0.42);
+                }
+                    
             }
-            RCLCPP_ERROR (this->get_logger(), "Legs detected: %d", id/2);
+            //RCLCPP_ERROR (this->get_logger(), "Legs detected: %d", id/2);
         }
 
 

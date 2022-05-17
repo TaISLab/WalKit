@@ -1,29 +1,29 @@
 #ifndef KALMAN_EXAMPLES1_LEG_SYSTEMMODEL_HPP_
 #define KALMAN_EXAMPLES1_LEG_SYSTEMMODEL_HPP_
 
-#include "kalman/LinearizedSystemModel.hpp"
+#include <kalman/LinearizedSystemModel.hpp>
 #include <cmath>
 
 namespace Leg
 {
 
 /**
- * @brief System state vector-type for a leg in swinging in 1D (a sine with unknown freq, amp and phase, basically)
+ * @brief System state vector-type for a leg in swinging in 1D (a constant plus a sine with unknown freq, amp and phase, basically)
  *
- * System is characterized by its swing amplitude, angular speed and phase:
- *            z_k = a_k * sin(2*pi* f_k*t_k + phi) = a_k sin(p_k)
+ * System is characterized by its swing amplitude, angular speed and phase on each axis as:
+ *            z_k = d_k + a_k * sin(2*pi* f_k*t_k + phi) = a_k sin(p_k)
  *                     measurement = z_k  = h(k) 
- *                           state = x_k  = [a_k  f_k  p_k] = f(x_k-1,u_k-1)
+ *                           state = x_k  = [d_k a_k  f_k  p_k] = f(x_k-1,u_k-1)
  *                         control = u_k  = t_k+1 - t_k
- *                    f(x_k,u_k)   = [a_k  f_k  p_k + 2*pi*u_k]
+ *                    f(x_k,u_k)   = [d_k a_k  f_k  p_k + 2*pi*u_k]
  *
  * @param T Numeric scalar type
  */
 template<typename T>
-class State : public Kalman::Vector<T, 6>
+class State : public Kalman::Vector<T, 8>
 {
 public:
-    KALMAN_VECTOR(State, T, 6)
+    KALMAN_VECTOR(State, T, 8)
     
     //! Amplitude
     static constexpr size_t AX = 0;
@@ -31,28 +31,36 @@ public:
     static constexpr size_t FX = 1;
     //! Absolute phase
     static constexpr size_t PX = 2;
+    //! Offset
+    static constexpr size_t DX = 3;
 
     //! Amplitude
-    static constexpr size_t AY = 3;
+    static constexpr size_t AY = 4;
     //! Frequency
-    static constexpr size_t FY = 4;
+    static constexpr size_t FY = 5;
     //! Absolute phase
-    static constexpr size_t PY = 5;
+    static constexpr size_t PY = 6;
+    //! Offset
+    static constexpr size_t DY = 7;
 
 
     T a_x()       const { return (*this)[ AX ]; }
     T f_x()       const { return (*this)[ FX ]; }
     T p_x()       const { return (*this)[ PX ]; }
+    T d_x()       const { return (*this)[ DX ]; }
     T a_y()       const { return (*this)[ AY ]; }
     T f_y()       const { return (*this)[ FY ]; }
     T p_y()       const { return (*this)[ PY ]; }
+    T d_y()       const { return (*this)[ DY ]; }
     
     T& a_x()      { return (*this)[ AX ]; }
     T& f_x()      { return (*this)[ FX ]; }
-    T& p_x()      { return (*this)[ PX ]; }     
+    T& p_x()      { return (*this)[ PX ]; }
+    T& d_x()      { return (*this)[ DX ]; }     
     T& a_y()      { return (*this)[ AY ]; }
     T& f_y()      { return (*this)[ FY ]; }
-    T& p_y()      { return (*this)[ PY ]; }    
+    T& p_y()      { return (*this)[ PY ]; }  
+    T& d_y()      { return (*this)[ DY ]; }   
 
 };
 
@@ -77,7 +85,7 @@ public:
 };
 
 /**
- * @brief System model for a leg swinging in 1D
+ * @brief System model for a leg swinging in 2D
  *
  * This is the system model defining how our leg changes state with
  * control input, i.e. how the system state evolves over time.
@@ -116,6 +124,8 @@ public:
                 
         x_new_.a_x() = x.a_x();
         x_new_.f_x() = x.f_x();
+        x_new_.d_x() = x.d_x();
+        x_new_.d_y() = x.d_y();
         x_new_.a_y() = x.a_y();
         x_new_.f_y() = x.f_y();
 
@@ -160,33 +170,54 @@ protected:
     {
         this->F.setZero();
         
-        // f(a_x,f_x,p_x,a_y,f_y,p_y) = [f_a_x, f_f_x, f_p_x, f_a_y, f_f_y, f_p_y]
-        // F(a_x,f_x,p_x,a_y,f_y,p_y) = [ [df_a_x/da_x, df_a_x/df_x, df_a_x/dp_x, df_a_x/da_y, df_a_x/df_y, df_a_x/dp_y ], 
-        //                                [df_f_x/da_x, df_f_x/df_x, df_f_x/dp_x, df_f_x/da_y, df_f_x/df_y, df_f_x/dp_y ], 
-        //                                [df_p_x/da_x, df_p_x/df_x, df_p_x/dp_x, df_p_x/da_y, df_p_x/df_y, df_p_x/dp_y ], 
-        //                                [df_a_y/da_x, df_a_y/df_x, df_a_y/dp_x, df_a_y/da_y, df_a_y/df_y, df_a_y/dp_y ], 
-        //                                [df_f_y/da_x, df_f_y/df_x, df_f_y/dp_x, df_f_y/da_y, df_f_y/df_y, df_f_y/dp_y ], 
-        //                                [df_p_y/da_x, df_p_y/df_x, df_p_y/dp_x, df_p_y/da_y, df_p_y/df_y, df_p_y/dp_y ]  ]
+        // f(a_x,f_x,p_x,d_x,a_y,f_y,p_y,d_y) =   [f_a_x,       f_f_x,       f_p_x,             f_d_x,       f_a_y,       f_f_y,       f_p_y,       f_d_y ]
+        // F(a_x,f_x,p_x,d_x,a_y,f_y,p_y,d_y) = [ [df_a_x/da_x, df_a_x/df_x, df_a_x/dp_x, df_a_x/dd_x, df_a_x/da_y, df_a_x/df_y, df_a_x/dp_y, df_a_x/dd_y ], 
+        //                                        [df_f_x/da_x, df_f_x/df_x, df_f_x/dp_x, df_f_x/dd_x, df_f_x/da_y, df_f_x/df_y, df_f_x/dp_y, df_f_x/dd_y ], 
+        //                                        [df_p_x/da_x, df_p_x/df_x, df_p_x/dp_x, df_p_x/dd_x, df_p_x/da_y, df_p_x/df_y, df_p_x/dp_y, df_p_x/dd_y ], 
+        //                                        [df_d_x/da_x, df_d_x/df_x, df_d_x/dp_x, df_d_x/dd_x, df_d_x/da_y, df_d_x/df_y, df_d_x/dp_y, df_d_x/dd_y ], 
+        //                                        [df_a_y/da_x, df_a_y/df_x, df_a_y/dp_x, df_a_y/dd_x, df_a_y/da_y, df_a_y/df_y, df_a_y/dp_y, df_a_y/dd_y ], 
+        //                                        [df_f_y/da_x, df_f_y/df_x, df_f_y/dp_x, df_f_y/dd_x, df_f_y/da_y, df_f_y/df_y, df_f_y/dp_y, df_f_y/dd_y ], 
+        //                                        [df_p_y/da_x, df_p_y/df_x, df_p_y/dp_x, df_p_y/dd_x, df_p_y/da_y, df_p_y/df_y, df_p_y/dp_y, df_p_y/dd_y ], 
+        //                                        [df_d_y/da_x, df_d_y/df_x, df_d_y/dp_x, df_d_y/dd_x, df_d_y/da_y, df_d_y/df_y, df_d_y/dp_y, df_d_y/dd_y ]  ]
 
-          this->F( S::AX, S::AX ) = 1;
+        //this line is just to avoid  -Wunused-parameter warning ...
+        double a = x.a_x();
+        a = a + 1;
+
+        this->F(S::AX, S::AX) = 1;
         //this->F( S::AX, S::FX ) = 0;
         //this->F( S::AX, S::PX ) = 0;
+        //this->F( S::AX, S::DX ) = 0;
         //this->F( S::FX, S::AX ) = 0;
           this->F( S::FX, S::FX ) = 1;
         //this->F( S::FX, S::PX ) = 0;
+        //this->F( S::FX, S::DX ) = 0;
         //this->F( S::PX, S::AX ) = 0;
           this->F( S::PX, S::FX ) = dosPi * u.dt();
           this->F( S::PX, S::PX ) = 1;
+        //this->F( S::PX, S::DX ) = 0;
+        //this->F( S::DX, S::AX ) = 0;
+        //this->F( S::DX, S::FX ) = 0;
+        //this->F( S::DX, S::PX ) = 0;
+          this->F( S::DX, S::DX ) = 1;
+
 
           this->F( S::AY, S::AY ) = 1;
         //this->F( S::AY, S::FY ) = 0;
         //this->F( S::AY, S::PY ) = 0;
+        //this->F( S::AY, S::DY ) = 0;
         //this->F( S::FY, S::AY ) = 0;
           this->F( S::FY, S::FY ) = 1;
         //this->F( S::FY, S::PY ) = 0;
+        //this->F( S::FY, S::DY ) = 0;
         //this->F( S::PY, S::AY ) = 0;
           this->F( S::PY, S::FY ) = dosPi * u.dt();
           this->F( S::PY, S::PY ) = 1;
+        //this->F( S::PY, S::DY ) = 0;
+        //this->F( S::DY, S::AY ) = 0;
+        //this->F( S::DY, S::FY ) = 0;
+        //this->F( S::DY, S::PY ) = 0;
+          this->F( S::DY, S::DY ) = 1;
 
         // W = df/dw (Jacobian of state transition w.r.t. the noise)
 
@@ -194,11 +225,6 @@ protected:
         // TODO: more sophisticated noise modelling
         //       i.e. The noise affects the the direction in which we move as 
         //       well as the velocity (i.e. the distance we move)
-
-        //If you learn how to get rid of [-Wunused-variable] warning: remove these lines
-        double nothing = x.a_x();
-        nothing += 42;
-
     }
 
 

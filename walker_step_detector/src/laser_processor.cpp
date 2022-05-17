@@ -184,5 +184,33 @@ namespace laser_processor
         // Insert our temporary clusters list back into the de facto list
         clusters_.insert(clusters_.begin(), tmp_clusters.begin(), tmp_clusters.end());
     }
+
+    void ScanProcessor::removeFar(std::string  dist_frame_id, float max_dist , std_msgs::msg::Header scan_header, std::shared_ptr<tf2_ros::Buffer> tf_buff){
+        geometry_msgs::msg::PointStamped position;
+        geometry_msgs::msg::PointStamped position_new;
+        float rel_dist = 4092.0;
+        std::list<SampleSet*>::iterator c_iter = clusters_.begin();
+        while (c_iter != clusters_.end()){
+            position.header = scan_header;
+            position.point = (*c_iter)->getPosition();
+
+            // transform
+            rel_dist = 4092.0;
+            try {
+                tf_buff->transform(position, position_new, dist_frame_id);
+                rel_dist = pow(position_new.point.x*position_new.point.x + position_new.point.y*position_new.point.y, 1./2.);
+            } catch (tf2::TransformException &e){
+                //RCLCPP_ERROR (this->get_logger(), "%s", e.what());
+            }
+
+            if ( rel_dist > max_dist ) {
+                delete (*c_iter);
+                clusters_.erase(c_iter++);
+            } else {
+                ++c_iter;
+            }
+        }
+    }
+
 } // namespace laser_processor 
 
