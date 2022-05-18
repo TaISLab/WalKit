@@ -36,7 +36,7 @@ def generate_launch_description():
             parameters= [
                 {"scan_topic" : "/scan_filtered"},
                 #{"scan_topic" : "/scan_filtered2"},
-                {"fixed_frame" : "laser"},
+                {"fixed_frame" : "base_link"},
                 {"forest_file" : forest_file_path},
                 {"detection_threshold": 0.001},
                 {"cluster_dist_euclid": 0.02},
@@ -46,7 +46,8 @@ def generate_launch_description():
                 {"use_scan_header_stamp_for_tfs": False},
                 {"max_detected_clusters": 2},
                 {"plot_all_clusters": False},
-                {"plot_leg_clusters": True}
+                {"plot_leg_kalman": False},
+                {"plot_leg_clusters": False}
             ],
         remappings=[ ("detected_step_left", "new_left"),
                      ("detected_step_right", "new_right")]

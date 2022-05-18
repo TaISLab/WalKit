@@ -33,6 +33,7 @@
 *********************************************************************/
 
 #include <walker_step_detector/laser_processor.h>
+#include "walker_step_detector/cluster_features.h"  // mfc: dont move me to header ...
 
 namespace laser_processor 
 {
@@ -65,7 +66,7 @@ namespace laser_processor
 
     }
 
-    geometry_msgs::msg::Point SampleSet::getPosition(){
+    geometry_msgs::msg::Point SampleSet::getPosition() const{
 
         geometry_msgs::msg::Point point;
         float x_mean = 0.0;
@@ -81,12 +82,24 @@ namespace laser_processor
         return point;
     }
 
-    ScanProcessor::ScanProcessor(const sensor_msgs::msg::LaserScan& scan){
 
+    ScanProcessor::ScanProcessor(){
+
+    }
+    
+    void ScanProcessor::setScan(const sensor_msgs::msg::LaserScan& scan){
         scan_ = scan;
 
-        SampleSet* cluster = new SampleSet;
+        // remove any previous data
+        std::list<SampleSet*>::iterator c_iter = clusters_.begin();
+        while (c_iter != clusters_.end())
+        {
+                delete (*c_iter);
+                clusters_.erase(c_iter++);
+        }
 
+        // add new ones
+        SampleSet* cluster = new SampleSet;
         for (unsigned long int i = 0; i < scan.ranges.size(); i++)
         {
             Sample* s = Sample::Extract(i, scan);
@@ -96,11 +109,25 @@ namespace laser_processor
         }
 
         clusters_.push_back(cluster);
+    }
+            
+    
+    
+    void ScanProcessor::setForestFile(std::string forest_file){
+
+        //forest = cv::ml::RTrees::create();       
+        
+        //Load Random forest
+        forest = cv::ml::StatModel::load<cv::ml::RTrees>(forest_file);
+        feat_count_ = forest->getVarCount();
+
+        // OpenCV matrix needed to use the OpenCV random forest classifier
+        tmp_mat = cvCreateMat(1, feat_count_, CV_32FC1);
 
     }
 
     ScanProcessor::~ScanProcessor(){
-        
+        cvReleaseMat(&tmp_mat);
         for ( std::list<SampleSet*>::iterator c = clusters_.begin(); c != clusters_.end(); ++c)
             delete (*c);
 
@@ -215,14 +242,15 @@ namespace laser_processor
     std::list<walker_msgs::msg::StepStamped> ScanProcessor::getCentroids(std::string  fixed_frame_id, std_msgs::msg::Header scan_header, std::shared_ptr<tf2_ros::Buffer> tf_buff){
         std::list<walker_msgs::msg::StepStamped> centroids;
 
-
+        ClusterFeatures cf_;
+        
         std::list<SampleSet*>::iterator c_iter = clusters_.begin();
         while (c_iter != clusters_.end()){
             geometry_msgs::msg::PointStamped position;
             position.header = scan_header;
             position.point = (*c_iter)->getPosition();
 
-            // transform
+            // position in requested frame
             try {
                 tf_buff->transform(position, position, fixed_frame_id);
             } catch (tf2::TransformException &e){
@@ -231,7 +259,15 @@ namespace laser_processor
 
             walker_msgs::msg::StepStamped new_step;
             new_step.position = position;
-            new_step.confidence = 0.42;  // TODO!
+
+            // Add features: TODO REVISIT THESE FILEs....
+            std::vector<float> f = cf_.calcClusterFeatures(*c_iter, scan_);
+            for (int k = 0; k < feat_count_; k++)
+                tmp_mat->data.fl[k] = (float)(f[k]);
+            
+            // Output of forest->predict is [-1.0, 1.0] so we scale to reach [0.0, 1.0]
+            new_step.confidence = 0.5 * (1.0 + forest->predict(cv::cvarrToMat(tmp_mat)));
+
             centroids.push_back(new_step);
             
             ++c_iter;

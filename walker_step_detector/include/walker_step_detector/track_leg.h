@@ -29,12 +29,13 @@ typedef Leg::PositionMeasurementModel<T> PositionModel;
 
     class TrackLeg{   
 
-        public:
-            //TrackLeg();
+        public:            
 
-            TrackLeg(rclcpp::Node *node_, std::string name);
+            TrackLeg();
             
             ~TrackLeg();
+
+            void init(rclcpp::Node *node_, std::string name, double d0, double a0, double f0, double p0);
 
             void add( walker_msgs::msg::StepStamped step);
 
@@ -45,7 +46,8 @@ typedef Leg::PositionMeasurementModel<T> PositionModel;
             walker_msgs::msg::StepStamped predict_step(double t);
 
             geometry_msgs::msg::Point get_speed(walker_msgs::msg::StepStamped step, walker_msgs::msg::StepStamped prev_step);
-
+            
+            void enable_log();
         private:
             std::ofstream myfile;
 
@@ -58,6 +60,11 @@ typedef Leg::PositionMeasurementModel<T> PositionModel;
             double t;
 
             rclcpp::Node *node;
+
+            bool is_init;
+            bool is_debug;
+
+            std::string name;
 
             // Extended Kalman Filter
             Kalman::ExtendedKalmanFilter<State> ekf;

@@ -11,20 +11,22 @@
     class LegsTracker{   
 
         public:
-            //LegsTracker();
-            
-            LegsTracker(rclcpp::Node *node_);
-            
+            LegsTracker();
+                        
             ~LegsTracker();
 
+            void init(rclcpp::Node *node_,double d0, double a0, double f0, double p0);
+            
             void add_detections( std::list<walker_msgs::msg::StepStamped> detect_steps);
 
             void get_steps(walker_msgs::msg::StepStamped* step_r, walker_msgs::msg::StepStamped* step_l, double t);
-
+            void enable_log();
         private:
             TrackLeg l_tracker;
             TrackLeg r_tracker;
             rclcpp::Node *node;
+            bool is_init;
+            bool is_debug;
     };
 
 

@@ -45,6 +45,13 @@
 #include <algorithm>
 #include <bullet/LinearMath/btVector3.h>
 
+// OpenCV related Headers
+#include <opencv2/core/core.hpp>
+#include <opencv2/ml/ml.hpp>
+#include <opencv2/ml.hpp>
+#include <opencv2/core/types_c.h>
+#include <opencv2/core/core_c.h> 
+
 #include <tf2_ros/buffer.h>
 
 #include <sensor_msgs/msg/laser_scan.hpp>
@@ -54,7 +61,6 @@
 
 // Custom Messages related Headers
 #include "walker_msgs/msg/step_stamped.hpp"
-
 
 
 /** @brief A namespace containing the laser processor helper classes */
@@ -114,7 +120,7 @@ namespace laser_processor
             * @brief Get the centroid of the sample points
             * @return Centriod in (x,y,0) (z-element assumed 0)
             */
-            geometry_msgs::msg::Point getPosition();
+            geometry_msgs::msg::Point getPosition() const;
            
     };
 
@@ -125,6 +131,12 @@ namespace laser_processor
     {   
         std::list<SampleSet*> clusters_;
         sensor_msgs::msg::LaserScan scan_;
+        
+        // feture related attributes
+        int feat_count_;
+        cv::Ptr<cv::ml::RTrees> forest;
+        CvMat* tmp_mat;
+
 
         public:
             /**
@@ -137,7 +149,11 @@ namespace laser_processor
             * @brief Constructor
             * @param scan Scan to be processed
             */
-            ScanProcessor(const sensor_msgs::msg::LaserScan& scan);
+            ScanProcessor();
+
+            void setScan(const sensor_msgs::msg::LaserScan& scan);
+            
+            void setForestFile(std::string forest_file);
             
             /**
             * @brief Destructor
