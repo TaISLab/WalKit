@@ -41,7 +41,8 @@
             first_step = detect_steps.front();
             l_tracker.add(first_step);
             last_step = detect_steps.back();
-
+            r_tracker.add(last_step);
+            
             // add all to kalman and let it smooth it
             // while(detect_steps.size()>0){  
             //     first_step = detect_steps.front();
@@ -63,9 +64,9 @@
         *step_r = r_tracker.predict_step(t);
         *step_l = l_tracker.predict_step(t);
 
-        RCLCPP_ERROR (node->get_logger(), "Pred Left step at  [%3.3f, %3.3f]", step_l->position.point.x, step_l->position.point.y);
-        RCLCPP_ERROR (node->get_logger(), "Pred Right step at [%3.3f, %3.3f]", step_r->position.point.x, step_r->position.point.y);
-        RCLCPP_ERROR (node->get_logger(), "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n\n\n\n");
+        //RCLCPP_ERROR (node->get_logger(), "Pred Left step at  [%3.3f, %3.3f]", step_l->position.point.x, step_l->position.point.y);
+        //RCLCPP_ERROR (node->get_logger(), "Pred Right step at [%3.3f, %3.3f]", step_r->position.point.x, step_r->position.point.y);
+        //RCLCPP_ERROR (node->get_logger(), "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n\n\n\n");
 
     }
 

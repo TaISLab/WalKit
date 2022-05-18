@@ -97,7 +97,7 @@
             
             pred_step.confidence = measure_step.confidence;
             pred_step.position.header = measure_step.position.header;
-            RCLCPP_ERROR(node->get_logger(), "Laser measurement available at %s", measure_step.position.header.frame_id.c_str());
+            //RCLCPP_ERROR(node->get_logger(), "Laser measurement available at %s", measure_step.position.header.frame_id.c_str());
             PositionMeasurement position;
             position.pos_x() = measure_step.position.point.x;
             position.pos_y() = measure_step.position.point.y;        
@@ -110,7 +110,7 @@
         } else{
             // u,nan,nan // predict -
             myfile   << u.dt()     << "," << "nan" << "," << "nan" << std::endl;
-            RCLCPP_ERROR(node->get_logger(), "No laser measurement available. No EKF update.");
+            //RCLCPP_ERROR(node->get_logger(), "No laser measurement available. No EKF update.");
         }
 
         PositionMeasurement pred_position = pm.h(ekf_state);
@@ -134,7 +134,7 @@
         // store last prediction time    
         t = ti;
 
-        RCLCPP_ERROR (node->get_logger(), "Pred -- step at  [%3.3f, %3.3f, (%s)]", pred_step.position.point.x, pred_step.position.point.y, pred_step.position.header.frame_id.c_str());
+        //RCLCPP_ERROR (node->get_logger(), "Pred -- step at  [%3.3f, %3.3f, (%s)]", pred_step.position.point.x, pred_step.position.point.y, pred_step.position.header.frame_id.c_str());
         return pred_step;
     }
 

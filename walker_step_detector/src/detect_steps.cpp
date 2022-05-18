@@ -133,6 +133,7 @@ public:
 
         left_detected_step_pub_ = this->create_publisher<walker_msgs::msg::StepStamped>(detected_steps_topic_name_ + "_left", 20);
         right_detected_step_pub_ = this->create_publisher<walker_msgs::msg::StepStamped>(detected_steps_topic_name_ + "_right", 20);
+
         //marker_pub_ = this->create_publisher<visualization_msgs::msg::Marker>("clusters", 5);
         markers_array_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("clusters", 20);
 
@@ -434,7 +435,7 @@ private:
         laser_processor::ScanProcessor processor(*scan);
         processor.splitConnected(cluster_dist_euclid_);
         processor.removeLessThan(min_points_per_cluster_);
-        RCLCPP_ERROR(this->get_logger(), "Found %d clusters", processor.size());            
+        //RCLCPP_ERROR(this->get_logger(), "Found %d clusters", processor.size());            
 
         // Find out the time that should be used for tfs
         bool transform_available;
@@ -462,11 +463,12 @@ private:
         } else {            
             // Remove far clusters
             processor.removeFar(detect_distance_frame_id_, max_detect_distance_, scan->header, buffer_);
-            RCLCPP_ERROR(this->get_logger(), "Found %d CLOSE clusters", processor.size());  
+            //RCLCPP_ERROR(this->get_logger(), "Found %d CLOSE clusters", processor.size());  
 
             if (plot_all_clusters_ || plot_leg_clusters_){
                 delete_all();
             }
+
             // if (plot_all_clusters_){
             //     publish_clusters(processor.getClusters());
             // }
@@ -480,7 +482,6 @@ private:
             
             kalman_tracker.add_detections(points);
         }
-
 
         // get steps from Kalman set
         walker_msgs::msg::StepStamped step_r;
@@ -499,10 +500,10 @@ private:
 
 
     void print_step(walker_msgs::msg::StepStamped step, std::string text){
-        
         RCLCPP_INFO(this->get_logger(), "Pose %s: %3.3f, %3.3f (%3.3f)", text.c_str(), step.position.point.x, step.position.point.y, step.confidence);
-
     }
+
+
 
 };
 
