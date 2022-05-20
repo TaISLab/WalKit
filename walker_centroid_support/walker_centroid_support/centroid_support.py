@@ -4,7 +4,7 @@ from tf2_ros.buffer import Buffer
 from ament_index_python.packages import get_package_share_directory
 from tf2_ros.transform_listener import TransformListener
 from std_msgs.msg import Float64MultiArray, String
-from geometry_msgs.msg import PointStamped
+from geometry_msgs.msg import PointStamped 
 
 from scipy import interpolate
 import yaml
@@ -91,7 +91,7 @@ class CentroidSupport(Node):
         self.tmr = self.create_timer(self.period, self.timer_callback)
 
 
-        self.get_logger().info("load detector started")  
+        self.get_logger().info("centroid support started")  
 
     def user_desc_lc(self, msg):
         user_fields = msg.data.split(':')
@@ -115,7 +115,7 @@ class CentroidSupport(Node):
             self.left_handle_weight  = self.fl(msg.force) 
             self.new_data_available = True
             if (self.left_handle_pose==None):
-                self.left_handle_pose= self.get_handle_pose(self.left_step_msg, self.left_handle_msg)
+                self.left_handle_pose = self.get_handle_pose(self.left_step_msg, self.left_handle_msg)
         else:
             self.get_logger().error("Don't know about which handle are you talking [" + msg.header.frame_id + "]")    
             return
@@ -129,10 +129,12 @@ class CentroidSupport(Node):
     def steps_lc(self, msg, id):
         if  (id==1):
                 self.right_step_msg = msg
+                self.right_leg_load = self.right_step_msg.load 
                 self.right_speed = self.right_step_msg.speed
                 self.new_data_available = True
         elif (id==0):
                 self.left_step_msg = msg
+                self.left_leg_load = self.left_step_msg.load
                 self.left_speed = self.left_step_msg.speed
                 self.new_data_available = True
         else:
@@ -144,13 +146,13 @@ class CentroidSupport(Node):
             self.new_data_available = False
 
             if (not self.first_data_ready ):
-                self.first_data_ready = (self.left_handle_msg is not None) and  (self.right_handle_msg is not None) and (self.left_step_msg is not None) and  (self.right_step_msg is not None)    
+                self.first_data_ready = (self.left_handle_msg is not None)  and (self.right_handle_msg is not None) and (self.left_step_msg is not None) and (self.right_step_msg is not None) and (self.right_handle_pose is not None) and (self.left_handle_pose is not None)   
 
             if ( self.first_data_ready ):
                     right_step_position = np.array([self.right_step_msg.position.point.x, self.right_step_msg.position.point.y, 0])
                     left_step_position = np.array([self.left_step_msg.position.point.x, self.left_step_msg.position.point.y, 0])
-                    right_handle_position = np.array([self.right_handle_pose.position.point.x, self.right_handle_pose.position.point.y, self.right_handle_pose.position.point.z])
-                    left_handle_position = np.array([self.left_handle_pose.position.point.x, self.left_handle_pose.position.point.y, self.left_handle_pose.position.point.z])
+                    right_handle_position = np.array([self.right_handle_pose.point.x, self.right_handle_pose.point.y, self.right_handle_pose.point.z])
+                    left_handle_position = np.array([self.left_handle_pose.point.x, self.left_handle_pose.point.y, self.left_handle_pose.point.z])
 
                     centroid = ( self.right_leg_load      * right_step_position   + 
                                  self.left_leg_load       * left_step_position    + 
@@ -158,31 +160,46 @@ class CentroidSupport(Node):
                                  self.left_handle_weight  * left_handle_position  ) / self.weight
 
                     centroid_msg = PointStamped()
-                    centroid_msg.header = self.right_step_msg.header
-                    centroid_msg.position.point.x = centroid[0]
-                    centroid_msg.position.point.y = centroid[1]
-                    centroid_msg.position.point.z = centroid[2]
+                    centroid_msg.header = self.right_step_msg.position.header
+                    centroid_msg.point.x = centroid[0]
+                    centroid_msg.point.y = centroid[1]
+                    centroid_msg.point.z = centroid[2]
                     
                     self.centroid_pub.publish(centroid_msg)
 
-        else:
-            pass
-                #self.get_logger().error("Not all data received yet ...")
+            else:
+                #pass
+                self.get_logger().error("Not all data received yet ...")
+                if (self.left_handle_msg is None):
+                    self.get_logger().error("\tleft_handle" )
+                if (self.right_handle_msg is None):
+                    self.get_logger().error("\tright_handle" )
+                if (self.left_step_msg is None):
+                    self.get_logger().error("\tleft_step" )
+                if (self.right_step_msg is None):
+                    self.get_logger().error("\tright_step" )
+                if (self.right_handle_pose is None):
+                    self.get_logger().error("\tright_handle_pose" )
+                if (self.left_handle_pose is None):
+                    self.get_logger().error("\tleft_handle_pose" )
 
     # We take 0,0,0 in handles frame and cast it to steps frame.
     def get_handle_pose(self, step_msg, handle_msg):
-        handle_pos = None
+        handle_orig = None
         if ( (step_msg is not None) and (handle_msg is not None)):
-            handle_orig_rel = PointStamped()
-            handle_orig_rel.header = handle_msg.header
-            handle_orig_rel.point.x = handle_orig_rel.point.y = handle_orig_rel.point.z = 0
-            
             try:
-                handle_pos = self.buffer.transform(handle_orig_rel, step_msg.position.header.frame_id)
+                # Handle "is" at the origin of its own tf. So we just need to know the transform between both
+                trans = self.buffer.lookup_transform( step_msg.position.header.frame_id, handle_msg.header.frame_id, rclpy.time.Time())                
+                #trans.transform.translation
+                #trans.transform.rotation
+                handle_orig = PointStamped()
+                handle_orig.header = step_msg.position.header
+                handle_orig.point.x = trans.transform.translation.x
+                handle_orig.point.y = trans.transform.translation.y
+                handle_orig.point.z = trans.transform.translation.z   
             except Exception as e:
-                self.get_logger().error("Can't transform handle point into frame [" + step_msg.position.header.frame_id + "]: [" + str(e) + "]")    
-        
-        return handle_pos
+                self.get_logger().error("Can't transform handle point from frame [" + handle_msg.header.frame_id + "] into frame [" + step_msg.position.header.frame_id + "]: [" + str(e) + "]")    
+        return handle_orig
 
 def main(args=None):
     rclpy.init(args=args)

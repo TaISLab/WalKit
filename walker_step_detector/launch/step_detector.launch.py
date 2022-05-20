@@ -49,8 +49,9 @@ def generate_launch_description():
                 {"plot_leg_kalman": False},
                 {"plot_leg_clusters": False}
             ],
-        remappings=[ ("detected_step_left", "new_left"),
-                     ("detected_step_right", "new_right")]
+        # Cheap way to reuse node with recorded rosbags
+        remappings=[ ("detected_step_left", "new_detected_step_left"),
+                     ("detected_step_right", "new_detected_step_right")]
     )
 
     #ld.add_action(laser_filter2_node)
