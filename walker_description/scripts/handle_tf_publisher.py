@@ -38,7 +38,7 @@ class HandleTfPublisher(Node):
                 print(exc)
 
         # stored data
-        self.new_data_available = False
+        self.new_data_available = True # send a dummy first data to fill tf_tree
         self.handle_height = 2                
         # ROS stuff
         self.tf_publisher = StaticTransformBroadcaster(self)
@@ -55,31 +55,29 @@ class HandleTfPublisher(Node):
             if (self.handle_height != msg.data):
                 self.handle_height = msg.data
                 self.new_data_available = True
-                # build template tf
-                self.current_handle_tf = TransformStamped()
-                self.current_handle_tf.header.stamp = self.get_clock().now().to_msg()
-                self.current_handle_tf.header.frame_id = self.frame_id
-                self.current_handle_tf.child_frame_id = self.child_frame_id_suffix
-                self.current_handle_tf.transform.translation.x = self.handle_x[self.handle_height]
-                self.current_handle_tf.transform.translation.y = self.handle_y[self.handle_height]
-                self.current_handle_tf.transform.translation.z = self.handle_z[self.handle_height]
-                self.current_handle_tf.transform.rotation.w = 1
 
+    def get_tf(self,offset, frame_prefix,y_side):
+        # build template tf
+        handle_tf = TransformStamped()
+        handle_tf.header.stamp = self.get_clock().now().to_msg()
+        handle_tf.header.frame_id = self.frame_id
+        handle_tf.child_frame_id = frame_prefix + self.child_frame_id_suffix
+        handle_tf.transform.translation.x = self.handle_x[offset]
+        handle_tf.transform.translation.y = y_side * self.handle_y[offset]
+        handle_tf.transform.translation.z = self.handle_z[offset]
+        handle_tf.transform.rotation.w = 1
+        return handle_tf
 
     def timer_callback(self):
         if (self.new_data_available):
             self.new_data_available = False           
             # right handle 
-            right_handle_tf = self.current_handle_tf.copy()
-            right_handle_tf.child_frame_id = "right" + right_handle_tf.child_frame_id
-            self.tf_publisher.sendTransform(right_handle_tf)
+            right_handle_tf = get_tf(self.handle_height, "right", 1)
 
             # left handle 
-            left_handle_tf = self.current_handle_tf.copy()
-            left_handle_tf.child_frame_id = "left" + left_handle_tf.child_frame_id
-            left_handle_tf.transform.translation.y = -left_handle_tf.transform.translation.y
+            left_handle_tf = get_tf(self.handle_height, "left", -1)
             self.tf_publisher.sendTransform(left_handle_tf)
-
+            self.get_logger().info("New data sent!")
 
 def main(args=None):
     rclpy.init(args=args)
