@@ -7,7 +7,7 @@
     <xacro:arg name="wheel_diameter_prop" default="0.15"/>
     <xacro:arg name="wheel_section_prop" default="0.022"/>
     <xacro:arg name="wheel_separation_prop" default="0.575"/>
-
+    <xacro:arg name="back_front_wheel_separation_prop" default="0.53"/>
     <!-- In base_footprint coordinates: 
           0,0,0 is at floor level in the middle point between back wheels
           x+ is towards front wheels
@@ -31,6 +31,8 @@
     <xacro:property name="wheel_diameter" value="$(arg wheel_diameter_prop)" />
     <xacro:property name="wheel_section" value="$(arg wheel_section_prop)" />
     <xacro:property name="wheel_separation" value="$(arg wheel_separation_prop)" />
+    <xacro:property name="back_front_wheel_separation" value="$(arg back_front_wheel_separation_prop)" />
+    
     <xacro:property name="lidar_pos_x" value="$(arg lidar_pos_x_prop)" />
     <xacro:property name="lidar_pos_y" value="$(arg lidar_pos_y_prop)" />
     <xacro:property name="lidar_pos_z" value="$(arg lidar_pos_z_prop)" />
@@ -42,9 +44,9 @@
     <xacro:property name="witmotion_size_y" value="$(arg witmotion_size_y_prop)" />
     <xacro:property name="witmotion_size_z" value="$(arg witmotion_size_z_prop)" />
 
-    <xacro:property name="model_scale_x" value="0.01" />
-    <xacro:property name="model_scale_y" value="0.0095" />
-    <xacro:property name="model_scale_z" value="0.0095" />
+    <xacro:property name="model_scale_x" value="0.009" /> <!--long -->
+    <xacro:property name="model_scale_y" value="0.0105" /> <!--wide -->
+    <xacro:property name="model_scale_z" value="0.0075" /> <!--high -->
 
     <xacro:property name="M_PI" value="3.1415926535897931" />
     <xacro:property name="M_PI_2" value="1.570796327" />
@@ -100,13 +102,15 @@
           </inertial>
 
           <collision name="base_collision"> 
-              <geometry>
+              <origin rpy="0 0 0" xyz="${back_front_wheel_separation} 0.0 -${wheel_diameter/2}"/>
+              <geometry>                  
                   <mesh scale="${model_scale_x} ${model_scale_y} ${model_scale_z}" filename="package://walker_description/models/walker/walker_no_wheels.dae"/>        
               </geometry>
           </collision>
 
           <visual name="base_visual"> 
-              <geometry>
+              <origin rpy="0 0 0" xyz="${back_front_wheel_separation} 0.0 -${wheel_diameter/2}"/>
+              <geometry>                  
                   <mesh scale="${model_scale_x} ${model_scale_y} ${model_scale_z}" filename="package://walker_description/models/walker/walker.dae"/>        
               </geometry>
           </visual>

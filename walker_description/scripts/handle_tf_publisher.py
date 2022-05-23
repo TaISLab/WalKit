@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
 import yaml
@@ -38,23 +39,19 @@ class HandleTfPublisher(Node):
                 print(exc)
 
         # stored data
-        self.new_data_available = True # send a dummy first data to fill tf_tree
         self.handle_height = 2                
         # ROS stuff
         self.tf_publisher = StaticTransformBroadcaster(self)
 
         self.handle_height_sub = self.create_subscription(Int32, self.handle_height_topic_name, self.handle_height_cb, 10)
 
-        self.tmr = self.create_timer(self.period, self.timer_callback)
-
-
         self.get_logger().info("handle tf publisher started")  
 
-    def handle_height_cb(self, msg):        
-        if len(self.handle_z)<msg.data:
+    def handle_height_cb(self, msg):  
+        if len(self.handle_z)>msg.data:
             if (self.handle_height != msg.data):
                 self.handle_height = msg.data
-                self.new_data_available = True
+                self.publish_handles()
 
     def get_tf(self,offset, frame_prefix,y_side):
         # build template tf
@@ -68,9 +65,7 @@ class HandleTfPublisher(Node):
         handle_tf.transform.rotation.w = 1.0
         return handle_tf
 
-    def timer_callback(self):
-        if (self.new_data_available):
-            self.new_data_available = False           
+    def publish_handles(self):
             # right handle 
             right_handle_tf = self.get_tf(self.handle_height, "right", 1)
             self.tf_publisher.sendTransform(right_handle_tf)
