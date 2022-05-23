@@ -4,9 +4,10 @@ import yaml
 from ament_index_python.packages import get_package_share_directory
 import os
 from geometry_msgs.msg import TransformStamped
+from std_msgs.msg import Int32
 from tf2_ros.static_transform_broadcaster import StaticTransformBroadcaster
 
-class CentroidSupport(Node):
+class HandleTfPublisher(Node):
 
     def __init__(self):
         super().__init__('centroid_support')
@@ -42,7 +43,7 @@ class CentroidSupport(Node):
         # ROS stuff
         self.tf_publisher = StaticTransformBroadcaster(self)
 
-        self.handle_height_sub = self.create_subscription(StepStamped, self.handle_height_topic_name, self.handle_height_cb, 10)
+        self.handle_height_sub = self.create_subscription(Int32, self.handle_height_topic_name, self.handle_height_cb, 10)
 
         self.tmr = self.create_timer(self.period, self.timer_callback)
 
@@ -87,7 +88,7 @@ def main(args=None):
 
     try:
       rclpy.spin(minimal_subscriber)
-   except KeyboardInterrupt:
+    except KeyboardInterrupt:
       pass
 
     minimal_subscriber.destroy_node()

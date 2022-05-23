@@ -20,8 +20,6 @@
     <xacro:arg name="witmotion_pos_x_prop" default="0.55"/>
     <xacro:arg name="witmotion_pos_y_prop" default="0.0"/>
     <xacro:arg name="witmotion_pos_z_prop" default="0.474"/>
-
-    51.3mm x36mm X15mm
     <xacro:arg name="witmotion_size_x_prop" default="0.0513"/>
     <xacro:arg name="witmotion_size_y_prop" default="0.036"/>
     <xacro:arg name="witmotion_size_z_prop" default="0.015"/>    
@@ -44,7 +42,10 @@
     <xacro:property name="witmotion_size_y" value="$(arg witmotion_size_y_prop)" />
     <xacro:property name="witmotion_size_z" value="$(arg witmotion_size_z_prop)" />
 
-    <xacro:property name="model_scale" value="0.0095" />
+    <xacro:property name="model_scale_x" value="0.01" />
+    <xacro:property name="model_scale_y" value="0.0095" />
+    <xacro:property name="model_scale_z" value="0.0095" />
+
     <xacro:property name="M_PI" value="3.1415926535897931" />
     <xacro:property name="M_PI_2" value="1.570796327" />
 
@@ -80,7 +81,7 @@
         <joint name="wheel_${name}_joint" type="fixed">
             <origin rpy="0 0 0" xyz="${origin_xyz}"/>
             <child link="wheel_${name}"/>
-            <parent link="base_link"/>
+            <parent link="base_footprint"/>
             <axis rpy="0 0 0" xyz="0 1 0"/>
             <limit effort="10000" velocity="1000"/>
             <joint_properties damping="1.0" friction="1.0"/>
@@ -100,13 +101,13 @@
 
           <collision name="base_collision"> 
               <geometry>
-                  <mesh scale="${model_scale} ${model_scale} ${5*model_scale/6}" filename="file://$(find walker_description)/models/walker/walker_no_wheels.dae"/>        
+                  <mesh scale="${model_scale_x} ${model_scale_y} ${model_scale_z}" filename="package://walker_description/models/walker/walker_no_wheels.dae"/>        
               </geometry>
           </collision>
 
           <visual name="base_visual"> 
               <geometry>
-                  <mesh scale="${model_scale} ${model_scale} ${5*model_scale/6}" filename="file://$(find walker_description)/models/walker/walker.dae"/>        
+                  <mesh scale="${model_scale_x} ${model_scale_y} ${model_scale_z}" filename="package://walker_description/models/walker/walker.dae"/>        
               </geometry>
           </visual>
     </link>
@@ -136,7 +137,7 @@
 
           <visual name="lidar_sensor_visual">
               <geometry>
-                  <mesh scale="0.001 0.001 0.001" filename="file://$(find walker_description)/models/turtlebot3_burger/meshes/lds.dae"/>                                                    
+                  <mesh scale="0.001 0.001 0.001" filename="package://walker_description/models/turtlebot3_burger/meshes/lds.dae"/>                                                    
               </geometry>
               <material name="grey">
                 <color rgba="0.2 0.2 0.2 1.0"/>
@@ -183,6 +184,6 @@
       <child link="witmotion"/>
     </joint>
     <!-- gazebo stuff 
-    <xacro:include filename="$(find walker_description)/urdf/walker_model.gazebo" />
+    <xacro:include filename="package://walker_description/urdf/walker_model.gazebo" />
     --> 
 </robot>
