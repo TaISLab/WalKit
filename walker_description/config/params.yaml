@@ -1,0 +1,4 @@
+# holes you can see in the handle    0,     1,     2,     3,     4    
+handle_z:                           [0.82,  0.84,  0.86,  0.88,  0.9  ] # m. in base footprint frame
+handle_x:                           [0.18 , 0.17 , 0.165, 0.155, 0.145] # m. in base footprint frame
+handle_y:                           [0.39,  0.39,  0.39,  0.39,  0.39 ] # m. in base footprint frame (this is right side. left should be negative)

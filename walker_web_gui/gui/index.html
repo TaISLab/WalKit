@@ -124,10 +124,10 @@ input { font-size: 40px; }
 <script type="text/javascript" src="static.robotwebtools.org/roslibjs/current/roslib.min.js"></script>
 <script type="text/javascript" src="requirejs.org/docs/release/2.3.5/minified/require.js"></script>
 
-
+<!-- WARNING: TRY TO KEEP URL VAR AT LINE 130 !! walker_config.bash WILL CHANGE IT BLINDLY -->
 <script type="text/javascript" type="text/javascript">
   var ros = new ROSLIB.Ros({
-    url : 'ws://192.168.42.42:9090'
+    url : 'ws://192.168.57.123:9090'
   });
 
   ros.on('connection', function() {
@@ -182,6 +182,19 @@ input { font-size: 40px; }
     document.getElementById("right_wheel_encoder").innerHTML = m.encoder;
   });
 
+  handle_height_listener = new ROSLIB.Topic({
+    ros : ros,
+    name : "/handle_height",
+    messageType : 'std_msgs/Int32',
+  });
+  
+  function handle_publish() {
+    var var_handle = new ROSLIB.Message({
+		    data : parseInt(document.getElementById("handleRange").value)
+		});
+		handle_height_listener.publish(var_handle);
+  }
+
   user_listener = new ROSLIB.Topic({
     ros : ros,
     name : "/user_desc",
@@ -196,11 +209,12 @@ input { font-size: 40px; }
             document.getElementById("WeightValue").innerHTML + ':' +
             document.getElementById("user_id").value + ':' +
             document.getElementById('gender_tag_status').innerHTML + ':' +
-            document.getElementById("condition").value
+            document.getElementById("myTextarea").value
     });
     user_listener.publish(user_info);
+    handle_publish();
   }
- 
+
   // Calling a service
   // -----------------
 
@@ -352,33 +366,34 @@ input { font-size: 40px; }
   </script>
 
   <!-- medical condition -->
-  <div id="condition_div" class="condition_class">
-    User medical condition:  
-    <input type="text" id="condition" value="No previous condition" size="12" >
+  <div id="condition_div">
+    <p>User medical condition: </p>
+      <textarea id="myTextarea" name="aTextArea" rows="5" cols="100">No previous condition</textarea>      
   </div>
 
-  <!-- Handle height  -->
+ <!-- ********************** Control CONFIGURATION **********************  -->
+ <br>
+ <hr size="3" noshade> 
+
+ <!-- Handle height  -->
   <div class="slidecontainer">
     <p>Handle position: <span id="handleValue"></span> # </p>
     <input type="range" min="0" max="4" value="2" class="slider" id="handleRange">
   </div>
   
   <script>
-      var slider_a = document.getElementById("handleRange");
-      var output_a = document.getElementById("handleValue");
-      output_a.innerHTML = slider_a.value;
+      var slider_hh = document.getElementById("handleRange");
+      var output_hh = document.getElementById("handleValue");
+      output_hh.innerHTML = slider_hh.value;
       
-      slider_a.oninput = function() {
-        output_a.innerHTML = this.value;
+      slider_hh.oninput = function() {
+        output_hh.innerHTML = this.value;
         user();
       }
   </script>
 
-
- <!-- ********************** Control CONFIGURATION **********************  -->
- <br>
- <hr size="3" noshade> 
-  <div id="record_tag_id" class="record_tag_class">
+ <!-- Start recording  -->
+   <div id="record_tag_id" class="record_tag_class">
     <label class="toggle">
       <input id="record_tog" type="checkbox">
       <span class="roundbutton"></span>
