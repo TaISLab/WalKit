@@ -65,7 +65,7 @@ class HandleTfPublisher(Node):
         handle_tf.transform.translation.x = self.handle_x[offset]
         handle_tf.transform.translation.y = y_side * self.handle_y[offset]
         handle_tf.transform.translation.z = self.handle_z[offset]
-        handle_tf.transform.rotation.w = 1
+        handle_tf.transform.rotation.w = 1.0
         return handle_tf
 
     def timer_callback(self):
