@@ -1,0 +1,92 @@
+#include <walker_step_detector/legs_tracker.h>
+
+    LegsTracker::LegsTracker(){
+        is_init = false;
+        is_debug = false;
+    }
+
+    void LegsTracker::init(rclcpp::Node *node_,double d0, double a0, double f0, double p0){
+        if (!is_init){
+            is_init = true;
+            node = node_;
+            l_tracker.init(node_, "left", d0, a0, f0, p0);
+            r_tracker.init(node_, "right",d0, a0, f0, p0);
+        }
+    }
+
+    void LegsTracker::enable_log(){
+        is_debug = true;
+        l_tracker.enable_log();
+        r_tracker.enable_log();
+    }
+
+
+    LegsTracker::~LegsTracker(){        
+    }
+
+    void LegsTracker::add_detections( std::list<walker_msgs::msg::StepStamped> detect_steps){
+
+        walker_msgs::msg::StepStamped first_step, last_step;
+
+        unsigned int n_points;
+
+        if (is_init){
+            n_points = detect_steps.size();
+            
+            if (n_points==1){
+                first_step = detect_steps.front();
+                // left should have y<0
+                if (first_step.position.point.y<0) {
+                    l_tracker.add(first_step);
+                } else{
+                    r_tracker.add(first_step);
+                }            
+            } else if (n_points==2) {
+                first_step = detect_steps.front();
+                last_step = detect_steps.back();
+
+                // left should have lower y
+                if (first_step.position.point.y<last_step.position.point.y) {
+                    l_tracker.add(first_step);
+                    r_tracker.add(last_step);
+                } else{
+                    l_tracker.add(last_step);
+                    r_tracker.add(first_step);                
+                }            
+            } else if (n_points>2) { // 3 points at least ...
+            detect_steps.sort(CompareSteps()); // sorted left-right
+            // pick most extreme ones
+            first_step = detect_steps.front();
+            l_tracker.add(first_step);
+            last_step = detect_steps.back();
+            r_tracker.add(last_step);
+            
+            // add all to kalman and let it smooth it
+            // while(detect_steps.size()>0){  
+            //     first_step = detect_steps.front();
+            //     detect_steps.pop_front();
+            //     l_tracker.add(first_step);
+            //     if (detect_steps.size()>0){
+            //         last_step = detect_steps.back();
+            //         detect_steps.pop_back();
+            //         r_tracker.add(last_step);
+            //     }
+            // }
+        }
+        }
+    }
+
+    void LegsTracker::get_steps(walker_msgs::msg::StepStamped* step_r, walker_msgs::msg::StepStamped* step_l, double t){
+        
+        *step_r = r_tracker.predict_step(t);
+        *step_l = l_tracker.predict_step(t);
+
+        if (is_debug){
+            RCLCPP_DEBUG (node->get_logger(), "Prediction requested at time (%3.3f)",t*1e-9);
+        }
+
+    }
+
+
+
+

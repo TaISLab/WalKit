@@ -34,21 +34,28 @@ def generate_launch_description():
             executable="detect_steps",
             name="detect_steps",
             parameters= [
-                {"scan_topic" : "/scan_filtered2"},
-                {"fixed_frame" : "laser"},
+                {"scan_topic" : "/scan_filtered"},
+                #{"scan_topic" : "/scan_filtered2"},
+                {"fixed_frame" : "base_link"},
                 {"forest_file" : forest_file_path},
-                {"detection_threshold": 0.01},
-                {"cluster_dist_euclid": 0.13},
+                {"detection_threshold": 0.001},
+                {"cluster_dist_euclid": 0.02},
                 {"min_points_per_cluster":  3},
                 {"detect_distance_frame_id": "base_link"},
                 {"max_detect_distance": 0.45},
                 {"use_scan_header_stamp_for_tfs": False},
-                {"max_detected_clusters": 2}
-            ]
+                {"max_detected_clusters": 2},
+                {"plot_all_clusters": False},
+                {"plot_leg_kalman": False},
+                {"plot_leg_clusters": False}
+            ],
+        # Cheap way to reuse node with recorded rosbags
+        remappings=[ ("detected_step_left", "new_detected_step_left"),
+                     ("detected_step_right", "new_detected_step_right")]
     )
 
-    ld.add_action(laser_filter2_node)
+    #ld.add_action(laser_filter2_node)
     ld.add_action(detect_steps_node)
-
+    
     return ld 
  

@@ -3,6 +3,9 @@
 ####################
 # see: https://github.com/github/gitignore/blob/main/Python.gitignore
 
+
+COLCON_IGNORE
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -37,8 +37,6 @@
 
 #include <unistd.h>
 #include <math.h>
-#include <sensor_msgs/msg/laser_scan.hpp>
-#include <sensor_msgs/msg/point_cloud.hpp>
 #include <list>
 #include <set>
 #include <vector>
@@ -47,9 +45,22 @@
 #include <algorithm>
 #include <bullet/LinearMath/btVector3.h>
 
+// OpenCV related Headers
+#include <opencv2/core/core.hpp>
+#include <opencv2/ml/ml.hpp>
+#include <opencv2/ml.hpp>
+#include <opencv2/core/types_c.h>
+#include <opencv2/core/core_c.h> 
+
+#include <tf2_ros/buffer.h>
+
+#include <sensor_msgs/msg/laser_scan.hpp>
+#include <sensor_msgs/msg/point_cloud.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include "std_msgs/msg/header.hpp"
 
-
+// Custom Messages related Headers
+#include "walker_msgs/msg/step_stamped.hpp"
 
 
 /** @brief A namespace containing the laser processor helper classes */
@@ -109,7 +120,7 @@ namespace laser_processor
             * @brief Get the centroid of the sample points
             * @return Centriod in (x,y,0) (z-element assumed 0)
             */
-            geometry_msgs::msg::Point getPosition();
+            geometry_msgs::msg::Point getPosition() const;
            
     };
 
@@ -120,6 +131,12 @@ namespace laser_processor
     {   
         std::list<SampleSet*> clusters_;
         sensor_msgs::msg::LaserScan scan_;
+        
+        // feture related attributes
+        int feat_count_;
+        cv::Ptr<cv::ml::RTrees> forest;
+        CvMat* tmp_mat;
+
 
         public:
             /**
@@ -132,7 +149,11 @@ namespace laser_processor
             * @brief Constructor
             * @param scan Scan to be processed
             */
-            ScanProcessor(const sensor_msgs::msg::LaserScan& scan);
+            ScanProcessor();
+
+            void setScan(const sensor_msgs::msg::LaserScan& scan);
+            
+            void setForestFile(std::string forest_file);
             
             /**
             * @brief Destructor
@@ -150,6 +171,14 @@ namespace laser_processor
             * @param thresh Euclidian distance threshold for clustering
             */
             void splitConnected(float thresh);
+
+            /**
+            * @brief Get number of clusters
+            */
+            int size(){ return clusters_.size(); };
+
+            void removeFar(std::string  dist_frame_id, float max_dist , std_msgs::msg::Header scan_header, std::shared_ptr<tf2_ros::Buffer> tf_buff);
+            std::list<walker_msgs::msg::StepStamped> getCentroids(std::string  fixed_frame_id, std_msgs::msg::Header scan_header, std::shared_ptr<tf2_ros::Buffer> tf_buff);
     };
 }
 

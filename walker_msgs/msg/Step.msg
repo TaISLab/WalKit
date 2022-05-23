@@ -10,5 +10,5 @@ bool tracked false
 # (m/s) leg motion speed (also on detector's frame)
 geometry_msgs/Point speed 
 
-# (kg) weight on foot. -1 means it hasn't been calculated or no single load on it.
+# single support (kg) weight on foot. -1 means it hasn't been calculated or no single load on it.
 float32 load -1

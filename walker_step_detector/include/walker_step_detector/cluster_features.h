@@ -36,13 +36,16 @@
 #ifndef CLUSTERFEATURES_HH
 #define CLUSTERFEATURES_HH
 
-#include "laser_processor.h"
+#include "walker_step_detector/laser_processor.h"
 #include <sensor_msgs/msg/laser_scan.hpp>
 
 
 /**
 * @brief Function that calculates the geometric features of a cluster of scan points
 */
+
+using namespace laser_processor;
+
 class ClusterFeatures 
 {
     public:

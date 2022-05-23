@@ -65,6 +65,10 @@
     font-size: 3rem;
 }
 
+.condition_class {
+    font-size: 3rem;
+}
+
 .toggle {
     margin:0 0 0 2rem;
     position: relative;
@@ -123,7 +127,7 @@ input { font-size: 40px; }
 
 <script type="text/javascript" type="text/javascript">
   var ros = new ROSLIB.Ros({
-    url : 'ws://localhost:9090'
+    url : 'ws://192.168.42.42:9090'
   });
 
   ros.on('connection', function() {
@@ -191,7 +195,8 @@ input { font-size: 40px; }
             document.getElementById("heightValue").innerHTML + ':' +
             document.getElementById("WeightValue").innerHTML + ':' +
             document.getElementById("user_id").value + ':' +
-            document.getElementById('gender_tag_status').innerHTML
+            document.getElementById('gender_tag_status').innerHTML + ':' +
+            document.getElementById("condition").value
     });
     user_listener.publish(user_info);
   }
@@ -345,6 +350,30 @@ input { font-size: 40px; }
       user();
     }
   </script>
+
+  <!-- medical condition -->
+  <div id="condition_div" class="condition_class">
+    User medical condition:  
+    <input type="text" id="condition" value="No previous condition" size="12" >
+  </div>
+
+  <!-- Handle height  -->
+  <div class="slidecontainer">
+    <p>Handle position: <span id="handleValue"></span> # </p>
+    <input type="range" min="0" max="4" value="2" class="slider" id="handleRange">
+  </div>
+  
+  <script>
+      var slider_a = document.getElementById("handleRange");
+      var output_a = document.getElementById("handleValue");
+      output_a.innerHTML = slider_a.value;
+      
+      slider_a.oninput = function() {
+        output_a.innerHTML = this.value;
+        user();
+      }
+  </script>
+
 
  <!-- ********************** Control CONFIGURATION **********************  -->
  <br>

@@ -1,39 +1,44 @@
 <?xml version="1.0"?>
 
-<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="rfid_robot">
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="walker">
 
 
     <!--All units in m-kg-s-radians unit system -->
-    <xacro:arg name="wheel_diameter" default="0.188"/>
-    <xacro:arg name="wheel_section" default="0.035"/>
-    <xacro:arg name="wheel_separation" default="0.5"/>
-    <xacro:arg name="lidar_height" default="0.34"/>
+    <xacro:arg name="wheel_diameter" default="0.15"/>
+    <xacro:arg name="wheel_section" default="0.022"/>
+    <xacro:arg name="wheel_separation" default="0.575"/>
+    <!-- From floor -->
+    <xacro:arg name="lidar_height" default="0.21"/>
+    <xacro:arg name="handle_height" default="0.85"/>
     
     <!--Constants and operable values -->
     <xacro:property name="wheel_diameter_prop" value="$(arg wheel_diameter)" />
     <xacro:property name="wheel_section_prop" value="$(arg wheel_section)" />
     <xacro:property name="wheel_separation_prop" value="$(arg wheel_separation)" />
     <xacro:property name="lidar_height_prop" value="$(arg lidar_height)" />
+    <xacro:property name="handle_height_prop" value="$(arg handle_height)" />
     
     <xacro:property name="model_scale" value="0.0095" />
     <xacro:property name="M_PI" value="3.1415926535897931" />
     <xacro:property name="M_PI_2" value="1.570796327" />
 
     <!-- macros  --> 
-    <xacro:macro name="link_wheel" params="name">
-        <link name="wheel_${name}_link">
+    <xacro:macro name="wheel" params="name origin_xyz">">
+        <link name="wheel_${name}">
             <inertial>
               <mass value="0.2"/>
               <origin rpy="0 ${M_PI_2} ${M_PI_2}" xyz="0 0 0"/>
               <inertia ixx="0.000526666666667" ixy="0" ixz="0" iyy="0.000526666666667" iyz="0" izz="0.001"/>
             </inertial>
+
             <collision name="wheel_${name}_collision">
               <origin rpy="0 ${M_PI_2} ${M_PI_2}" xyz="0 0 0"/>
               <geometry>
                 <cylinder radius="${wheel_diameter_prop/2}" length="${wheel_section_prop}"/>
               </geometry>
             </collision>
-            <!-- <visual name="wheel_${name}_visual">
+            
+            <visual name="wheel_${name}_visual">
               <origin rpy="0 ${M_PI_2} ${M_PI_2}" xyz="0 0 0"/>
               <geometry>
                 <cylinder radius="${wheel_diameter_prop/2}" length="${wheel_section_prop}"/>
@@ -41,57 +46,63 @@
               <material name="black">
                 <color rgba="0.0 0.0 0.0 1.0"/>
               </material>
-            </visual> -->
+            </visual>
         </link>
-    </xacro:macro>
-    
-    <xacro:macro name="joint_wheel" params="name origin_xyz">
-      <joint name="wheel_${name}_joint" type="continuous">
-        <origin rpy="0 0 0" xyz="${origin_xyz}"/>
-        <child link="wheel_${name}_link"/>
-        <parent link="base_link"/>
-        <axis rpy="0 0 0" xyz="0 1 0"/>
-        <limit effort="10000" velocity="1000"/>
-        <joint_properties damping="1.0" friction="1.0"/>
-      </joint>
+
+
+        <!-- continuous type does not get done-->
+        <joint name="wheel_${name}_joint" type="fixed">
+            <origin rpy="0 0 0" xyz="${origin_xyz}"/>
+            <child link="wheel_${name}"/>
+            <parent link="base_link"/>
+            <axis rpy="0 0 0" xyz="0 1 0"/>
+            <limit effort="10000" velocity="1000"/>
+            <joint_properties damping="1.0" friction="1.0"/>
+        </joint>
+    </xacro:macro> 
+
+    <xacro:macro name="handle" params="name origin_xyz">">
+        <link name="handle_${name}">
+            <inertial>
+              <mass value="0.2"/>
+              <origin rpy="0 ${M_PI_2} ${M_PI_2}" xyz="0 0 0"/>
+              <inertia ixx="0.000526666666667" ixy="0" ixz="0" iyy="0.000526666666667" iyz="0" izz="0.001"/>
+            </inertial>
+
+            <collision name="handle_${name}_collision">
+              <origin rpy="0 ${M_PI_2} ${M_PI_2}" xyz="0 0 0"/>
+              <geometry>
+                <cylinder radius="${wheel_diameter_prop/2}" length="${wheel_section_prop}"/>
+              </geometry>
+            </collision>
+            
+            <visual name="handle_${name}_visual">
+              <origin rpy="0 ${M_PI_2} ${M_PI_2}" xyz="0 0 0"/>
+              <geometry>
+                <cylinder radius="${wheel_diameter_prop/2}" length="${wheel_section_prop}"/>
+              </geometry>
+              <material name="black">
+                <color rgba="0.0 0.0 0.0 1.0"/>
+              </material>
+            </visual>
+        </link>
+
+        <joint name="handle_${name}_joint" type="fixed">
+            <origin rpy="0 0 0" xyz="${origin_xyz}"/>
+            <child link="handle_${name}"/>
+            <parent link="base_link"/>
+            <axis rpy="0 0 0" xyz="0 1 0"/>
+            <limit effort="10000" velocity="1000"/>
+            <joint_properties damping="1.0" friction="1.0"/>
+        </joint>
     </xacro:macro>
 
-    <!-- gazebo stuff --> 
-    <xacro:include filename="$(find walker_simulation)/urdf/walker_model.gazebo" />
+    <!-- gazebo stuff 
+    <xacro:include filename="$(find walker_description)/urdf/walker_model.gazebo" />
+    --> 
 
     <!-- root link --> 
     <link name="base_footprint"/>
-
-    <!-- LIDAR link --> 
-    <link name="base_scan">
-          <inertial>
-              <mass value="0.004" />
-              <inertia ixx="0.001" ixy="0.000" ixz="0.000" iyy="0.001" iyz="0.000" izz="0.001" />
-          </inertial>
-
-          <collision name="lidar_sensor_collision">
-              <geometry>
-                  <cylinder radius="0.0508" length="0.055"/>
-              </geometry>
-          </collision>             
-
-          <visual name="lidar_sensor_visual">
-              <geometry>
-                  <mesh scale="0.001 0.001 0.001" filename="file://$(find turtlebot3_gazebo)/models/turtlebot3_burger/meshes/lds.dae"/>                                                    
-              </geometry>
-              <material name="grey">
-                <color rgba="0.2 0.2 0.2 1.0"/>
-              </material>
-          </visual>
-
-    </link>
-
-    <joint name="lidar_joint" type="fixed">
-      <origin xyz="0.0 0 ${lidar_height_prop}" rpy="0 0 0"/>
-      <axis xyz="0 0 1"/> 
-      <parent link="base_link"/>
-      <child link="base_scan"/>
-    </joint>
 
     <!-- Chassis link -->
     <link name="base_link">
@@ -120,11 +131,43 @@
       <child link="base_link"/>
     </joint>
 
+    <!-- LIDAR link --> 
+    <link name="laser">
+          <inertial>
+              <mass value="0.004" />
+              <inertia ixx="0.001" ixy="0.000" ixz="0.000" iyy="0.001" iyz="0.000" izz="0.001" />
+          </inertial>
+
+          <collision name="lidar_sensor_collision">
+              <geometry>
+                  <cylinder radius="0.0508" length="0.055"/>
+              </geometry>
+          </collision>             
+
+          <visual name="lidar_sensor_visual">
+              <geometry>
+                  <mesh scale="0.001 0.001 0.001" filename="file://$(find turtlebot3_gazebo)/models/turtlebot3_burger/meshes/lds.dae"/>                                                    
+              </geometry>
+              <material name="grey">
+                <color rgba="0.2 0.2 0.2 1.0"/>
+              </material>
+          </visual>
+
+    </link>
+
+    <joint name="lidar_joint" type="fixed">
+      <origin xyz="0.0 0 ${lidar_height_prop}" rpy="0 0 0"/>
+      <axis xyz="0 0 1"/> 
+      <parent link="base_link"/>
+      <child link="laser"/>
+    </joint>
+
     <!-- Wheel links -->
-    <xacro:link_wheel name="right" />
-    <xacro:joint_wheel name="right" origin_xyz="0 -${wheel_separation_prop/2} ${wheel_diameter_prop/2}" />
-    
-    <xacro:link_wheel name="left" />
-    <xacro:joint_wheel name="left" origin_xyz="0 ${wheel_separation_prop/2} ${wheel_diameter_prop/2}" />
+    <xacro:wheel name="right" origin_xyz="0 -${wheel_separation_prop/2} ${wheel_diameter_prop/2}" />
+    <xacro:wheel name="left"  origin_xyz="0 ${wheel_separation_prop/2} ${wheel_diameter_prop/2}" />
+
+    <!-- Handle links -->
+    <xacro:handle name="right" origin_xyz="0.31 -0.24  ${handle_height_prop}" />
+    <xacro:handle name="left"  origin_xyz="0.31  0.24  ${handle_height_prop}" />
 
 </robot>
