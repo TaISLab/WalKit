@@ -72,10 +72,10 @@ class HandleTfPublisher(Node):
         if (self.new_data_available):
             self.new_data_available = False           
             # right handle 
-            right_handle_tf = get_tf(self.handle_height, "right", 1)
+            right_handle_tf = self.get_tf(self.handle_height, "right", 1)
 
             # left handle 
-            left_handle_tf = get_tf(self.handle_height, "left", -1)
+            left_handle_tf = self.get_tf(self.handle_height, "left", -1)
             self.tf_publisher.sendTransform(left_handle_tf)
             self.get_logger().info("New data sent!")
 
