@@ -2,6 +2,9 @@ session: walker_ros2
 init_cmd: |
   # Any initial config/command goes here:
   source ~/workspace/walker_ws/install/setup.bash & source ~/workspace/walker_ws/install/setup.sh
+  # find ip
+  ip_addr=$(ip -f inet -o addr show wlp2s0 | cut -d\  -f 7 | cut -d/ -f 1)
+  sed -i "130s/.*/    url : \x27ws:\/\/$ip_addr:9090\x27/" ~/workspace/walker_ws/src/WalKit/walker_web_gui/gui/index.html 
 windows:
   - name: arduino
     tags: ['core']
