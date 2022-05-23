@@ -73,7 +73,7 @@ class HandleTfPublisher(Node):
             self.new_data_available = False           
             # right handle 
             right_handle_tf = self.get_tf(self.handle_height, "right", 1)
-
+            self.tf_publisher.sendTransform(right_handle_tf)
             # left handle 
             left_handle_tf = self.get_tf(self.handle_height, "left", -1)
             self.tf_publisher.sendTransform(left_handle_tf)
