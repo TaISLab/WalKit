@@ -10,7 +10,7 @@ from tf2_ros.static_transform_broadcaster import StaticTransformBroadcaster
 class HandleTfPublisher(Node):
 
     def __init__(self):
-        super().__init__('centroid_support')
+        super().__init__('handle_tf_publisher')
         self.declare_parameters(
             namespace='',
             parameters=[
@@ -48,7 +48,7 @@ class HandleTfPublisher(Node):
         self.tmr = self.create_timer(self.period, self.timer_callback)
 
 
-        self.get_logger().info("centroid support started")  
+        self.get_logger().info("handle tf publisher started")  
 
     def handle_height_cb(self, msg):        
         if len(self.handle_z)<msg.data:
