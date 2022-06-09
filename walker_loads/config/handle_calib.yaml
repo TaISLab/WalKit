@@ -1,3 +1,7 @@
-weight_points: [0, 1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20] # measurement points in kg
-left_handle_points: [2.7, 46.7, 81.8, 138.5, 193.1, 255.01, 334.6, 430.9, 474.1, 551, 612.1, 669.7] # handle measurement
-right_handle_points: [0.025, 42.13, 68.2, 139.2, 223.8, 290.5, 346.5, 447.2, 481.7, 559.5, 640.1, 662.8] # handle measurement
+---
+
+partial_loads:
+  ros__parameters:
+    weight_points:       [0.0,    1.0,   2.0,   4.0,   6.0,   8.0,   10.0,  12.0,  14.0,  16.0,  18.0,  20.0] # measurement points in kg
+    left_handle_points:  [2.7,   46.7,  81.8, 138.5, 193.1, 255.01, 334.6, 430.9, 474.1, 551.0, 612.1, 669.7] # handle measurement
+    right_handle_points: [0.025, 42.13, 68.2, 139.2, 223.8, 290.5,  346.5, 447.2, 481.7, 559.5, 640.1, 662.8] # handle measurement
