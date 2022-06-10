@@ -20,6 +20,7 @@ find_package(walker_msgs REQUIRED)
 
 # Include Cpp "include" directory
 include_directories(include)
+#ament_export_include_directories(include)
 
 # Create Cpp executable
 add_executable(partial_loads src/partial_loads_node.cpp src/spline.cpp src/partial_loads.cpp)

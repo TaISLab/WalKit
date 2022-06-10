@@ -7,11 +7,13 @@
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/parameter.hpp>
 #include <rclcpp/parameter_map.hpp>
+#include "rcpputils/split.hpp"
 
 #include <rcl_yaml_param_parser/parser.h>
 #include <ament_index_cpp/get_package_share_directory.hpp>
 
 #include "std_msgs/msg/string.hpp"
+#include "std_msgs/msg/header.hpp"
 
 // Custom Messages related Headers
 #include "walker_msgs/msg/step_stamped.hpp"
@@ -20,6 +22,9 @@
 
 // Local includes
 #include "walker_loads/spline.h"
+
+//MFC AQUI PETA!!
+//#include "walker_loads/diff_tracker.h"
 
 using std::placeholders::_1;
 using namespace std::chrono_literals;
@@ -35,6 +40,8 @@ class PartialLoads : public rclcpp::Node{
       void r_steps_lc(const walker_msgs::msg::StepStamped::SharedPtr msg);
       void user_desc_lc(const std_msgs::msg::String::SharedPtr msg);
       void timer_callback();
+      bool has_data(std_msgs::msg::Header header);
+      void steps_lc(const walker_msgs::msg::StepStamped::SharedPtr msg, int id);
 
       // ROS objects
       rclcpp::Publisher<walker_msgs::msg::StepStamped>::SharedPtr left_load_pub_;
@@ -60,30 +67,30 @@ class PartialLoads : public rclcpp::Node{
       std::string user_desc_topic_name_;
       int ms_period_;
       double speed_delta_;
+      bool debug_output_ = false;
  
       // Handle force interpolators
       SplineFunction fl_;
       SplineFunction fr_;
 
       // Internal state
-      walker_msgs::msg::ForceStamped left_handle_msg;
-      walker_msgs::msg::ForceStamped right_handle_msg;
-      walker_msgs::msg::StepStamped left_step_msg;
-      walker_msgs::msg::StepStamped right_step_msg;
+      walker_msgs::msg::ForceStamped left_handle_msg_;
+      walker_msgs::msg::ForceStamped right_handle_msg_;
+      walker_msgs::msg::StepStamped left_step_msg_;
+      walker_msgs::msg::StepStamped right_step_msg_;
 
-      double speed_diff = 0;
-      geometry_msgs::msg::Point right_speed;
-      geometry_msgs::msg::Point left_speed;
+      double speed_diff_ = 0;
+      geometry_msgs::msg::Point right_speed_;
+      geometry_msgs::msg::Point left_speed_;
 
-      double weight = 100;
-      double right_handle_weight = 0;
-      double left_handle_weight  = 0;
-      double leg_load = 0;
-      bool new_data_available = false;
-      bool first_data_ready = false;
+      int weight_ = 100;
+      double right_handle_weight_ = 0;
+      double left_handle_weight_  = 0;
+      double leg_load_ = 0;
+      bool new_data_available_ = false;
+      bool first_data_ready_ = false;
 
+      //DiffTracker kalman_tracker_;
 };
-
-
 
 #endif //WALKER_LOADS_HPP_
