@@ -49,13 +49,21 @@ PartialLoads::PartialLoads() : Node("partial_loads"){
         first_data_ready_ = false;    
 
 
-/*
+
         // Load kalman tracker
-        kalman_tracker_.init(this, d0, a0, f0, p0 );
-*/
+        double v0 = 0.01;   // meters/s
+        double v1 = 1.0;    // meters/s
+        double f0 = 4.0;    // Kg.
+        double f1 = 15.0;   // Kg.
+        double w = 0.1;    // rad/s
+        double d = 0.50;   // rad
+        double vp = 0.20;   // rad
+
+        kalman_tracker_.init(this,"diff_tracker", v0, v1, f0, f1, w,  d, vp);
+
         // Set debug output
         if (debug_output_){
-            //kalman_tracker_.enable_log();
+            kalman_tracker_.enable_log();
 
             auto ret = rcutils_logging_set_logger_level( this->get_logger().get_name(), RCUTILS_LOG_SEVERITY_DEBUG);
             if (ret != RCUTILS_RET_OK) {
@@ -152,8 +160,9 @@ PartialLoads::PartialLoads() : Node("partial_loads"){
 
         if ( has_data(left_handle_msg_.header) &  has_data(right_handle_msg_.header) ){ 
             double force_diff = left_handle_weight_ - right_handle_weight_;
-            // Kalman this bitch!
-            //kalman_tracker_.add_force_measurement(force_diff);
+            // Kalman this!
+            double t = (this->now()).nanoseconds();
+            kalman_tracker_.add_force_measurement(force_diff, t);
         }        
 
     }
@@ -182,8 +191,9 @@ PartialLoads::PartialLoads() : Node("partial_loads"){
 
         if ( has_data(left_step_msg_.position.header) &  has_data(right_step_msg_.position.header) ){ 
             speed_diff_ = left_speed_.x - right_speed_.x ;
-            // Kalman this bitch!
-            //kalman_tracker_.add_speed_measurement(speed_diff_);
+            // Kalman this!
+            double t = (this->now()).nanoseconds();
+            kalman_tracker_.add_speed_measurement(speed_diff_,t);
         }
     }
 
@@ -221,9 +231,8 @@ PartialLoads::PartialLoads() : Node("partial_loads"){
             if ( first_data_ready_ ){
                     // amount of weight on legs
                     leg_load_ = weight_ - left_handle_weight_ - right_handle_weight_;
-
-                    //double t = (this->now()).nanoseconds();
-                    //speed_diff_ = kalman_tracker_.get_speed_diff(t);
+                    
+                    speed_diff_ = kalman_tracker_.get_speed_diff();
 
                     // assign weight to supporting leg...
                     if (speed_diff_>speed_delta_){

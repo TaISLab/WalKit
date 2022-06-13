@@ -23,7 +23,7 @@ include_directories(include)
 #ament_export_include_directories(include)
 
 # Create Cpp executable
-add_executable(partial_loads src/partial_loads_node.cpp src/spline.cpp src/partial_loads.cpp)
+add_executable(partial_loads src/partial_loads_node.cpp src/spline.cpp src/partial_loads.cpp src/diff_tracker.cpp)
 ament_target_dependencies(partial_loads rclcpp ament_index_cpp Eigen3 walker_msgs)
 
 ament_export_dependencies(eigen3_cmake_module)

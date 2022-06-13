@@ -9,7 +9,7 @@
 // Custom Messages related Headers
 
 #include <kalman/ExtendedKalmanFilter.hpp>
-#include <kalman/SystemModel.hpp>
+#include <kalman/DiffSystemModel.hpp>
 #include <kalman/ForceMeasurementModel.hpp>
 #include <kalman/SpeedMeasurementModel.hpp>
 

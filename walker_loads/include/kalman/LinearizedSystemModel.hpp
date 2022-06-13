@@ -74,7 +74,7 @@ namespace Kalman {
             W.setIdentity();
         }
         ~LinearizedSystemModel() {}
-    }
+    };
 }
 
 #endif

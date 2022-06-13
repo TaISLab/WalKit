@@ -23,8 +23,7 @@
 // Local includes
 #include "walker_loads/spline.h"
 
-//MFC AQUI PETA!!
-//#include "walker_loads/diff_tracker.h"
+#include "walker_loads/diff_tracker.h"
 
 using std::placeholders::_1;
 using namespace std::chrono_literals;
@@ -90,7 +89,7 @@ class PartialLoads : public rclcpp::Node{
       bool new_data_available_ = false;
       bool first_data_ready_ = false;
 
-      //DiffTracker kalman_tracker_;
+      DiffTracker kalman_tracker_;
 };
 
 #endif //WALKER_LOADS_HPP_
