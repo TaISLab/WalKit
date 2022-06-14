@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from turtle import right
 import rclpy
 from rclpy.node import Node
@@ -111,8 +113,9 @@ class LoadPlotter(Node):
                 self.marker_pub_.publish(marker_left_text)                
         else:
             self.get_logger().error("Don't know about which step are you talking [" + id + "]")    
-            return            
-    
+            return
+        #self.get_logger().info("published!")    
+
     def fill_in_marker(self, stepStMsg, index):
 
         marker = self.marker_ref        

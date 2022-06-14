@@ -41,12 +41,15 @@ typedef KalmanExamples::Step::SpeedMeasurementModel<T> SpeedModel;
 
             double get_speed_diff();
 
+            double get_force_diff();
+
         private:
             // Config stuff
             rclcpp::Node *node_;
             bool is_init_;
             bool is_debug_;
             std::string name_;
+            double f_threshold_; // minimum valid force difference 
 
             // debug file to check kalman working
             std::ofstream debug_file_;

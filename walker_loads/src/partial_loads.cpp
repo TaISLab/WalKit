@@ -163,7 +163,8 @@ PartialLoads::PartialLoads() : Node("partial_loads"){
             // Kalman this!
             double t = (this->now()).nanoseconds();
             kalman_tracker_.add_force_measurement(force_diff, t);
-        }        
+        }      
+        //RCLCPP_DEBUG(this->get_logger(), "Received handle data from (%s)", frame_id.c_str());  
 
     }
 
@@ -172,7 +173,7 @@ PartialLoads::PartialLoads() : Node("partial_loads"){
     }
 
     void PartialLoads::r_steps_lc(const walker_msgs::msg::StepStamped::SharedPtr msg)  {
-        steps_lc(msg, 0);
+        steps_lc(msg, 1);
     }
 
     void PartialLoads::steps_lc(const walker_msgs::msg::StepStamped::SharedPtr msg, int id){
@@ -195,10 +196,13 @@ PartialLoads::PartialLoads() : Node("partial_loads"){
             double t = (this->now()).nanoseconds();
             kalman_tracker_.add_speed_measurement(speed_diff_,t);
         }
+
+        //RCLCPP_DEBUG(this->get_logger(), "Received step data from (%s)", msg->position.header.frame_id.c_str());  
     }
 
     bool PartialLoads::has_data( std_msgs::msg::Header header){
-        return (header.frame_id.find("NONE") == std::string::npos);
+        bool hasData = (header.frame_id.find("NONE") == std::string::npos);
+        return hasData;
     }
 
     void PartialLoads::user_desc_lc(const std_msgs::msg::String::SharedPtr msg)  {
@@ -218,6 +222,20 @@ PartialLoads::PartialLoads() : Node("partial_loads"){
     void PartialLoads::timer_callback(){
         double right_leg_load, left_leg_load;
         walker_msgs::msg::StepStamped msg;
+
+        if (!has_data(left_step_msg_.position.header)){
+            RCLCPP_DEBUG(this->get_logger(), "No data from left step");
+        }
+        if (!has_data(right_step_msg_.position.header)){
+            RCLCPP_DEBUG(this->get_logger(), "No data from right step");
+        }
+        if (!has_data(left_handle_msg_.header)){
+            RCLCPP_DEBUG(this->get_logger(), "No data from left handle");
+        }
+        if (!has_data(right_handle_msg_.header) ){
+            RCLCPP_DEBUG(this->get_logger(), "No data from right handle");
+        }
+
         if (new_data_available_){
             new_data_available_ = false;
 
