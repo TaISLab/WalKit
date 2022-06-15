@@ -1,17 +1,19 @@
+import yaml
+import os
+import numpy as np
+from scipy import interpolate
+
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import QoSDurabilityPolicy, QoSHistoryPolicy, QoSReliabilityPolicy
+from rclpy.qos import QoSProfile
+
 from tf2_ros.buffer import Buffer
 from ament_index_python.packages import get_package_share_directory
 from tf2_ros.transform_listener import TransformListener
+
 from std_msgs.msg import Float64MultiArray, String
 from geometry_msgs.msg import PointStamped 
-
-from scipy import interpolate
-import yaml
-from ament_index_python.packages import get_package_share_directory
-import os
-import numpy as np
-
 from walker_msgs.msg import ForceStamped, StepStamped 
 
 class CentroidSupport(Node):
@@ -86,8 +88,12 @@ class CentroidSupport(Node):
         self.left_load_sub  = self.create_subscription(StepStamped, self.left_loads_topic_name,  self.l_steps_lc, 10)
         self.right_load_sub = self.create_subscription(StepStamped, self.right_loads_topic_name, self.r_steps_lc, 10)
 
-
-        self.user_desc_sub = self.create_subscription(String, self.user_desc_topic_name, self.user_desc_lc, 10) 
+        # mimics a ROS1 'latched' topic
+        latched_profile = QoSProfile(depth=1)
+        latched_profile.history = QoSHistoryPolicy.KEEP_LAST
+        latched_profile.reliability = QoSReliabilityPolicy.RELIABLE
+        latched_profile.durability = QoSDurabilityPolicy.TRANSIENT_LOCAL
+        self.user_desc_sub = self.create_subscription(String, self.user_desc_topic_name, self.user_desc_lc, latched_profile) 
         self.tmr = self.create_timer(self.period, self.timer_callback)
 
 

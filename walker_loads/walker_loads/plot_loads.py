@@ -1,16 +1,15 @@
-from turtle import right
-import rclpy
-from rclpy.node import Node
-
-from walker_msgs.msg import ForceStamped 
-from std_msgs.msg import Float64MultiArray
-from walker_msgs.msg import StepStamped
-from std_msgs.msg import String
 from numpy import interp
+from scipy import interpolate
 from squaternion import Quaternion
 import matplotlib.pyplot as plt
+
+import rclpy
+from rclpy.node import Node
+from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSHistoryPolicy, QoSReliabilityPolicy
+
+from walker_msgs.msg import ForceStamped, StepStamped
+from std_msgs.msg import Float64MultiArray, String
 from visualization_msgs.msg import Marker
-from scipy import interpolate
 
 class LoadPlotter(Node):
 
@@ -79,11 +78,19 @@ class LoadPlotter(Node):
         self.left_handle_weight  = 0
         self.leg_load = 0
 
-        # ROS stuff
-        self.user_desc_sub = self.create_subscription(String, self.user_desc_topic_name, self.user_desc_lc, 10) 
+        # ROS stuff 
         self.left_loads_sub  = self.create_subscription(StepStamped, self.left_loads_topic_name ,  self.l_loads_lc, 10) 
         self.right_loads_sub = self.create_subscription(StepStamped, self.right_loads_topic_name , self.r_loads_lc, 10) 
+
+        # mimics a ROS1 'latched' topic
+        latched_profile = QoSProfile(depth=1)
+        latched_profile.history = QoSHistoryPolicy.KEEP_LAST
+        latched_profile.reliability = QoSReliabilityPolicy.RELIABLE
+        latched_profile.durability = QoSDurabilityPolicy.TRANSIENT_LOCAL
+        self.user_desc_sub = self.create_subscription(String, self.user_desc_topic_name, self.user_desc_lc, latched_profile)
+
         self.marker_pub_ = self.create_publisher(Marker, self.markers_topic_name, 10)
+
 
         self.get_logger().info("load plotter started")  
 

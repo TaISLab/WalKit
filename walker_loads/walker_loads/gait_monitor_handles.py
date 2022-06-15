@@ -1,16 +1,20 @@
+import numpy as np
+import yaml
+import os
 from operator import index
+from scipy import interpolate
+
 import rclpy
+from rclpy.qos import QoSDurabilityPolicy, QoSHistoryPolicy, QoSReliabilityPolicy
+from rclpy.qos import QoSProfile
 from rclpy.node import Node
+
 from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
+
 from nav_msgs.msg import Odometry
 from std_msgs.msg import String
 from ament_index_python.packages import get_package_share_directory
-
-import numpy as np
-from scipy import interpolate
-import yaml
-import os
 
 from walker_msgs.msg import ForceStamped 
 
@@ -97,7 +101,13 @@ class GaitMonitorHand(Node):
         self.right_handle_sub = self.create_subscription(ForceStamped, self.right_handle_topic_name, self.handle_lc, 10) 
         self.sub = self.create_subscription(Odometry, self.odom_topic_name, self.odom_callback, 10)
 
-        self.user_desc_sub = self.create_subscription(String, self.user_desc_topic_name, self.user_desc_lc, 10) 
+        # mimics a ROS1 'latched' topic
+        latched_profile = QoSProfile(depth=1)
+        latched_profile.history = QoSHistoryPolicy.KEEP_LAST
+        latched_profile.reliability = QoSReliabilityPolicy.RELIABLE
+        latched_profile.durability = QoSDurabilityPolicy.TRANSIENT_LOCAL
+
+        self.user_desc_sub = self.create_subscription(String, self.user_desc_topic_name, self.user_desc_lc, latched_profile) 
         self.tmr = self.create_timer(self.period, self.timer_callback)
 
         self.get_logger().info("Force based Gait monitor started")  
