@@ -19,15 +19,15 @@ class HandleTfPublisher(Node):
                  ('frame_id', 'base_footprint' ),
                  ('child_frame_id_suffix', '_handle_id' ),
                  ('handle_height_topic_name', '/handle_height'),
-                 ('period', 0.05),
+                 ('handle_height', -1),
             ]
         )
 
         self.handle_height_topic_name = self.get_parameter('handle_height_topic_name').value
         self.frame_id = self.get_parameter('frame_id').value
         self.child_frame_id_suffix = self.get_parameter('child_frame_id_suffix').value
-        self.period = self.get_parameter('period').value
         self.handle_calibration_file = self.get_parameter('handle_calibration_file').value
+        self.handle_height = int(self.get_parameter('handle_height').value)
 
         with open(self.handle_calibration_file, 'r') as stream:
             try:
@@ -38,14 +38,15 @@ class HandleTfPublisher(Node):
             except yaml.YAMLError as exc:
                 print(exc)
 
-        # stored data
-        self.handle_height = 2                
         # ROS stuff
         self.tf_publisher = StaticTransformBroadcaster(self)
 
         self.handle_height_sub = self.create_subscription(Int32, self.handle_height_topic_name, self.handle_height_cb, 10)
 
         self.get_logger().info("handle tf publisher started")  
+
+        if (self.handle_height>-1): # height read from config, not from topic
+                self.publish_handles()
 
     def handle_height_cb(self, msg):  
         if len(self.handle_z)>msg.data:
@@ -68,10 +69,13 @@ class HandleTfPublisher(Node):
     def publish_handles(self):
             # right handle 
             right_handle_tf = self.get_tf(self.handle_height, "right", 1)
-            self.tf_publisher.sendTransform(right_handle_tf)
+
             # left handle 
             left_handle_tf = self.get_tf(self.handle_height, "left", -1)
-            self.tf_publisher.sendTransform(left_handle_tf)
+
+            # See https://answers.ros.org/question/287469/unable-to-publish-multiple-static-transformations-using-tf/
+
+            self.tf_publisher.sendTransform([right_handle_tf, left_handle_tf])
             self.get_logger().info("New data sent!")
 
 def main(args=None):

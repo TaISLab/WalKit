@@ -50,8 +50,8 @@ def generate_launch_description():
                 {"plot_leg_clusters": False}
             ],
         # Cheap way to reuse node with recorded rosbags
-        remappings=[ ("detected_step_left", "new_detected_step_left"),
-                     ("detected_step_right", "new_detected_step_right")]
+        #remappings=[ ("detected_step_left", "new_detected_step_left"),
+        #             ("detected_step_right", "new_detected_step_right")]
     )
 
     #ld.add_action(laser_filter2_node)
