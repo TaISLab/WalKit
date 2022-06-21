@@ -21,7 +21,7 @@
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
-  <a href="https://github.com/TaISLab/WalKit/blob/foxy/">
+  <a href="https://github.com/TaISLab/WalKit/blob/humble/">
     <img src="Pictures/Walker.png" alt="Logo" width="320">
   </a>
 
@@ -79,12 +79,12 @@ WalKit is an open hardware project created to monitor the elderly unintrusively.
 <!-- GETTING STARTED -->
 ## Getting Started
 
-WalKit is based on commercial rollators. First step would be to build and flash the necessary Arduino-based modules, as it is described in folders [firmware](https://github.com/TaISLab/WalKit/tree/foxy/firmware)
- and [hardware](https://github.com/TaISLab/WalKit/tree/foxy/hardware)
+WalKit is based on commercial rollators. First step would be to build and flash the necessary Arduino-based modules, as it is described in folders [firmware](https://github.com/TaISLab/WalKit/tree/humble/firmware)
+ and [hardware](https://github.com/TaISLab/WalKit/tree/humble/hardware)
 
 ### Prerequisites
 
-Once the hardware is ready, you should install Ubuntu Server 20.04 on the Raspberry Pi and ROS2 foxy.
+Once the hardware is ready, you should install Ubuntu Server 20.04 on the Raspberry Pi and ROS2 humble.
 
 ### Installation
 
@@ -93,19 +93,21 @@ Now we can clone and compile this (and some other related) repo(s). Note we are 
 ```
 mkdir -p ~/walker_ws/src
 cd ~/walker_ws/src
-git clone https://github.com/TaISLab/WalKit.git -b foxy
+git clone https://github.com/TaISLab/WalKit.git -b humble
 cp WalKit/walker.rosinstall .rosinstall
-sudo apt-get install python3-rosinstall
+sudo apt-get install python3-rosinstall  python3-rosdep2 python3-colcon-common-extensions  build-essential python3-pip
+sudo -H pip3 install tmule
+
 wstool update
 # init may not be needed
 sudo rosdep init
 rosdep update
-rosdep install --from-paths . --ignore-packages-from-source --rosdistro foxy -y
+rosdep install --from-paths . --ignore-packages-from-source --rosdistro humble -y
 colcon build --symlink-install
 ```
 If you are compiling on the Raspberry Pi, consider being gentle on the  compilation and use the following instead of regular colcon command:
 ```
-MAKEFLAGS='-j1 -l1' colcon build --executor sequential --symlink-install --allow-overriding ros2bag rosbag2 rosbag2_compression rosbag2_cpp rosbag2_storage rosbag2_storage_default_plugins rosbag2_transport shared_queues_vendor sqlite3_vendor zstd_vendor
+MAKEFLAGS='-j1 -l1' colcon build --executor sequential --symlink-install 
 ```
 
 Also, package 'aws_robomaker_hospital_world' will take a  long time (>6min!) to download all the models. Consider getting a good coffee in the meantime.
@@ -115,24 +117,28 @@ Also, package 'aws_robomaker_hospital_world' will take a  long time (>6min!) to 
 - Packages in WalKit repository:
     - firmware: arduino codes for handles and wheels. 
     - hardware: 3d models and schematics.
-    - walker_analysis: codes to process recorded data.
     - walker_arduino: ros2 nodes to interact with USB arduino boards.   
     - walker_bringup: robot specific configuration scripts and tools. 
+    - walker_centroid_support: obtains weight centroid based on current support.
     - walker_description: robot description.  
     - walker_diff_odom: odometry node.
+    - walker_loads: reports partial supports on each leg.
     - walker_msgs: custom handle and wheel encoder msgs.
-    - walker_navigation2: nav2 configuration for walker. 
+    - walker_navigation2: nav2 configuration for walker (TODO). 
     - walker_plot: Publishes Arrow marker based on handle force readings.  
+    - walker_py_cluster: (TODO)
     - walker_simulation: roller simulation in gazebo.
+    - walker_slam: (TODO)
+    - walker_step_detector: reports step position.
+    - walker_web_gui: web interface for tests.
             
 - Repositories forked for this project
     - aws-robomaker-hospital-world: simulated hospital for gazebo.  
     - bwt901cl_pkg: IMU package.   
+    - csm: ROS2 port of Andrea Censeis Scan matcher, needed by laser scan matcher package.
     - leap_motion: stereo camera package (DOES NOT WORK WITH arm64)  
+    - ros2_laser_scan_matcher: provides odometry from laser readings.
     - rplidar_ros2: RPLidar A1 package. 
-    - laser_filters: For some reason they are not available as binaries in foxy.
-    - rosbag2: Foxy binary has serious performance issues. Recording with leap_motion was severely affected if binary was used.
-
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -193,7 +199,7 @@ This project is licensed under the Creative Commons Attribution 4.0 - see [LICEN
 
 Manuel Fernandez-Carmona - [@ermanazas](https://twitter.com/ermanazas) - manolofc at gmail.com
 
-Project Link: [https://github.com/TaISLab/WalKit/tree/foxy](https://github.com/TaISLab/WalKit/tree/foxy)
+Project Link: [https://github.com/TaISLab/WalKit/tree/humble](https://github.com/TaISLab/WalKit/tree/humble)
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
