@@ -88,13 +88,20 @@ class ForcePlotter(Node):
 def main(args=None):
     rclpy.init(args=args)
 
-    minimal_subscriber = ForcePlotter()
+    myNode = ForcePlotter()
 
-    rclpy.spin(minimal_subscriber)
- 
-    minimal_subscriber.destroy_node()
-    rclpy.shutdown()
-
+    try:
+        rclpy.spin(myNode)
+    except KeyboardInterrupt:
+        print('User-requested stop')
+    except BaseException:
+        print('Exception in execution:', file=sys.stderr)
+        raise
+    finally:
+        # Destroy the node explicitly
+        # (optional - Done automatically when node is garbage collected)
+        myNode.destroy_node()
+        rclpy.shutdown()  
 
 if __name__ == '__main__':
     main()

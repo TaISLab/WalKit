@@ -23,7 +23,7 @@ class CentroidSupport(Node):
         self.declare_parameters(
             namespace='',
             parameters=[
-                 ('handle_calibration_file', os.path.join(get_package_share_directory('walker_loads'), "config", "params.yaml") ),
+                 ('handle_calibration_file', os.path.join(get_package_share_directory('walker_loads'), "config", "handle_calib.yaml") ),
                  ('left_loads_topic_name', '/left_loads'),
                  ('right_loads_topic_name', '/right_loads'),
                  ('left_handle_topic_name', '/left_handle'),
@@ -48,10 +48,10 @@ class CentroidSupport(Node):
 
         with open(self.handle_calibration_file, 'r') as stream:
             try:
-                parsed_yaml=yaml.safe_load(stream)
-                self.weight_points = parsed_yaml['weight_points']        
-                self.left_handle_points = parsed_yaml['left_handle_points']
-                self.right_handle_points = parsed_yaml['right_handle_points']
+                parsed_yaml=yaml.safe_load(stream)                
+                self.weight_points = parsed_yaml['partial_loads']['ros__parameters']['weight_points']        
+                self.left_handle_points = parsed_yaml['partial_loads']['ros__parameters']['left_handle_points']
+                self.right_handle_points = parsed_yaml['partial_loads']['ros__parameters']['right_handle_points']
             except yaml.YAMLError as exc:
                 print(exc)
         
@@ -82,11 +82,11 @@ class CentroidSupport(Node):
         # ROS stuff
         self.centroid_pub = self.create_publisher(PointStamped, self.centroid_topic_name, 10)
 
-        self.left_handle_sub = self.create_subscription(ForceStamped, self.left_handle_topic_name, self.handle_lc, 10) 
-        self.right_handle_sub = self.create_subscription(ForceStamped, self.right_handle_topic_name, self.handle_lc, 10) 
+        self.left_handle_sub = self.create_subscription(ForceStamped, self.left_handle_topic_name, self.handle_callback, 10) 
+        self.right_handle_sub = self.create_subscription(ForceStamped, self.right_handle_topic_name, self.handle_callback, 10) 
 
-        self.left_load_sub  = self.create_subscription(StepStamped, self.left_loads_topic_name,  self.l_steps_lc, 10)
-        self.right_load_sub = self.create_subscription(StepStamped, self.right_loads_topic_name, self.r_steps_lc, 10)
+        self.left_load_sub  = self.create_subscription(StepStamped, self.left_loads_topic_name,  self.left_load_callback, 10)
+        self.right_load_sub = self.create_subscription(StepStamped, self.right_loads_topic_name, self.right_load_callback, 10)
 
         # mimics a ROS1 'latched' topic
         latched_profile = QoSProfile(depth=1)
@@ -107,7 +107,7 @@ class CentroidSupport(Node):
                 self.weight = new_weight
                 self.new_data_available = True
 
-    def handle_lc(self, msg):
+    def handle_callback(self, msg):
         if ('right' in msg.header.frame_id ):
             self.right_handle_msg = msg          
             self.right_handle_weight = self.fr(msg.force)
@@ -126,13 +126,13 @@ class CentroidSupport(Node):
             self.get_logger().error("Don't know about which handle are you talking [" + msg.header.frame_id + "]")    
             return
 
-    def l_steps_lc(self, msg):
-        self.steps_lc(msg,0)
+    def left_load_callback(self, msg):
+        self.load_callback(msg,0)
 
-    def r_steps_lc(self, msg):
-        self.steps_lc(msg,1)
+    def right_load_callback(self, msg):
+        self.load_callback(msg,1)
 
-    def steps_lc(self, msg, id):
+    def load_callback(self, msg, id):
         if  (id==1):
                 self.right_step_msg = msg
                 self.right_leg_load = self.right_step_msg.load 
@@ -210,12 +210,20 @@ class CentroidSupport(Node):
 def main(args=None):
     rclpy.init(args=args)
 
-    minimal_subscriber = CentroidSupport()
+    myNode = CentroidSupport()
 
-    rclpy.spin(minimal_subscriber)
- 
-    minimal_subscriber.destroy_node()
-    rclpy.shutdown()
+    try:
+        rclpy.spin(myNode)
+    except KeyboardInterrupt:
+        print('User-requested stop')
+    except BaseException:
+        print('Exception in execution:', file=sys.stderr)
+        raise
+    finally:
+        # Destroy the node explicitly
+        # (optional - Done automatically when node is garbage collected)
+        myNode.destroy_node()
+        rclpy.shutdown()      
 
 
 if __name__ == '__main__':

@@ -1,9 +1,11 @@
+#!/usr/bin/python3
+
 import rclpy
 from rclpy.node import Node
 from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
 
-from walker_msgs.msg import StepStamped 
+from walker_msgs.msg import StepStamped, GaitStamped, WalkStats
 import numpy as np
 from nav_msgs.msg import Odometry
 
@@ -35,6 +37,9 @@ class GaitMonitorSp(Node):
             parameters=[
                 ('left_loads_topic_name', '/left_loads'),
                 ('right_loads_topic_name', '/right_loads'),
+                ('left_gait_stats_topic_name', '/left_gait_stats'),
+                ('right_gait_stats_topic_name', '/right_gait_stats'),
+                ('global_gait_stats_topic_name', '/global_gait_stats'),
                 ('odom_topic_name', '/odom'),
                 ('global_frame_id', '/odom'),
                 ('period', 2.0),
@@ -42,6 +47,9 @@ class GaitMonitorSp(Node):
 
         self.left_loads_topic_name = self.get_parameter('left_loads_topic_name').value
         self.right_loads_topic_name = self.get_parameter('right_loads_topic_name').value
+        self.left_gait_stats_topic_name = self.get_parameter('left_gait_stats_topic_name').value
+        self.right_gait_stats_topic_name = self.get_parameter('right_gait_stats_topic_name').value
+        self.global_gait_stats_topic_name = self.get_parameter('global_gait_stats_topic_name').value
         self.odom_topic_name = self.get_parameter('odom_topic_name').value
         self.period = self.get_parameter('period').value
         self.global_frame_id = self.get_parameter('global_frame_id').value
@@ -65,9 +73,19 @@ class GaitMonitorSp(Node):
         self.cur_position = None
         self.travelled = 0
 
+        self.left_gait_stats_data = GaitStamped()
+        self.left_gait_stats_data.header.frame_id = "left"
+        self.right_gait_stats_data = GaitStamped()
+        self.right_gait_stats_data.header.frame_id = "right"
+        self.global_gait_stats_data = WalkStats()        
+
         # ROS stuff
         self.buffer = Buffer()
         self.listener = TransformListener(self.buffer, self)
+
+        self.left_gait_stats_pub   = self.create_publisher(GaitStamped, self.left_gait_stats_topic_name, 10)
+        self.right_gait_stats_pub   = self.create_publisher(GaitStamped, self.right_gait_stats_topic_name, 10)
+        self.global_gait_stats_pub   = self.create_publisher(WalkStats, self.global_gait_stats_topic_name, 10)
 
         self.left_loads_sub = self.create_subscription(StepStamped, self.left_loads_topic_name, self.left_loads_cb, 10) 
         self.right_loads_sub = self.create_subscription(StepStamped, self.right_loads_topic_name, self.right_loads_cb, 10) 
@@ -86,19 +104,23 @@ class GaitMonitorSp(Node):
             self.travelled += d
 
     def get_difference(self, position_rel, prev_position_rel):
-        # Cast positions to global frame
-        try:
-            p = self.buffer.transform(position_rel, self.global_frame_id)
-            pp = self.buffer.transform(prev_position_rel, self.global_frame_id)
+        p = position_rel
+        pp =prev_position_rel
+        # Distance
+        d = np.sqrt(np.power(p.point.x - pp.point.x, 2.0 ) + np.power(p.point.y - pp.point.y, 2.0 ) )
+
+        # We don't need to cast positions to global frame
+        # try:
+        #     p = self.buffer.transform(position_rel, self.global_frame_id)
+        #     pp = self.buffer.transform(prev_position_rel, self.global_frame_id)
             
-            # Distance
-            d = np.sqrt(np.power(p.point.x - pp.point.x, 2.0 ) + np.power(p.point.y - pp.point.y, 2.0 ) )
+        #     # Distance
+        #     d = np.sqrt(np.power(p.point.x - pp.point.x, 2.0 ) + np.power(p.point.y - pp.point.y, 2.0 ) )
 
-        except Exception as e:
-            self.get_logger().error("Can't transform points into frame [" + self.global_frame_id + "]: [" + str(e) + "]")    
-            d = np.nan        
+        # except Exception as e:
+        #     self.get_logger().error("Can't transform points into frame [" + self.global_frame_id + "]: [" + str(e) + "]")    
+        #     d = np.nan        
         return d
-
 
     def left_loads_cb(self, msg):
         if (msg.load>0):
@@ -123,19 +145,19 @@ class GaitMonitorSp(Node):
             leg_loads.append( msg)
             # If we have at least two steps
             if (len(leg_loads)>1):
-                stride_time = leg_loads[-1].position.header.stamp - leg_loads[-2].position.header.stamp 
-                leg_stride_times.append(stride_time)
+                stride_duration = self.get_secs_diff(leg_loads[-1].position.header, leg_loads[-2].position.header)
+                leg_stride_times.append(stride_duration)
                 stride_lenght = self.get_difference(leg_loads[-1].position, leg_loads[-2].position)
                 leg_stride_lenghts.append(stride_lenght)
             # Last step load from the other leg
             if (len(opposite_loads)>0):
-                step_time = leg_loads[-1].position.header.stamp - opposite_loads[-1].position.header.stamp 
-                leg_step_times.append(step_time)
+                step_duration = self.get_secs_diff(leg_loads[-1].position.header, opposite_loads[-1].position.header)
+                leg_step_times.append( step_duration)
                 step_lenght = self.get_difference(leg_loads[-1].position, opposite_loads[-1].position)
                 leg_step_lenghts.append(step_lenght)
 
     def timer_callback(self):
-        if ( (len(self.left_loads)>0) and  (len(self.right_loads)>0) ):
+        if ( (len(self.left_loads)>2) and  (len(self.right_loads)>2) ):
             l_SpT = np.nanmean(self.left_step_times)
             l_SdT = np.nanmean(self.left_stride_times)
             l_NoS = len(self.left_loads)
@@ -149,53 +171,87 @@ class GaitMonitorSp(Node):
             r_SdL = np.nanmean(self.right_step_lenghts)
 
             NoS = l_NoS + r_NoS
-
-            if ((self.left_loads[0].position.header.stamp - self.right_loads[0].position.header.stamp)>0):
+            if (self.get_secs_diff(self.left_loads[0].position.header, self.right_loads[0].position.header)>0):
                 start_stamp = self.right_loads[0].position.header.stamp
             else:
                 start_stamp = self.left_loads[0].position.header.stamp
 
-
-            if ((self.left_loads[-1].position.header.stamp - self.right_loads[-1].position.header.stamp)>0):
+            if (self.get_secs_diff(self.left_loads[-1].position.header, self.right_loads[-1].position.header)>0):
                 end_stamp = self.left_loads[-1].position.header.stamp
             else:                
                 end_stamp = self.right_loads[-1].position.header.stamp
-            Tr = end_stamp - start_stamp  
+            Tr = rclpy.time.Time.from_msg(end_stamp) - rclpy.time.Time.from_msg(start_stamp)
                
             d = self.travelled 
-            CAD =  60.0 * NoS/Tr
-            WV = d/Tr
+            CAD = 1e9 * 60.0 * NoS/Tr.nanoseconds
+            WV = 1e9 * d/Tr.nanoseconds
 
-            self.get_logger().info("Current gait parameters:") 
-            self.get_logger().info("\t  [" + str( ) + "]")             
+            self.get_logger().debug("Current gait parameters:") 
+            self.get_logger().debug("\t  [" + str( ) + "]")             
 
-            self.get_logger().info("\t  Left leg:")            
-            self.get_logger().info("\t\t Step time (SpT): ["     + str(l_SpT ) + "]")             
-            self.get_logger().info("\t\t Stride time (SdT):  ["  + str(l_SdT) + "]")             
-            self.get_logger().info("\t\t Step length (SpL): ["   + str(l_SpL) + "]")             
-            self.get_logger().info("\t\t Stride length (SdL): [" + str(l_SdL ) + "]")             
+            self.get_logger().debug("\t  Left leg:")            
+            self.get_logger().debug("\t\t Step time (SpT): ["     + str(l_SpT ) + "]")             
+            self.get_logger().debug("\t\t Stride time (SdT):  ["  + str(l_SdT) + "]")             
+            self.get_logger().debug("\t\t Step length (SpL): ["   + str(l_SpL) + "]")             
+            self.get_logger().debug("\t\t Stride length (SdL): [" + str(l_SdL ) + "]")             
 
-            self.get_logger().info("\t  Right leg:")            
-            self.get_logger().info("\t\t Step time (SpT): ["     + str(r_SpT ) + "]")             
-            self.get_logger().info("\t\t Stride time (SdT):  ["  + str(r_SdT) + "]")             
-            self.get_logger().info("\t\t Step length (SpL): ["   + str(r_SpL) + "]")             
-            self.get_logger().info("\t\t Stride length (SdL): [" + str(r_SdL ) + "]")   
+            self.left_gait_stats_data.header.stamp = self.get_clock().now().to_msg()
+            self.left_gait_stats_data.spt = l_SpT
+            self.left_gait_stats_data.sdt = l_SdT
+            self.left_gait_stats_data.spl = l_SpL
+            self.left_gait_stats_data.sdl = l_SdL
+            self.left_gait_stats_pub.publish(self.left_gait_stats_data)
 
-            self.get_logger().info("\t Time required (Tr): [" + str(Tr ) + "]")  
-            self.get_logger().info("\t Number of Step (NoS):  [" + str(NoS ) + "]")             
-            self.get_logger().info("\t Distance (d): [" + str(d) + "]")  
-            self.get_logger().info("\t Cadence (CAD): [" + str(CAD) + "]")  
-            self.get_logger().info("\t Average walking velocity (WV): [" + str(WV) + "]")  
+            self.get_logger().debug("\t  Right leg:")            
+            self.get_logger().debug("\t\t Step time (SpT): ["     + str(r_SpT ) + "]")             
+            self.get_logger().debug("\t\t Stride time (SdT):  ["  + str(r_SdT) + "]")             
+            self.get_logger().debug("\t\t Step length (SpL): ["   + str(r_SpL) + "]")             
+            self.get_logger().debug("\t\t Stride length (SdL): [" + str(r_SdL ) + "]")   
+
+            self.right_gait_stats_data.header.stamp = self.get_clock().now().to_msg()
+            self.right_gait_stats_data.spt = r_SpT
+            self.right_gait_stats_data.sdt = r_SdT
+            self.right_gait_stats_data.spl = r_SpL
+            self.right_gait_stats_data.sdl = r_SdL
+            self.right_gait_stats_pub.publish(self.right_gait_stats_data)
+            
+            self.get_logger().debug("\t Time required (Tr): [" + str(Tr ) + "]")  
+            self.get_logger().debug("\t Number of Step (NoS):  [" + str(NoS ) + "]")             
+            self.get_logger().debug("\t Distance (d): [" + str(d) + "]")  
+            self.get_logger().debug("\t Cadence (CAD): [" + str(CAD) + "]")  
+            self.get_logger().debug("\t Average walking velocity (WV): [" + str(WV) + "]")  
+
+            self.global_gait_stats_data.tr = Tr.to_msg()
+            self.global_gait_stats_data.nos = NoS
+            self.global_gait_stats_data.d = d
+            self.global_gait_stats_data.cad = CAD
+            self.global_gait_stats_data.wv = WV
+            self.global_gait_stats_pub.publish(self.global_gait_stats_data)
+    
+    def get_secs_diff(self,HeaderEnd, HeaderStart):
+        duration = rclpy.time.Time.from_msg(HeaderEnd.stamp) - rclpy.time.Time.from_msg(HeaderStart.stamp)
+        seconds = duration.nanoseconds*1e-9
+        return seconds
+
+
 
 def main(args=None):
     rclpy.init(args=args)
 
-    minimal_subscriber = GaitMonitorSp()
+    myNode = GaitMonitorSp()
 
-    rclpy.spin(minimal_subscriber)
- 
-    minimal_subscriber.destroy_node()
-    rclpy.shutdown()
+    try:
+        rclpy.spin(myNode)
+    except KeyboardInterrupt:
+        print('User-requested stop')
+    except BaseException:
+        print('Exception in execution:', file=sys.stderr)
+        raise
+    finally:
+        # Destroy the node explicitly
+        # (optional - Done automatically when node is garbage collected)
+        myNode.destroy_node()
+        rclpy.shutdown()  
 
 
 if __name__ == '__main__':
