@@ -2,34 +2,35 @@
 
 
 PartialLoads::PartialLoads() : Node("partial_loads"){
+        handle_calibration_file_ = ament_index_cpp::get_package_share_directory("walker_loads") + "/config/handle_calib.yaml";
 
         //Declare ROS parameters
-        this->declare_parameter("handle_calibration_file");
-        this->declare_parameter("left_loads_topic_name");
-        this->declare_parameter("right_loads_topic_name");
-        this->declare_parameter("left_handle_topic_name");
-        this->declare_parameter("right_handle_topic_name");
-        this->declare_parameter("left_steps_topic_name");
-        this->declare_parameter("right_steps_topic_name");
-        this->declare_parameter("user_desc_topic_name");
-        this->declare_parameter("ms_period");
-        this->declare_parameter("speed_delta");
-        this->declare_parameter("debug_output");
+        this->declare_parameter<std::string>("scan_topic",              "/scan");
+        this->declare_parameter<std::string>("left_loads_topic_name",   "/left_loads");
+        this->declare_parameter<std::string>("right_loads_topic_name",  "/right_loads");
+        this->declare_parameter<std::string>("left_handle_topic_name",  "/left_handle");
+        this->declare_parameter<std::string>("right_handle_topic_name", "/right_handle");
+        this->declare_parameter<std::string>("left_steps_topic_name",   "/detected_step_left");
+        this->declare_parameter<std::string>("right_steps_topic_name",  "/detected_step_right");
+        this->declare_parameter<std::string>("user_desc_topic_name",    "/user_desc");
+        this->declare_parameter<std::string>("handle_calibration_file", handle_calibration_file_);
+        this->declare_parameter<double>("ms_period",                    500);
+        this->declare_parameter<double>("speed_delta",                  0.05);
+        this->declare_parameter<bool>("debug_output",                   false);
 
         //Get ROS parameters
-        this->get_parameter_or("scan_topic", scan_topic, std::string("/scan"));
-        this->get_parameter_or("left_loads_topic_name", left_loads_topic_name_, std::string("/left_loads"));
-        this->get_parameter_or("right_loads_topic_name", right_loads_topic_name_, std::string("/right_loads"));
-        this->get_parameter_or("left_handle_topic_name", left_handle_topic_name_, std::string("/left_handle"));
-        this->get_parameter_or("right_handle_topic_name", right_handle_topic_name_, std::string("/right_handle"));
-        this->get_parameter_or("left_steps_topic_name", left_steps_topic_name_, std::string("/detected_step_left"));
-        this->get_parameter_or("right_steps_topic_name", right_steps_topic_name_, std::string("/detected_step_right"));
-        this->get_parameter_or("user_desc_topic_name", user_desc_topic_name_, std::string("/user_desc"));
-        this->get_parameter_or("ms_period", ms_period_,  500);
-        this->get_parameter_or("speed_delta", speed_delta_,  0.05);
-        handle_calibration_file_ = ament_index_cpp::get_package_share_directory("walker_loads") + "/config/handle_calib.yaml";
-        this->get_parameter_or("handle_calibration_file", handle_calibration_file_, handle_calibration_file_);
-        this->get_parameter_or("debug_output", debug_output_, false);
+        this->get_parameter("scan_topic",              scan_topic);
+        this->get_parameter("left_loads_topic_name",   left_loads_topic_name_);
+        this->get_parameter("right_loads_topic_name",  right_loads_topic_name_);
+        this->get_parameter("left_handle_topic_name",  left_handle_topic_name_);
+        this->get_parameter("right_handle_topic_name", right_handle_topic_name_);
+        this->get_parameter("left_steps_topic_name",   left_steps_topic_name_);
+        this->get_parameter("right_steps_topic_name",  right_steps_topic_name_);
+        this->get_parameter("user_desc_topic_name",    user_desc_topic_name_);
+        this->get_parameter("handle_calibration_file", handle_calibration_file_);
+        this->get_parameter("ms_period",               ms_period_);
+        this->get_parameter("speed_delta",             speed_delta_);
+        this->get_parameter("debug_output",            debug_output_);
 
 
         //Load config files

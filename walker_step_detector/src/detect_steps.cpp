@@ -75,50 +75,45 @@ public:
         std::string scan_topic;
         num_prev_markers_published_ = 0;
         scan_num_ = 0;
-
-        this->declare_parameter("scan_topic");
-        this->declare_parameter("fixed_frame");
-        this->declare_parameter("forest_file");
-        this->declare_parameter("detection_threshold");
-        this->declare_parameter("cluster_dist_euclid");
-        this->declare_parameter("min_points_per_cluster");
-        this->declare_parameter("detect_distance_frame_id");
-        this->declare_parameter("max_detect_distance");
-        this->declare_parameter("use_scan_header_stamp_for_tfs");
-        this->declare_parameter("plot_all_clusters");
-        this->declare_parameter("plot_leg_clusters");      
-        this->declare_parameter("plot_leg_kalman");         
-        this->declare_parameter("max_detected_clusters");
-        this->declare_parameter("detected_steps_topic_name");
-    
-        this->declare_parameter("kalman_model_d0");
-        this->declare_parameter("kalman_model_a0");
-        this->declare_parameter("kalman_model_f0");
-        this->declare_parameter("kalman_model_p0");
-
-
-        this->get_parameter_or("scan_topic", scan_topic, std::string("/scan"));
-        this->get_parameter_or("fixed_frame", fixed_frame_, std::string("laser"));
-        this->get_parameter_or("detect_distance_frame_id", detect_distance_frame_id_, std::string("base_link"));
-        this->get_parameter_or("max_detect_distance", max_detect_distance_, 10.0);
-        this->get_parameter_or("forest_file", forest_file, std::string("./src/leg_detector/config/trained_leg_detector_res_0.33.yaml"));
-        this->get_parameter_or("detection_threshold", detection_threshold_, -1.0);
-        this->get_parameter_or("cluster_dist_euclid", cluster_dist_euclid_, 0.13);
-        this->get_parameter_or("min_points_per_cluster", min_points_per_cluster_, 3);
-
-        
-        this->get_parameter_or("use_scan_header_stamp_for_tfs", use_scan_header_stamp_for_tfs_, false);
-        this->get_parameter_or("plot_all_clusters", plot_all_clusters_, false);
-        this->get_parameter_or("plot_leg_kalman", plot_leg_kalman_, false);
-        this->get_parameter_or("plot_leg_clusters", plot_leg_clusters_, false);
-        this->get_parameter_or("max_detected_clusters", max_detected_clusters_, -1);
-        this->get_parameter_or("detected_steps_topic_name", detected_steps_topic_name_, std::string("/detected_step"));
-        
         double d0,a0,f0,p0;
-        this->get_parameter_or("kalman_model_d0", d0, 0.001);
-        this->get_parameter_or("kalman_model_a0", a0, 0.001);
-        this->get_parameter_or("kalman_model_f0", f0, 0.001);
-        this->get_parameter_or("kalman_model_p0", p0, 0.001);
+
+        this->declare_parameter<std::string>("scan_topic",                "/scan");
+        this->declare_parameter<std::string>("fixed_frame",               "laser");
+        this->declare_parameter<std::string>("detect_distance_frame_id",  "base_link");
+        this->declare_parameter<std::string>("forest_file",               "./src/leg_detector/config/trained_leg_detector_res_0.33.yaml");
+        this->declare_parameter<std::string>("detected_steps_topic_name", "/detected_step");
+        this->declare_parameter<double>("kalman_model_d0",                0.001);
+        this->declare_parameter<double>("kalman_model_a0",                0.001);
+        this->declare_parameter<double>("kalman_model_f0",                0.001);
+        this->declare_parameter<double>("kalman_model_p0",                0.001);
+        this->declare_parameter<double>("detection_threshold",            -1.0);
+        this->declare_parameter<double>("cluster_dist_euclid",            0.13);
+        this->declare_parameter<double>("max_detect_distance",            10.0);
+        this->declare_parameter<double>("max_detected_clusters",          -1);
+        this->declare_parameter<int>("min_points_per_cluster",            3);    
+        this->declare_parameter<bool>("plot_all_clusters",                false);
+        this->declare_parameter<bool>("plot_leg_kalman",                  false);
+        this->declare_parameter<bool>("plot_leg_clusters",                false);
+        this->declare_parameter<bool>("use_scan_header_stamp_for_tfs",    false);
+
+        this->get_parameter("scan_topic",                    scan_topic);
+        this->get_parameter("fixed_frame",                   fixed_frame_);
+        this->get_parameter("detect_distance_frame_id",      detect_distance_frame_id_);
+        this->get_parameter("forest_file",                   forest_file);
+        this->get_parameter("detected_steps_topic_name",     detected_steps_topic_name_);
+        this->get_parameter("kalman_model_d0",               d0);
+        this->get_parameter("kalman_model_a0",               a0);
+        this->get_parameter("kalman_model_f0",               f0);
+        this->get_parameter("kalman_model_p0",               p0);
+        this->get_parameter("detection_threshold",           detection_threshold_);
+        this->get_parameter("cluster_dist_euclid",           cluster_dist_euclid_);
+        this->get_parameter("max_detect_distance",           max_detect_distance_);
+        this->get_parameter("max_detected_clusters",         max_detected_clusters_);
+        this->get_parameter("min_points_per_cluster",        min_points_per_cluster_);
+        this->get_parameter("plot_all_clusters",             plot_all_clusters_);
+        this->get_parameter("plot_leg_kalman",               plot_leg_kalman_);
+        this->get_parameter("plot_leg_clusters",             plot_leg_clusters_);
+        this->get_parameter("use_scan_header_stamp_for_tfs", use_scan_header_stamp_for_tfs_);
 
         // Load kalman tracker
         kalman_tracker.init(this, d0, a0, f0, p0 );
@@ -232,7 +227,7 @@ private:
 
         marker.header.frame_id = frame_id;
         marker.header.stamp = rclcpp::Clock().now();
-        marker.lifetime = rclcpp::Duration(0.0);
+        marker.lifetime = rclcpp::Duration(std::chrono::nanoseconds(0));
 
         marker.ns = ns;
         marker.id = id;
@@ -273,7 +268,7 @@ private:
 
         marker.header.frame_id = frame_id;
         marker.header.stamp = rclcpp::Clock().now();
-        marker.lifetime = rclcpp::Duration(0.0);
+        marker.lifetime = rclcpp::Duration(std::chrono::nanoseconds(0));
 
         marker.ns = ns;
         marker.id = id;
@@ -320,7 +315,7 @@ private:
         visualization_msgs::msg::Marker marker;
 
         marker.header = step->position.header;
-        marker.lifetime = rclcpp::Duration(0.0);
+        marker.lifetime = rclcpp::Duration(std::chrono::nanoseconds(0));
 
         marker.ns = ns;
         marker.id = id;
@@ -423,7 +418,7 @@ private:
         if (use_scan_header_stamp_for_tfs_){
             tf_time = scan->header.stamp;
             try {
-                buffer_->lookupTransform(fixed_frame_, scan->header.frame_id, tf_time, rclcpp::Duration(1.0));
+                buffer_->lookupTransform(fixed_frame_, scan->header.frame_id, tf_time, rclcpp::Duration(std::chrono::seconds(1)));
                 transform_available = buffer_->canTransform(fixed_frame_, scan->header.frame_id, tf_time);              
             } catch(tf2::TransformException &e) {
                 RCLCPP_WARN(this->get_logger(), "No tf available");

@@ -92,7 +92,7 @@ namespace laser_processor
         /**
         * @brief The comparator allowing the creation of an ordered set of Samples
         */  
-        inline bool operator() (const Sample* a, const Sample* b)
+        inline bool operator() (const Sample* a, const Sample* b) const
         {
             return (a->index <  b->index);
         }
