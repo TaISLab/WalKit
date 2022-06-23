@@ -47,14 +47,14 @@ public:
     PlotSteps() : Node("steps_plotter"){
         
         // declare parameters
-        this->declare_parameter("steps_topic_name");
-        this->declare_parameter("marker_display_lifetime");
-        this->declare_parameter("speed_dead_zone");
+        this->declare_parameter<std::string>("steps_topic_name", "/detected_step");
+        this->declare_parameter<double>("marker_display_lifetime", 0.01);
+        this->declare_parameter<double>("speed_dead_zone", 0.05);
 
         // default values
-        this->get_parameter_or("steps_topic_name", steps_topic_name_, std::string("/detected_step"));
-        this->get_parameter_or("marker_display_lifetime", marker_display_lifetime_, 0.01);
-        this->get_parameter_or("speed_dead_zone", speed_dead_zone_, 0.05);
+        this->get_parameter("steps_topic_name", steps_topic_name_);
+        this->get_parameter("marker_display_lifetime", marker_display_lifetime_);  // seconds
+        this->get_parameter("speed_dead_zone", speed_dead_zone_);
         
         
         //Print  parameters
@@ -129,7 +129,7 @@ private:
             m.color.r = 1;
         }
 
-        m.lifetime = rclcpp::Duration(marker_display_lifetime_);
+        m.lifetime = rclcpp::Duration::from_seconds(marker_display_lifetime_);
         return m;
     }
 
@@ -153,7 +153,7 @@ private:
         m.color.r = 1;
         m.color.g = 1;
         m.color.b = 1;  
-        m.lifetime = rclcpp::Duration(marker_display_lifetime_);
+        m.lifetime = rclcpp::Duration::from_seconds(marker_display_lifetime_);
         return m;
     }
 
