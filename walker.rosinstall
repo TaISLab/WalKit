@@ -11,17 +11,17 @@
 - git:
     uri: https://github.com/TaISLab/leap_motion.git
     local-name: leap_motion
-    version: foxy
+    version: humble
 
 - git:
     uri: https://github.com/TaISLab/rplidar_ros.git
     local-name: rplidar_ros2
-    version: ros2
+    version: humble
 
 - git:
     uri: https://github.com/TaISLab/bwt901cl_pkg.git
     local-name: bwt901cl_pkg
-    version: foxy
+    version: humble
 
 - git:
     uri: https://github.com/TaISLab/ros2_laser_scan_matcher.git
