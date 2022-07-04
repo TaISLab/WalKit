@@ -1,6 +1,6 @@
 # ~/.walker_cfg.bash
-# you should set these accordingly
-ROS2_WORKSPACE="~/workspace/walker_ws"
+# you should set these accordingly. Dont use '~' for home folder
+ROS2_WORKSPACE="/home/ubuntu/workspace/walker_ws"
 NETWORK_INTERFACE="wlan0"
 
 #this should be automatic

@@ -127,7 +127,7 @@ input { font-size: 40px; }
 <!-- WARNING: TRY TO KEEP URL VAR AT LINE 130 !! walker_config.bash WILL CHANGE IT BLINDLY -->
 <script type="text/javascript" type="text/javascript">
   var ros = new ROSLIB.Ros({
-    url : 'ws://192.168.0.180:9090'
+    url : 'ws://192.168.0.178:9090'
   });
 
   ros.on('connection', function() {
@@ -187,6 +187,10 @@ input { font-size: 40px; }
     name : "/handle_height",
     messageType : 'std_msgs/Int32',
   });
+
+  handle_height_listener.subscribe(function(m) {
+    document.getElementById("handle_height_data").innerHTML = m.data;
+  });
   
   function handle_publish() {
     var var_handle = new ROSLIB.Message({
@@ -200,6 +204,10 @@ input { font-size: 40px; }
     name : "/user_desc",
     messageType : 'std_msgs/String',
     latch : true
+  });
+
+  user_listener.subscribe(function(m) {
+    document.getElementById("user_desc_data").innerHTML = m.data;
   });
 
   user = function () {
@@ -236,13 +244,19 @@ input { font-size: 40px; }
         
       if (result.message){
         outputtext.innerHTML = "Grabando!";
+        user();
       }
 
       console.log('Result for service call on '
           + cmdlineClient.name
           + ': '
           + result.message);
-    });      
+    });
+    
+    intervalId = setInterval(function() {
+        user()
+    }, 1000);
+
   };
 
   function stopRecord() {
@@ -269,6 +283,7 @@ input { font-size: 40px; }
           + ': '
           + result.message);
     });      
+    clearInterval(intervalId);
   };
 
 
@@ -282,7 +297,9 @@ input { font-size: 40px; }
   <p>Right handle force: <span id="right_handle_force"></span></p>
   <p>Left wheel encoder: <span id="left_wheel_encoder"></span></p>
   <p>Right wheel encoder: <span id="right_wheel_encoder"></span></p>
-
+  <p>user_desc var: <span id="user_desc_data"></span></p>
+  <p>handle_height var: <span id="handle_height_data"></span></p>
+  
   <!-- ********************** USER CONFIGURATION **********************  -->
   <br>
   <hr size="3" noshade> 

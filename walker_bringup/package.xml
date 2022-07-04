@@ -19,6 +19,8 @@
   <exec_depend>walker_description</exec_depend>
   <exec_depend>walker_arduino</exec_depend>
   <exec_depend>walker_diff_odom</exec_depend>
+  <exec_depend>laser_filters</exec_depend>
+  <exec_depend>rosbridge_server</exec_depend>
   
   <export>
     <build_type>ament_cmake</build_type>

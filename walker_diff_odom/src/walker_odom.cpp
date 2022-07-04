@@ -15,7 +15,7 @@ WalkerDiffDrive::WalkerDiffDrive() : Node("diff_tf") {
       this->get_parameter("left_wheel_encoder_topic_name", left_wheel_encoder_topic_name_);
       this->declare_parameter("right_wheel_encoder_topic_name", rclcpp::ParameterValue("right"));
       this->get_parameter("right_wheel_encoder_topic_name", right_wheel_encoder_topic_name_);
-      this->declare_parameter("ticks_meter", rclcpp::ParameterValue(50));
+      this->declare_parameter("ticks_meter", rclcpp::ParameterValue(50.0));
       this->get_parameter("ticks_meter", ticks_meter_ );
       this->declare_parameter("base_width", rclcpp::ParameterValue(0.245) );
       this->get_parameter("base_width", base_width_ );

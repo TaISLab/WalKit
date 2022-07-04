@@ -89,7 +89,7 @@ public:
         this->declare_parameter<double>("detection_threshold",            -1.0);
         this->declare_parameter<double>("cluster_dist_euclid",            0.13);
         this->declare_parameter<double>("max_detect_distance",            10.0);
-        this->declare_parameter<double>("max_detected_clusters",          -1);
+        this->declare_parameter<int>("max_detected_clusters",             -1);
         this->declare_parameter<int>("min_points_per_cluster",            3);    
         this->declare_parameter<bool>("plot_all_clusters",                false);
         this->declare_parameter<bool>("plot_leg_kalman",                  false);

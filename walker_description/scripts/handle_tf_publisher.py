@@ -6,7 +6,7 @@ from ament_index_python.packages import get_package_share_directory
 import os
 from geometry_msgs.msg import TransformStamped
 from std_msgs.msg import Int32
-from tf2_ros.static_transform_broadcaster import StaticTransformBroadcaster
+from tf2_ros import TransformBroadcaster
 
 class HandleTfPublisher(Node):
 
@@ -35,22 +35,27 @@ class HandleTfPublisher(Node):
                 self.handle_x = parsed_yaml['handle_x']
                 self.handle_y = parsed_yaml['handle_y']
                 self.handle_z = parsed_yaml['handle_z']                
+                self.num_configs = len(self.handle_z)
             except yaml.YAMLError as exc:
                 print(exc)
 
         # ROS stuff
-        self.tf_publisher = StaticTransformBroadcaster(self)
+        self.tf_publisher = TransformBroadcaster(self)
 
-        self.handle_height_sub = self.create_subscription(Int32, self.handle_height_topic_name, self.handle_height_cb, 10)
-
+        if (self.handle_height>-1): 
+            self.get_logger().info("handle height read from config")  
+            self.publish_handles()
+        else:
+            self.get_logger().info("handle height read from topic")              
+            self.handle_height_sub = self.create_subscription(Int32, self.handle_height_topic_name, self.handle_height_cb, 10)
+       
         self.get_logger().info("handle tf publisher started")  
 
-        if (self.handle_height>-1): # height read from config, not from topic
-                self.publish_handles()
-
     def handle_height_cb(self, msg):  
-        if len(self.handle_z)>msg.data:
+        if self.num_configs>msg.data:
+            self.get_logger().info("Valid height received")  
             if (self.handle_height != msg.data):
+                self.get_logger().info("New value received")  
                 self.handle_height = msg.data
                 self.publish_handles()
 
@@ -68,10 +73,10 @@ class HandleTfPublisher(Node):
 
     def publish_handles(self):
             # right handle 
-            right_handle_tf = self.get_tf(self.handle_height, "right", 1)
+            right_handle_tf = self.get_tf(self.handle_height, "right", -1)
 
             # left handle 
-            left_handle_tf = self.get_tf(self.handle_height, "left", -1)
+            left_handle_tf = self.get_tf(self.handle_height, "left", 1)
 
             # See https://answers.ros.org/question/287469/unable-to-publish-multiple-static-transformations-using-tf/
 

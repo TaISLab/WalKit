@@ -14,7 +14,7 @@ PartialLoads::PartialLoads() : Node("partial_loads"){
         this->declare_parameter<std::string>("right_steps_topic_name",  "/detected_step_right");
         this->declare_parameter<std::string>("user_desc_topic_name",    "/user_desc");
         this->declare_parameter<std::string>("handle_calibration_file", handle_calibration_file_);
-        this->declare_parameter<double>("ms_period",                    500);
+        this->declare_parameter<int>("ms_period",                       500);
         this->declare_parameter<double>("speed_delta",                  0.05);
         this->declare_parameter<bool>("debug_output",                   false);
 
