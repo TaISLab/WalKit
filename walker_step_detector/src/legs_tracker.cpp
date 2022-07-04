@@ -35,8 +35,8 @@
             
             if (n_points==1){
                 first_step = detect_steps.front();
-                // left should have y<0
-                if (first_step.position.point.y<0) {
+                // left should have y>0
+                if (first_step.position.point.y>0) {
                     l_tracker.add(first_step);
                 } else{
                     r_tracker.add(first_step);
@@ -45,8 +45,8 @@
                 first_step = detect_steps.front();
                 last_step = detect_steps.back();
 
-                // left should have lower y
-                if (first_step.position.point.y<last_step.position.point.y) {
+                // left should have bigger y
+                if (first_step.position.point.y>last_step.position.point.y) {
                     l_tracker.add(first_step);
                     r_tracker.add(last_step);
                 } else{
@@ -54,22 +54,22 @@
                     r_tracker.add(first_step);                
                 }            
             } else if (n_points>2) { // 3 points at least ...
-            detect_steps.sort(CompareSteps()); // sorted left-right
+            detect_steps.sort(CompareSteps()); // sorted right-left
             // pick most extreme ones
             first_step = detect_steps.front();
-            l_tracker.add(first_step);
+            r_tracker.add(first_step);
             last_step = detect_steps.back();
-            r_tracker.add(last_step);
+            l_tracker.add(last_step);
             
             // add all to kalman and let it smooth it
             // while(detect_steps.size()>0){  
             //     first_step = detect_steps.front();
             //     detect_steps.pop_front();
-            //     l_tracker.add(first_step);
+            //     r_tracker.add(first_step);
             //     if (detect_steps.size()>0){
             //         last_step = detect_steps.back();
             //         detect_steps.pop_back();
-            //         r_tracker.add(last_step);
+            //         l_tracker.add(last_step);
             //     }
             // }
         }
