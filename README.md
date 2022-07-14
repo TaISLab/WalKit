@@ -5,7 +5,7 @@
   <img src="https://github.com/TaISLab/WalKit/blob/master/Pictures/walkerTransfiereReduced.jpg" />
 </p>
 
-WalKit is an open hardware project created to monitor the elderly. It is modular, so different parameters, such as weight-bearing, cadence, activity duration, walking speed or other spatiotemporal gait parameters can be monitoring. 
+WalKit is an open hardware project created to monitor the elderly. It is modular, so different parameters, such as weight-bearing, cadence, activity duration, walking speed or other spatiotemporal gait parameters can be monitored. 
 
 ## Contributors
 * [Plan Propio de la Universidad de Málaga (E3-PROYECTOS DE PRUEBA DE CONCEPTO (E3/02/18))](https://www.uma.es/servicio-de-investigacion/cms/menu/plan-propio-de-investigacion/?set_language=en) at Málaga University, Spain
