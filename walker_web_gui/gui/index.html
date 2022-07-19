@@ -1,313 +1,584 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-<meta charset="utf-8" />
-<style>
-  h1 {
-    font-size: 60px;
-  }
+  <meta charset="utf-8" />
+  <style>
+    h1 {
+      font-size: 60px;
+    }
 
-  h2 {
-    font-size: 20px;
-  }
+    h2 {
+      font-size: 20px;
+    }
+
+    p {
+      font-size: 12px;
+    }
+
+    .slidecontainer {
+      width: 90%;
+    }
+
+    .slidecontainer p {
+      font-size: 45px;
+    }
+
+    .slider {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 25px;
+      background: #d3d3d3;
+      outline: none;
+      opacity: 0.7;
+      -webkit-transition: .2s;
+      transition: opacity .2s;
+    }
+
+    .slider:hover {
+      opacity: 1;
+    }
+
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 25px;
+      height: 25px;
+      background: #04AA6D;
+      cursor: pointer;
+    }
+
+    .slider::-moz-range-thumb {
+      width: 25px;
+      height: 25px;
+      background: #04AA6D;
+      cursor: pointer;
+    }
+
+    .record_tag_class {
+      font-size: 2rem;
+      font-family: sans-serif;
+      padding: 2rem 0 2rem 2rem;
+      color: black;
+    }
+
+    .user_id_class {
+      font-size: 3rem;
+    }
+
+    .condition_class {
+      font-size: 3rem;
+    }
+
+    .toggle {
+      margin: 0 0 0 2rem;
+      position: relative;
+      display: inline-block;
+      width: 6rem;
+      height: 3.4rem;
+    }
+
+    .toggle input {
+      display: none;
+    }
+
+    .roundbutton {
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      right: 0;
+      width: 100%;
+      background-color: #33455e;
+      display: block;
+      transition: all 0.3s;
+      border-radius: 3.4rem;
+      cursor: pointer;
+    }
+
+    .roundbutton:before {
+      position: absolute;
+      content: "";
+      height: 2.4rem;
+      width: 2.5rem;
+      border-radius: 100%;
+      display: block;
+      left: 0.5rem;
+      bottom: 0.5rem;
+      background-color: white;
+      transition: all 0.3s;
+    }
+
+    input:checked+.roundbutton {
+      background-color: #FF6E48;
+    }
+
+    input:checked+.roundbutton:before {
+      transform: translate(2.6rem, 0);
+    }
+
+    input {
+      font-size: 40px;
+    }
+
+    .column {
+      float: left;
+      width: 50%;
+    }
+
+    /* Clear floats after the columns */
+    .row:after {
+      content: "";
+      display: table;
+      clear: both;
+    }
+  </style>
+  <link rel="stylesheet" href="https://pyscript.net/alpha/pyscript.css" />
+  <script defer type="text/javascript" src="https://pyscript.net/alpha/pyscript.js"></script>
+
+  <script type="text/javascript" src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <script type="text/javascript" src="static.robotwebtools.org/roslibjs/current/roslib.min.js"></script>
+  <script type="text/javascript" src="requirejs.org/docs/release/2.3.5/minified/require.js"></script>
   
-  p {
-    font-size: 12px;
-  }
-
-  .slidecontainer {
-    width: 90%;
-  }
-  
-  .slidecontainer p {
-    font-size: 45px;
-  }
-
-  .slider {
-    -webkit-appearance: none;
-    width: 100%;
-    height: 25px;
-    background: #d3d3d3;
-    outline: none;
-    opacity: 0.7;
-    -webkit-transition: .2s;
-    transition: opacity .2s;
-  }
-  
-  .slider:hover {
-    opacity: 1;
-  }
-  
-  .slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 25px;
-    height: 25px;
-    background: #04AA6D;
-    cursor: pointer;
-  }
-  
-  .slider::-moz-range-thumb {
-    width: 25px;
-    height: 25px;
-    background: #04AA6D;
-    cursor: pointer;
-  }
-
-  .record_tag_class {
-    font-size: 2rem;
-    font-family: sans-serif;
-    padding: 2rem 0 2rem 2rem;
-    color: black;
-}
-
-.user_id_class {
-    font-size: 3rem;
-}
-
-.condition_class {
-    font-size: 3rem;
-}
-
-.toggle {
-    margin:0 0 0 2rem;
-    position: relative;
-    display: inline-block;
-    width: 6rem;
-    height: 3.4rem;
-}
-
-.toggle input {
-    display: none;
-}
-
-.roundbutton {
-    position: absolute;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    right: 0;
-    width: 100%;
-    background-color: #33455e;
-    display: block;
-    transition: all 0.3s;
-    border-radius: 3.4rem;
-    cursor: pointer;
-}
-
-.roundbutton:before {
-    position: absolute;
-    content: "";
-    height: 2.4rem;
-    width: 2.5rem;
-    border-radius: 100%;
-    display: block;
-    left: 0.5rem;
-    bottom: 0.5rem;
-    background-color: white;
-    transition: all 0.3s;
-}
-
-input:checked + .roundbutton {
-    background-color: #FF6E48;
-}
-
-input:checked + .roundbutton:before  {
-    transform: translate(2.6rem, 0);
-}
-
-input { font-size: 40px; }
-
-
-</style>
-
-<script type="text/javascript" src="static.robotwebtools.org/roslibjs/current/roslib.min.js"></script>
-<script type="text/javascript" src="requirejs.org/docs/release/2.3.5/minified/require.js"></script>
-
-<!-- WARNING: TRY TO KEEP URL VAR AT LINE 130 !! walker_config.bash WILL CHANGE IT BLINDLY -->
-<script type="text/javascript" type="text/javascript">
-  var ros = new ROSLIB.Ros({
-    url : 'ws://192.168.0.178:9090'
-  });
-
-  ros.on('connection', function() {
-    document.getElementById("status").innerHTML = "Connected";
-  });
-
-  ros.on('error', function(error) {
-    document.getElementById("status").innerHTML = "Error";
-  });
-
-  ros.on('close', function() {
-    document.getElementById("status").innerHTML = "Closed";
-  });
-
-  var right_handle_listener = new ROSLIB.Topic({
-    ros : ros,
-    name : '/right_handle',
-    messageType : 'walker_msgs/msg/ForceStamped'
-  });
-
-  right_handle_listener.subscribe(function(m) {
-    document.getElementById("right_handle_force").innerHTML = m.force;
-  });
-
-  var left_handle_listener = new ROSLIB.Topic({
-    ros : ros,
-    name : '/left_handle',
-    messageType : 'walker_msgs/msg/ForceStamped'
-  });
-
-  left_handle_listener.subscribe(function(m) {
-    document.getElementById("left_handle_force").innerHTML = m.force;
-  });
-
-  var left_wheel_listener = new ROSLIB.Topic({
-    ros : ros,
-    name : '/left_wheel',
-    messageType : 'walker_msgs/msg/EncoderStamped'
-  });
-
-  left_wheel_listener.subscribe(function(m) {
-    document.getElementById("left_wheel_encoder").innerHTML = m.encoder;
-  });
-
-  var right_wheel_listener = new ROSLIB.Topic({
-    ros : ros,
-    name : '/right_wheel',
-    messageType : 'walker_msgs/msg/EncoderStamped'
-  });
-
-  right_wheel_listener.subscribe(function(m) {
-    document.getElementById("right_wheel_encoder").innerHTML = m.encoder;
-  });
-
-  handle_height_listener = new ROSLIB.Topic({
-    ros : ros,
-    name : "/handle_height",
-    messageType : 'std_msgs/Int32',
-  });
-
-  handle_height_listener.subscribe(function(m) {
-    document.getElementById("handle_height_data").innerHTML = m.data;
-  });
-  
-  function handle_publish() {
-    var var_handle = new ROSLIB.Message({
-		    data : parseInt(document.getElementById("handleRange").value)
-		});
-		handle_height_listener.publish(var_handle);
-  }
-
-  user_listener = new ROSLIB.Topic({
-    ros : ros,
-    name : "/user_desc",
-    messageType : 'std_msgs/String',
-    latch : true
-  });
-
-  user_listener.subscribe(function(m) {
-    document.getElementById("user_desc_data").innerHTML = m.data;
-  });
-
-  user = function () {
-    var user_info = new ROSLIB.Message({
-      data: document.getElementById("ageValue").innerHTML + ':' +
-            document.getElementById("heightValue").innerHTML + ':' +
-            document.getElementById("WeightValue").innerHTML + ':' +
-            document.getElementById("user_id").value + ':' +
-            document.getElementById('gender_tag_status').innerHTML + ':' +
-            document.getElementById("myTextarea").value
-    });
-    user_listener.publish(user_info);
-    handle_publish();
-  }
-
-  // Calling a service
-  // -----------------
-
-
-  function startRecord() {
-      var cmdlineClient = new ROSLIB.Service({
-        ros : ros,
-        name : '/rosbag_record',
-        serviceType : 'std_srvs/srv/SetBool'
-      });
-
-
-    var request = new ROSLIB.ServiceRequest({
-      data : true
-    });
-
-    cmdlineClient.callService(request, function(result) {
-      var outputtext = document.getElementById('record_tag_status');
-        
-      if (result.message){
-        outputtext.innerHTML = "Grabando!";
-        user();
-      }
-
-      console.log('Result for service call on '
-          + cmdlineClient.name
-          + ': '
-          + result.message);
-    });
     
-    intervalId = setInterval(function() {
-        user()
-    }, 1000);
+  <!-- WARNING: TRY TO KEEP URL VAR AT LINE 130 !! walker_config.bash WILL CHANGE IT BLINDLY -->
+  <script type="text/javascript" type="text/javascript">
+    var ros = new ROSLIB.Ros({
+      url: 'ws://192.168.0.196:9090'
+    });
 
-  };
+    ros.on('connection', function () {
+      document.getElementById("status").innerHTML = "Connected";
+    });
 
-  function stopRecord() {
+    ros.on('error', function (error) {
+      document.getElementById("status").innerHTML = "Error";
+    });
+
+    ros.on('close', function () {
+      document.getElementById("status").innerHTML = "Closed";
+    });
+
+    var right_handle_listener = new ROSLIB.Topic({
+      ros: ros,
+      name: '/right_handle',
+      messageType: 'walker_msgs/msg/ForceStamped'
+    });
+
+    right_handle_listener.subscribe(function (m) {
+      document.getElementById("right_handle_force").innerHTML = Math.round((m.force + Number.EPSILON) * 100) / 100;
+    });
+
+    var left_handle_listener = new ROSLIB.Topic({
+      ros: ros,
+      name: '/left_handle',
+      messageType: 'walker_msgs/msg/ForceStamped'
+    });
+
+    left_handle_listener.subscribe(function (m) {
+      document.getElementById("left_handle_force").innerHTML = Math.round((m.force + Number.EPSILON) * 100) / 100;
+    });
+
+    var left_wheel_listener = new ROSLIB.Topic({
+      ros: ros,
+      name: '/left_wheel',
+      messageType: 'walker_msgs/msg/EncoderStamped'
+    });
+
+    left_wheel_listener.subscribe(function (m) {
+      document.getElementById("left_wheel_encoder").innerHTML = m.encoder; 
+    });
+
+    var right_wheel_listener = new ROSLIB.Topic({
+      ros: ros,
+      name: '/right_wheel',
+      messageType: 'walker_msgs/msg/EncoderStamped'
+    });
+
+    right_wheel_listener.subscribe(function (m) {
+      document.getElementById("right_wheel_encoder").innerHTML = m.encoder;
+    });
+
+    handle_height_listener = new ROSLIB.Topic({
+      ros: ros,
+      name: "/handle_height",
+      messageType: 'std_msgs/Int32',
+    });
+
+    handle_height_listener.subscribe(function (m) {
+      document.getElementById("handle_height_data").innerHTML = m.data;
+    });
+
+    function handle_publish() {
+      var var_handle = new ROSLIB.Message({
+        data: parseInt(document.getElementById("handleRange").value)
+      });
+      handle_height_listener.publish(var_handle);
+    }
+
+
+    left_load_listener = new ROSLIB.Topic({
+      ros: ros,
+      name: "/left_loads",
+      messageType: 'walker_msgs/msg/StepStamped',
+      latch: false
+    });
+
+    left_load_listener.subscribe(function (m) {
+      var new_x = m.position.point.x;
+      var new_y = m.position.point.y;
+      //TODO: check frame_id== base_link 
+      if ((new_x !=0.0) | (new_y!=0.0))  {
+        var graphDiv = document.getElementById('myPlot')
+        var dataRetrievedLater = graphDiv.data;
+        var layoutRetrievedLater = graphDiv.layout;
+      
+        dataRetrievedLater[0].x = [-new_y];
+        dataRetrievedLater[0].y = [ new_x];
+
+        var new_range_x = layoutRetrievedLater.xaxis.range
+        new_range_x[0] = Math.min(new_range_x[0], dataRetrievedLater[0].x )
+        new_range_x[1] = Math.max(new_range_x[1], dataRetrievedLater[0].x )
+
+        var new_range_y = layoutRetrievedLater.yaxis.range
+        new_range_y[0] = Math.min(new_range_y[0], dataRetrievedLater[0].y )
+        new_range_y[1] = Math.max(new_range_y[1], dataRetrievedLater[0].y )
+
+        //console.log(layoutRetrievedLater);
+        var layout = {
+          xaxis: {
+            autorange: false,
+            range: new_range_x
+            //showgrid: false,
+            //zeroline: false,
+            //showline: false,
+            //autotick: true,
+            //ticks: '',
+            //showticklabels: false
+          },
+          yaxis: {
+            autorange: false,
+            range: new_range_y
+            //showgrid: false,
+            //zeroline: false,
+            //showline: false,
+            //autotick: true,
+            //ticks: '',
+            //showticklabels: false
+          }
+        };
+
+        Plotly.react(graphDiv, dataRetrievedLater, layout);          
+      }
+    });
+
+    right_load_listener = new ROSLIB.Topic({
+      ros: ros,
+      name: "/right_loads",
+      messageType: 'walker_msgs/msg/StepStamped',
+      latch: false
+    });
+
+    right_load_listener.subscribe(function (m) {
+      var new_x = m.position.point.x
+      var new_y = m.position.point.y
+      
+      //TODO: check frame_id == base_link 
+      if ((new_x !=0.0) | (new_y!=0.0)) {
+        var graphDiv = document.getElementById('myPlot')
+        var dataRetrievedLater = graphDiv.data;
+        var layoutRetrievedLater = graphDiv.layout;
+      
+        dataRetrievedLater[1].x = [-new_y];
+        dataRetrievedLater[1].y = [ new_x];
+
+
+        var new_range_x = layoutRetrievedLater.xaxis.range
+        new_range_x[0] = Math.min(new_range_x[0], dataRetrievedLater[0].x )
+        new_range_x[1] = Math.max(new_range_x[1], dataRetrievedLater[0].x )
+
+        var new_range_y = layoutRetrievedLater.yaxis.range
+        new_range_y[0] = Math.min(new_range_y[0], dataRetrievedLater[0].y )
+        new_range_y[1] = Math.max(new_range_y[1], dataRetrievedLater[0].y )
+
+        //console.log(layoutRetrievedLater);
+        var layout = {
+          xaxis: {
+            autorange: false,
+            range: new_range_x
+            //showgrid: false,
+            //zeroline: false,
+            //showline: false,
+            //autotick: true,
+            //ticks: '',
+            //showticklabels: false
+          },
+          yaxis: {
+            autorange: false,
+            range: new_range_y
+            //showgrid: false,
+            //zeroline: false,
+            //showline: false,
+            //autotick: true,
+            //ticks: '',
+            //showticklabels: false
+          }
+        };
+
+        Plotly.react(graphDiv, dataRetrievedLater, layout);        
+      }      
+    });
+
+    ////////////////////////////////////////////
+/* TODO: create a dummy module to provide laser points in base_link frame
+    laser_listener = new ROSLIB.Topic({
+      ros: ros,
+      name: "/scan_filtered",
+      messageType: 'sensor_msgs/msg/LaserScan',
+      latch: false
+    });
+
+    laser_listener.subscribe(function (m) {
+      //var new_x = m.position.point.x
+      //var new_y = m.position.point.y
+
+      //if ((new_x !=0.0) | (new_y!=0.0)) 
+      if (false){
+        var graphDiv = document.getElementById('myPlot')
+        var dataRetrievedLater = graphDiv.data;
+        var layoutRetrievedLater = graphDiv.layout;
+      
+        dataRetrievedLater[1].x = [-new_y];
+        dataRetrievedLater[1].y = [ new_x];
+
+        var new_range_x = layoutRetrievedLater.xaxis.range
+        new_range_x[0] = Math.min(new_range_x[0], dataRetrievedLater[0].x )
+        new_range_x[1] = Math.max(new_range_x[1], dataRetrievedLater[0].x )
+
+        var new_range_y = layoutRetrievedLater.yaxis.range
+        new_range_y[0] = Math.min(new_range_y[0], dataRetrievedLater[0].y )
+        new_range_y[1] = Math.max(new_range_y[1], dataRetrievedLater[0].y )
+
+        //console.log(layoutRetrievedLater);
+        var layout = {
+          xaxis: {
+            autorange: false,
+            range: new_range_x
+          },
+          yaxis: {
+            autorange: false,
+            range: new_range_y
+          }
+        };
+
+        Plotly.react(graphDiv, dataRetrievedLater, layout);        
+      }      
+    });
+*/
+    /////////////////////////////////////////////
+
+    
+
+    user_listener = new ROSLIB.Topic({
+      ros: ros,
+      name: "/user_desc",
+      messageType: 'std_msgs/String',
+      latch: true
+    });
+
+    user_listener.subscribe(function (m) {
+      document.getElementById("user_desc_data").innerHTML = m.data;
+    });
+
+    user = function () {
+      var user_info = new ROSLIB.Message({
+        data: document.getElementById("ageValue").innerHTML + ':' +
+          document.getElementById("heightValue").innerHTML + ':' +
+          document.getElementById("WeightValue").innerHTML + ':' +
+          document.getElementById("user_id").value + ':' +
+          document.getElementById('gender_tag_status').innerHTML + ':' +
+          document.getElementById("myTextarea").value
+      });
+      user_listener.publish(user_info);
+      handle_publish();
+    }
+
+    // Calling a service
+    // -----------------
+
+
+    function startRecord() {
       var cmdlineClient = new ROSLIB.Service({
-        ros : ros,
-        name : '/rosbag_record',
-        serviceType : 'std_srvs/srv/SetBool'
+        ros: ros,
+        name: '/rosbag_record',
+        serviceType: 'std_srvs/srv/SetBool'
       });
 
 
-    var request = new ROSLIB.ServiceRequest({
-      data : false
-    });
+      var request = new ROSLIB.ServiceRequest({
+        data: true
+      });
 
-    cmdlineClient.callService(request, function(result) {
-      var outputtext = document.getElementById('record_tag_status');
-        
-      if (result.message){
-        outputtext.innerHTML = "Detenido!";
-      }
+      cmdlineClient.callService(request, function (result) {
+        var outputtext = document.getElementById('record_tag_status');
 
-      console.log('Result for service call on '
+        if (result.message) {
+          outputtext.innerHTML = "Grabando!";
+          user();
+        }
+
+        console.log('Result for service call on '
           + cmdlineClient.name
           + ': '
           + result.message);
-    });      
-    clearInterval(intervalId);
-  };
+      });
+
+      intervalId = setInterval(function () {
+        user()
+      }, 1000);
+
+    };
+
+    function stopRecord() {
+      var cmdlineClient = new ROSLIB.Service({
+        ros: ros,
+        name: '/rosbag_record',
+        serviceType: 'std_srvs/srv/SetBool'
+      });
 
 
-</script>
+      var request = new ROSLIB.ServiceRequest({
+        data: false
+      });
+
+      cmdlineClient.callService(request, function (result) {
+        var outputtext = document.getElementById('record_tag_status');
+
+        if (result.message) {
+          outputtext.innerHTML = "Detenido!";
+        }
+
+        console.log('Result for service call on '
+          + cmdlineClient.name
+          + ': '
+          + result.message);
+      });
+      clearInterval(intervalId);
+    };
+
+
+  </script>
 </head>
 
 <body>
   <h1>Walk-it ROS2 User Interface</h1>
-  <p>Connection status: <span id="status"></span></p>
-  <p>Left handle force: <span id="left_handle_force"></span></p>
-  <p>Right handle force: <span id="right_handle_force"></span></p>
-  <p>Left wheel encoder: <span id="left_wheel_encoder"></span></p>
-  <p>Right wheel encoder: <span id="right_wheel_encoder"></span></p>
-  <p>user_desc var: <span id="user_desc_data"></span></p>
-  <p>handle_height var: <span id="handle_height_data"></span></p>
-  
+  <div class="row">
+    <div class="column">
+      <p>Connection status: <span id="status"></span></p>
+      <p>Left handle force: <span id="left_handle_force"></span></p>
+      <p>Right handle force: <span id="right_handle_force"></span></p>
+      <p>Left wheel encoder: <span id="left_wheel_encoder"></span></p>
+      <p>Right wheel encoder: <span id="right_wheel_encoder"></span></p>
+      <p>user_desc var: <span id="user_desc_data"></span></p>
+      <p>handle_height var: <span id="handle_height_data"></span></p>
+    </div>
+    <div class="column">
+      <div id="myPlot" style="width:100%;max-width:700px"></div>
+    </div>
+  </div>
+
+  <script>
+
+    var orig_left_x = 0;
+    var orig_left_y = 0.15;
+    var orig_right_x = 0;
+    var orig_right_y = -0.15;
+
+    var left_x  = -orig_left_y;
+    var left_y  = orig_left_x;
+    var right_x = -orig_right_y;
+    var right_y = orig_right_x;
+
+
+    var data = [{
+      x: [left_x],
+      y: [left_y],
+      type: 'scatter',
+      mode: 'markers',
+      name: 'left',
+      marker: {
+        color: 'rgb(255, 0, 0)',
+        size: 20,
+        symbol: 'square',
+        line: {
+          color: 'rgb(255, 0, 100)',
+          width: 2
+        }
+      },
+      showlegend: false
+      }, {
+      x: [right_x],
+      y: [right_y],
+      type: 'scatter',
+      mode: 'markers',
+      name: 'right',
+      marker: {
+        color: 'rgb(0, 0, 255)',
+        size: 20,
+        line: {
+          color: 'rgb(0, 255, 100)',
+          width: 2
+        }
+      },
+      showlegend: false
+    }, {
+      x: [0],
+      y: [0],
+      type: 'scatter',
+      mode: 'markers',
+      name: 'laser',
+      marker: {
+        color: 'rgb(255, 0, 255)',
+        size: 2,
+        line: {
+          color: 'rgb(255, 0, 255)',
+          width: 2
+        }
+      },
+      showlegend: false
+    },{
+      x: [0],
+      y: [1],
+      type: 'scatter',
+      mode: 'markers',
+      name: 'walker_advance',
+      marker: {
+        color: 'rgb(0, 0, 0)',
+        size: 10,
+        symbol: 'star-triangle-up',
+        line: {
+          color: 'rgb(0, 0, 0)',
+          width: 2
+        }
+      },
+      showlegend: false
+    }]
+    const config = { 
+      displayModeBar: false, // this is the line that hides the bar.
+    };
+
+    // Display using Plotly
+    Plotly.newPlot("myPlot", data,config);
+  </script>
+
   <!-- ********************** USER CONFIGURATION **********************  -->
   <br>
-  <hr size="3" noshade> 
-  
+  <hr size="3" noshade>
+
   <!-- user id -->
   <div id="user_id_div" class="user_id_class">
-    User id:  
-    <input type="text" id="user_id" value="Manuel" size="15" >
+    User id:
+    <input type="text" id="user_id" value="Manuel" size="15">
   </div>
 
   <!-- Gender -->
@@ -320,14 +591,14 @@ input { font-size: 40px; }
   </div>
 
   <script>
-    document.getElementById('gender_tog').onclick = function() {
+    document.getElementById('gender_tog').onclick = function () {
       var outputtext = document.getElementById('gender_tag_status');
-          if(this.checked) {
-            outputtext.innerHTML = "Femenino";
-          } else {
-            outputtext.innerHTML = "Masculino";
-          }
-          user();
+      if (this.checked) {
+        outputtext.innerHTML = "Femenino";
+      } else {
+        outputtext.innerHTML = "Masculino";
+      }
+      user();
     };
   </script>
 
@@ -336,16 +607,16 @@ input { font-size: 40px; }
     <p>Age: <span id="ageValue"></span> years</p>
     <input type="range" min="1" max="100" value="42" class="slider" id="ageRange">
   </div>
-  
+
   <script>
-      var slider_a = document.getElementById("ageRange");
-      var output_a = document.getElementById("ageValue");
-      output_a.innerHTML = slider_a.value;
-      
-      slider_a.oninput = function() {
-        output_a.innerHTML = this.value;
-        user();
-      }
+    var slider_a = document.getElementById("ageRange");
+    var output_a = document.getElementById("ageValue");
+    output_a.innerHTML = slider_a.value;
+
+    slider_a.oninput = function () {
+      output_a.innerHTML = this.value;
+      user();
+    }
   </script>
 
   <!-- Height  -->
@@ -358,8 +629,8 @@ input { font-size: 40px; }
     var slider_h = document.getElementById("heightRange");
     var output_h = document.getElementById("heightValue");
     output_h.innerHTML = slider_h.value;
-    
-    slider_h.oninput = function() {
+
+    slider_h.oninput = function () {
       output_h.innerHTML = this.value;
       user();
     }
@@ -375,8 +646,8 @@ input { font-size: 40px; }
     var slider_w = document.getElementById("WeightRange");
     var output_w = document.getElementById("WeightValue");
     output_w.innerHTML = slider_w.value;
-    
-    slider_w.oninput = function() {
+
+    slider_w.oninput = function () {
       output_w.innerHTML = this.value;
       user();
     }
@@ -385,32 +656,32 @@ input { font-size: 40px; }
   <!-- medical condition -->
   <div id="condition_div">
     <p>User medical condition: </p>
-      <textarea id="myTextarea" name="aTextArea" rows="5" cols="100">No previous condition</textarea>      
+    <textarea id="myTextarea" name="aTextArea" rows="5" cols="100">No previous condition</textarea>
   </div>
 
- <!-- ********************** Control CONFIGURATION **********************  -->
- <br>
- <hr size="3" noshade> 
+  <!-- ********************** Control CONFIGURATION **********************  -->
+  <br>
+  <hr size="3" noshade>
 
- <!-- Handle height  -->
+  <!-- Handle height  -->
   <div class="slidecontainer">
     <p>Handle position: <span id="handleValue"></span> # </p>
     <input type="range" min="0" max="4" value="2" class="slider" id="handleRange">
   </div>
-  
+
   <script>
-      var slider_hh = document.getElementById("handleRange");
-      var output_hh = document.getElementById("handleValue");
-      output_hh.innerHTML = slider_hh.value;
-      
-      slider_hh.oninput = function() {
-        output_hh.innerHTML = this.value;
-        user();
-      }
+    var slider_hh = document.getElementById("handleRange");
+    var output_hh = document.getElementById("handleValue");
+    output_hh.innerHTML = slider_hh.value;
+
+    slider_hh.oninput = function () {
+      output_hh.innerHTML = this.value;
+      user();
+    }
   </script>
 
- <!-- Start recording  -->
-   <div id="record_tag_id" class="record_tag_class">
+  <!-- Start recording  -->
+  <div id="record_tag_id" class="record_tag_class">
     <label class="toggle">
       <input id="record_tog" type="checkbox">
       <span class="roundbutton"></span>
@@ -422,15 +693,16 @@ input { font-size: 40px; }
   <script>
     var input = document.getElementById('record_tog');
 
-    input.addEventListener('change',function(){
-          if(this.checked) {
-            user();
-            startRecord();
-          } else {
-            stopRecord();
-          }
+    input.addEventListener('change', function () {
+      if (this.checked) {
+        user();
+        startRecord();
+      } else {
+        stopRecord();
+      }
     });
   </script>
 
 </body>
+
 </html>
