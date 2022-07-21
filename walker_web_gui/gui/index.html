@@ -138,9 +138,99 @@
   <script type="text/javascript" src="static.robotwebtools.org/roslibjs/current/roslib.min.js"></script>
   <script type="text/javascript" src="requirejs.org/docs/release/2.3.5/minified/require.js"></script>
   
-    
-  <!-- WARNING: TRY TO KEEP URL VAR AT LINE 130 !! walker_config.bash WILL CHANGE IT BLINDLY -->
+</head>
+
+<body>
+  <h1>Walk-it ROS2 User Interface</h1>
+  <div class="row">
+    <div class="column">
+      <p>Connection status: <span id="status"></span></p>
+      <p>Left handle load (kg): <span id="left_handle_force"></span></p>
+      <p>Right handle load (kg): <span id="right_handle_force"></span></p>
+
+      <p>Left leg load (kg): <span id="left_leg_load"></span></p>
+      <p>Right leg load (kg): <span id="right_leg_load"></span></p>
+
+      <p>Left wheel encoder: <span id="left_wheel_encoder"></span></p>
+      <p>Right wheel encoder: <span id="right_wheel_encoder"></span></p>
+      <p>user_desc var: <span id="user_desc_data"></span></p>
+      <p>handle_height var: <span id="handle_height_data"></span></p>
+    </div>
+    <div class="column">
+      <div id="myPlot" style="width:100%;max-width:700px"></div>
+    </div>
+  </div>
+
+
+  <!-- ********************** USER CONFIGURATION **********************  -->
+  <br>
+  <hr size="3" noshade>
+
+  <!-- user id -->
+  <div id="user_id_div" class="user_id_class">
+    User id:
+    <input type="text" id="user_id" value="Manuel" size="15">
+  </div>
+
+  <!-- Gender -->
+  <div id="gender_id" class="gender_tog_class">
+    <label class="toggle">
+      <input id="gender_tog" type="checkbox">
+      <span class="roundbutton"></span>
+    </label>
+    Género <span id="gender_tag_status">Masculino</span>
+  </div>
+
+  <!-- AGE  -->
+  <div class="slidecontainer">
+    <p>Age: <span id="ageValue"></span> years</p>
+    <input type="range" min="1" max="100" value="42" class="slider" id="ageRange">
+  </div>
+
+
+  <!-- Height  -->
+  <div class="slidecontainer">
+    <p>Height: <span id="heightValue"></span> cm.</p>
+    <input type="range" min="120" max="210" value="175" class="slider" id="heightRange">
+  </div>
+
+  <!-- Weight  -->
+  <div class="slidecontainer">
+    <p>Weight: <span id="WeightValue"></span> Kg.</p>
+    <input type="range" min="20" max="210" value="92" class="slider" id="WeightRange">
+  </div>
+
+
+  <!-- medical condition -->
+  <div id="condition_div">
+    <p>User medical condition: </p>
+    <textarea id="myTextarea" name="aTextArea" rows="5" cols="100">No previous condition</textarea>
+  </div>
+
+  <!-- ********************** Control CONFIGURATION **********************  -->
+  <br>
+  <hr size="3" noshade>
+
+  <!-- Handle height  -->
+  <div class="slidecontainer">
+    <p>Handle position: <span id="handleValue"></span> # </p>
+    <input type="range" min="0" max="4" value="2" class="slider" id="handleRange">
+  </div>
+
+  <!-- Start recording  -->
+  <div id="record_tag_id" class="record_tag_class">
+    <label class="toggle">
+      <input id="record_tog" type="checkbox">
+      <span class="roundbutton"></span>
+    </label>
+    Rosbag esta <span id="record_tag_status">Detenido</span>
+  </div>
+
+</body>
+
+  <!-- WARNING: TRY TO KEEP URL VAR AT LINE 235 !! walker_config.bash WILL CHANGE IT BLINDLY -->
   <script type="text/javascript" type="text/javascript">
+    // ROS................................................................................
     var ros = new ROSLIB.Ros({
       url: 'ws://192.168.0.196:9090'
     });
@@ -157,6 +247,7 @@
       document.getElementById("status").innerHTML = "Closed";
     });
 
+    /////////////////////////////////////////////
     var left_wheel_listener = new ROSLIB.Topic({
       ros: ros,
       name: '/left_wheel',
@@ -167,6 +258,7 @@
       document.getElementById("left_wheel_encoder").innerHTML = m.encoder; 
     });
 
+    /////////////////////////////////////////////
     var right_wheel_listener = new ROSLIB.Topic({
       ros: ros,
       name: '/right_wheel',
@@ -177,7 +269,8 @@
       document.getElementById("right_wheel_encoder").innerHTML = m.encoder;
     });
 
-    handle_height_listener = new ROSLIB.Topic({
+    /////////////////////////////////////////////
+    var handle_height_listener = new ROSLIB.Topic({
       ros: ros,
       name: "/handle_height",
       messageType: 'std_msgs/Int32',
@@ -222,12 +315,12 @@
         dataRetrievedLater[0].marker.color = [color];
 
         var new_range_x = layoutRetrievedLater.xaxis.range
-        new_range_x[0] = Math.min(new_range_x[0], dataRetrievedLater[0].x )
-        new_range_x[1] = Math.max(new_range_x[1], dataRetrievedLater[0].x )
+        //new_range_x[0] = Math.min(new_range_x[0], dataRetrievedLater[0].x )
+        //new_range_x[1] = Math.max(new_range_x[1], dataRetrievedLater[0].x )
 
         var new_range_y = layoutRetrievedLater.yaxis.range
-        new_range_y[0] = Math.min(new_range_y[0], dataRetrievedLater[0].y )
-        new_range_y[1] = Math.max(new_range_y[1], dataRetrievedLater[0].y )
+        //new_range_y[0] = Math.min(new_range_y[0], dataRetrievedLater[0].y )
+        //new_range_y[1] = Math.max(new_range_y[1], dataRetrievedLater[0].y )
 
         //console.log(layoutRetrievedLater);
         var layout = {
@@ -243,7 +336,9 @@
           },
           yaxis: {
             autorange: false,
-            range: new_range_y
+            range: new_range_y,
+            scaleanchor: "x",
+            scaleratio: 1
             //showgrid: false,
             //zeroline: false,
             //showline: false,
@@ -284,12 +379,12 @@
         dataRetrievedLater[1].marker.color = [color];
 
         var new_range_x = layoutRetrievedLater.xaxis.range
-        new_range_x[0] = Math.min(new_range_x[0], dataRetrievedLater[1].x )
-        new_range_x[1] = Math.max(new_range_x[1], dataRetrievedLater[1].x )
+        //new_range_x[0] = Math.min(new_range_x[0], dataRetrievedLater[1].x )
+        //new_range_x[1] = Math.max(new_range_x[1], dataRetrievedLater[1].x )
 
         var new_range_y = layoutRetrievedLater.yaxis.range
-        new_range_y[0] = Math.min(new_range_y[0], dataRetrievedLater[1].y )
-        new_range_y[1] = Math.max(new_range_y[1], dataRetrievedLater[1].y )
+        //new_range_y[0] = Math.min(new_range_y[0], dataRetrievedLater[1].y )
+        //new_range_y[1] = Math.max(new_range_y[1], dataRetrievedLater[1].y )
 
         //console.log(layoutRetrievedLater);
         var layout = {
@@ -305,7 +400,9 @@
           },
           yaxis: {
             autorange: false,
-            range: new_range_y
+            range: new_range_y,
+            scaleanchor: "x",
+            scaleratio: 1
             //showgrid: false,
             //zeroline: false,
             //showline: false,
@@ -356,11 +453,13 @@
       var layout = {
         xaxis: {
           autorange: false,
-          range: new_range_x
+          range: new_range_x,
         },
         yaxis: {
           autorange: false,
-          range: new_range_y
+          range: new_range_y,
+          scaleratio: 1,
+          scaleanchor: "x"
         }
       };
 
@@ -392,6 +491,7 @@
         Plotly.react(graphDiv, dataRetrievedLater, layoutRetrievedLater);
       }      
     });
+   
     /////////////////////////////////////////////
 
     right_hand_load_listener = new ROSLIB.Topic({
@@ -419,7 +519,6 @@
 
     ////////////////////////////////////////////
     
-
     user_listener = new ROSLIB.Topic({
       ros: ros,
       name: "/user_desc",
@@ -446,7 +545,6 @@
 
     // Calling a service
     // -----------------
-
 
     function startRecord() {
       var cmdlineClient = new ROSLIB.Service({
@@ -507,42 +605,28 @@
       clearInterval(intervalId);
     };
 
+    // e.o. ROS...........................................................................
 
-  </script>
-</head>
-
-<body>
-  <h1>Walk-it ROS2 User Interface</h1>
-  <div class="row">
-    <div class="column">
-      <p>Connection status: <span id="status"></span></p>
-      <p>Left handle load (kg): <span id="left_handle_force"></span></p>
-      <p>Right handle load (kg): <span id="right_handle_force"></span></p>
-
-      <p>Left leg load (kg): <span id="left_leg_load"></span></p>
-      <p>Right leg load (kg): <span id="right_leg_load"></span></p>
-
-      <p>Left wheel encoder: <span id="left_wheel_encoder"></span></p>
-      <p>Right wheel encoder: <span id="right_wheel_encoder"></span></p>
-      <p>user_desc var: <span id="user_desc_data"></span></p>
-      <p>handle_height var: <span id="handle_height_data"></span></p>
-    </div>
-    <div class="column">
-      <div id="myPlot" style="width:100%;max-width:700px"></div>
-    </div>
-  </div>
-
-  <script>
-
+    // PLOT AREA .........................................................................
+    // base_link coords...
     var orig_left_x = 0;
     var orig_left_y = 0.15;
     var orig_right_x = 0;
     var orig_right_y = -0.15;
+    var orig_handle_left_x = 0.2;
+    var orig_handle_left_y = 0.25;
+    var orig_handle_right_x = 0.2;
+    var orig_handle_right_y = -0.25;
 
+    // plotly coordinates: 90º turn
     var left_x  = -orig_left_y;
-    var left_y  = orig_left_x;
+    var left_y  =  orig_left_x;
     var right_x = -orig_right_y;
-    var right_y = orig_right_x;
+    var right_y =  orig_right_x;
+    var handle_left_x  = -orig_handle_left_y;
+    var handle_left_y  =  orig_handle_left_x;
+    var handle_right_x = -orig_handle_right_y;
+    var handle_right_y =  orig_handle_right_x;
 
     // fields in  data:
     //     0          1       2         3            4
@@ -597,7 +681,7 @@
       showlegend: false
     },{
       x: [0],
-      y: [1],
+      y: [1.5*handle_right_y],
       type: 'scatter',
       mode: 'markers',
       name: 'walker_advance',
@@ -612,14 +696,14 @@
       },
       showlegend: false
     },{
-      x: [-0.5, 0.5],  // left, right
-      y: [0.5, 0.5],
+      x: [handle_left_x, handle_right_x],
+      y: [handle_left_y, handle_right_y],
       type: 'scatter',
       mode: 'markers',
       name: 'handles',
       marker: {
         color: [0, 50],
-        size: 10,
+        size: 20,
         symbol: 'diamond-tall',
         colorscale: 'Bluered',
         cmin: 0,
@@ -633,28 +717,9 @@
 
     // Display using Plotly
     Plotly.newPlot("myPlot", data,config);
-  </script>
 
-  <!-- ********************** USER CONFIGURATION **********************  -->
-  <br>
-  <hr size="3" noshade>
+    // e.o .PLOT AREA .....................................................................
 
-  <!-- user id -->
-  <div id="user_id_div" class="user_id_class">
-    User id:
-    <input type="text" id="user_id" value="Manuel" size="15">
-  </div>
-
-  <!-- Gender -->
-  <div id="gender_id" class="gender_tog_class">
-    <label class="toggle">
-      <input id="gender_tog" type="checkbox">
-      <span class="roundbutton"></span>
-    </label>
-    Género <span id="gender_tag_status">Masculino</span>
-  </div>
-
-  <script>
     document.getElementById('gender_tog').onclick = function () {
       var outputtext = document.getElementById('gender_tag_status');
       if (this.checked) {
@@ -664,15 +729,6 @@
       }
       user();
     };
-  </script>
-
-  <!-- AGE  -->
-  <div class="slidecontainer">
-    <p>Age: <span id="ageValue"></span> years</p>
-    <input type="range" min="1" max="100" value="42" class="slider" id="ageRange">
-  </div>
-
-  <script>
     var slider_a = document.getElementById("ageRange");
     var output_a = document.getElementById("ageValue");
     output_a.innerHTML = slider_a.value;
@@ -681,15 +737,7 @@
       output_a.innerHTML = this.value;
       user();
     }
-  </script>
 
-  <!-- Height  -->
-  <div class="slidecontainer">
-    <p>Height: <span id="heightValue"></span> cm.</p>
-    <input type="range" min="120" max="210" value="175" class="slider" id="heightRange">
-  </div>
-
-  <script>
     var slider_h = document.getElementById("heightRange");
     var output_h = document.getElementById("heightValue");
     output_h.innerHTML = slider_h.value;
@@ -698,15 +746,7 @@
       output_h.innerHTML = this.value;
       user();
     }
-  </script>
 
-  <!-- Weight  -->
-  <div class="slidecontainer">
-    <p>Weight: <span id="WeightValue"></span> Kg.</p>
-    <input type="range" min="20" max="210" value="92" class="slider" id="WeightRange">
-  </div>
-
-  <script>
     var slider_w = document.getElementById("WeightRange");
     var output_w = document.getElementById("WeightValue");
     output_w.innerHTML = slider_w.value;
@@ -715,25 +755,8 @@
       output_w.innerHTML = this.value;
       user();
     }
-  </script>
 
-  <!-- medical condition -->
-  <div id="condition_div">
-    <p>User medical condition: </p>
-    <textarea id="myTextarea" name="aTextArea" rows="5" cols="100">No previous condition</textarea>
-  </div>
 
-  <!-- ********************** Control CONFIGURATION **********************  -->
-  <br>
-  <hr size="3" noshade>
-
-  <!-- Handle height  -->
-  <div class="slidecontainer">
-    <p>Handle position: <span id="handleValue"></span> # </p>
-    <input type="range" min="0" max="4" value="2" class="slider" id="handleRange">
-  </div>
-
-  <script>
     var slider_hh = document.getElementById("handleRange");
     var output_hh = document.getElementById("handleValue");
     output_hh.innerHTML = slider_hh.value;
@@ -742,19 +765,7 @@
       output_hh.innerHTML = this.value;
       user();
     }
-  </script>
 
-  <!-- Start recording  -->
-  <div id="record_tag_id" class="record_tag_class">
-    <label class="toggle">
-      <input id="record_tog" type="checkbox">
-      <span class="roundbutton"></span>
-    </label>
-    Rosbag esta <span id="record_tag_status">Detenido</span>
-  </div>
-
-
-  <script>
     var input = document.getElementById('record_tog');
 
     input.addEventListener('change', function () {
@@ -765,8 +776,7 @@
         stopRecord();
       }
     });
+    
   </script>
-
-</body>
 
 </html>
