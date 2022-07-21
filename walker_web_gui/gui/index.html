@@ -232,7 +232,7 @@
   <script type="text/javascript" type="text/javascript">
     // ROS................................................................................
     var ros = new ROSLIB.Ros({
-      url: 'ws://192.168.0.196:9090'
+    url : 'ws://192.168.0.178:9090'
     });
 
     ros.on('connection', function () {
@@ -300,6 +300,7 @@
       var new_x = m.position.point.x;
       var new_y = m.position.point.y;
       var color = m.load;
+
       document.getElementById("left_leg_load").innerHTML = Math.round((m.load + Number.EPSILON) * 100) / 100;
 
       //TODO: check frame_id== base_link 
@@ -323,8 +324,7 @@
         //new_range_y[1] = Math.max(new_range_y[1], dataRetrievedLater[0].y )
 
         //console.log(layoutRetrievedLater);
-        var layout = {
-          xaxis: {
+        layoutRetrievedLater.xaxis = {
             autorange: false,
             range: new_range_x
             //showgrid: false,
@@ -333,8 +333,8 @@
             //autotick: true,
             //ticks: '',
             //showticklabels: false
-          },
-          yaxis: {
+          };
+        layoutRetrievedLater.yaxis = {
             autorange: false,
             range: new_range_y,
             scaleanchor: "x",
@@ -346,10 +346,57 @@
             //ticks: '',
             //showticklabels: false
           }
-        };
+        
 
-        Plotly.react(graphDiv, dataRetrievedLater, layout);          
+        Plotly.react(graphDiv, dataRetrievedLater, layoutRetrievedLater);          
       }
+    });
+
+    ////////////////////////////////////////////
+    odom_listener = new ROSLIB.Topic({
+      ros: ros,
+      name: "/odom",
+      messageType: 'nav_msgs/msg/Odometry',
+      latch: false
+    });
+
+    odom_listener.subscribe(function (m) {
+
+      var new_ang_speed = m.twist.twist.angular.x;
+      var new_lin_speed = m.twist.twist.linear.x;      
+      var ang_factor = -0.2;
+      var lin_factor = -0.2;
+      var ang_threshold = 0.15;
+      var lin_threshold = 0.05;
+
+      if (Math.abs(new_ang_speed) < ang_threshold) {
+          new_ang_speed = 0;       
+      } else {
+          new_ang_speed = new_ang_speed/Math.abs(new_ang_speed);       
+      } 
+
+      if (Math.abs(new_lin_speed) < lin_threshold) {
+          new_lin_speed = 0;       
+      }else {
+          new_lin_speed = new_lin_speed/Math.abs(new_lin_speed);       
+      }
+
+      var x = new_ang_speed * ang_factor;
+      var y = new_lin_speed * lin_factor;
+      var ax = 0;
+      var ay = 0;
+            
+      var graphDiv = document.getElementById('myPlot')
+      var dataRetrievedLater = graphDiv.data;
+      var layoutRetrievedLater = graphDiv.layout;
+      
+      layoutRetrievedLater.annotations[0].x = x;
+      layoutRetrievedLater.annotations[0].y = y;
+      layoutRetrievedLater.annotations[0].ax = ax;
+      layoutRetrievedLater.annotations[0].ay = ay;
+
+      Plotly.react(graphDiv, dataRetrievedLater, layoutRetrievedLater);          
+      
     });
 
     ////////////////////////////////////////////
@@ -365,7 +412,7 @@
       var new_x = m.position.point.x
       var new_y = m.position.point.y
       var color = m.load;
-      
+                  
       document.getElementById("right_leg_load").innerHTML = Math.round((m.load + Number.EPSILON) * 100) / 100;
       
       //TODO: check frame_id == base_link 
@@ -387,8 +434,7 @@
         //new_range_y[1] = Math.max(new_range_y[1], dataRetrievedLater[1].y )
 
         //console.log(layoutRetrievedLater);
-        var layout = {
-          xaxis: {
+        layoutRetrievedLater.xaxis = {
             autorange: false,
             range: new_range_x
             //showgrid: false,
@@ -397,8 +443,8 @@
             //autotick: true,
             //ticks: '',
             //showticklabels: false
-          },
-          yaxis: {
+          };
+        layoutRetrievedLater.yaxis = {
             autorange: false,
             range: new_range_y,
             scaleanchor: "x",
@@ -410,9 +456,9 @@
             //ticks: '',
             //showticklabels: false
           }
-        };
+        
 
-        Plotly.react(graphDiv, dataRetrievedLater, layout);        
+        Plotly.react(graphDiv, dataRetrievedLater, layoutRetrievedLater);        
       }      
     });
 
@@ -450,20 +496,19 @@
       new_range_y[1] = Math.max(new_range_y[1], Math.max(...dataRetrievedLater[2].y ));
 
       //console.log(layoutRetrievedLater);
-      var layout = {
-        xaxis: {
+      layoutRetrievedLater.xaxis = {
           autorange: false,
           range: new_range_x,
-        },
-        yaxis: {
+        };
+      layoutRetrievedLater.yaxis = {
           autorange: false,
           range: new_range_y,
           scaleratio: 1,
           scaleanchor: "x"
-        }
-      };
+        };
+      
 
-      Plotly.react(graphDiv, dataRetrievedLater, layout);        
+      Plotly.react(graphDiv, dataRetrievedLater, layoutRetrievedLater);        
            
     });
 
@@ -479,7 +524,11 @@
     left_hand_load_listener.subscribe(function (m) {
       document.getElementById("left_handle_force").innerHTML = Math.round((m.force + Number.EPSILON) * 100) / 100;
       var color = m.force;
-      
+
+      if (color<1){
+        color = 'rgb(200,200,200)'
+      }
+
       if (true) {
         var graphDiv = document.getElementById('myPlot')
         var dataRetrievedLater = graphDiv.data;
@@ -505,6 +554,10 @@
       var color = m.force;
       document.getElementById("right_handle_force").innerHTML = Math.round((m.force + Number.EPSILON) * 100) / 100;
 
+      if (color<1){
+        color = 'rgb(200,200,200)'
+      }
+      
       if (true) {
         var graphDiv = document.getElementById('myPlot')
         var dataRetrievedLater = graphDiv.data;
@@ -711,12 +764,31 @@
       },
       showlegend: false
     }]
-    const config = { 
+    const layout = { 
       displayModeBar: false, // this is the line that hides the bar.
+      annotations: [
+          {
+            text: '',
+            arrowsize: 2,
+            arrowwidth: 1,
+            xref: 'x',
+            yref: 'y',
+            text: '',
+            showarrow: true,
+            arrowhead: 2,
+            arrowcolor: 'rgb(0,255,0)',
+            axref: 'x',
+            ayref: 'y',            
+            x: 0.0,
+            y: 0.3,
+            ax: 0.0,
+            ay: 0.1
+          }
+        ]
     };
 
     // Display using Plotly
-    Plotly.newPlot("myPlot", data,config);
+    Plotly.newPlot("myPlot", data, layout);
 
     // e.o .PLOT AREA .....................................................................
 
