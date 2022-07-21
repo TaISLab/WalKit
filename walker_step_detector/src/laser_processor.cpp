@@ -150,6 +150,58 @@ namespace laser_processor
         }
     }
 
+    /*
+    TODO this does not work
+    I should get rid of all those pointers I can't control and redo all this ...
+    void ScanProcessor::removeLines(double threshold, rclcpp::Node *boss){
+
+        std::list<SampleSet*>::iterator c_iter = clusters_.begin();
+        RCLCPP_ERROR(boss->get_logger(), "Removing lines"); 
+        // Iterate over all clusters
+        while (c_iter != clusters_.end())
+        {
+            RCLCPP_ERROR(boss->get_logger(), "Reading cluster"); 
+            // Iterate over laser scan samples in each cluster
+            SampleSet* cluster_i = *c_iter;            
+            RCLCPP_ERROR(boss->get_logger(), "Cluster has %ld samples",cluster_i->size()); 
+            if (cluster_i->size() > 0)
+            {                
+                double m_mean = 0;
+                double m_var = 0;
+                double i = 1;
+                SampleSet::iterator s_iter = cluster_i->begin();
+                Sample *s1 = *s_iter;
+                s_iter++;
+                RCLCPP_ERROR(boss->get_logger(), "Procesing samples"); 
+                while (s_iter != cluster_i->end()){
+                    Sample *s2 = *s_iter;
+                    double m = (s2->y - s1->y)/(s2->x - s1->x);
+
+                    m_mean = m/i + (i-1)*m_mean/i;
+                    m_var  = pow(m-m_mean,2)/i + (i-1)*m_var/i;
+
+                    s1 = s2;
+                    i = i + 1.0;
+                    s_iter++;
+                }
+
+                if (m_var<threshold){
+                    RCLCPP_ERROR(boss->get_logger(), "Deleting line %3.3f : %3.3f ---------------------------------------------", m_mean, m_var);
+                    //delete (*c_iter);
+                    clusters_.erase(c_iter);
+                    RCLCPP_ERROR(boss->get_logger(), "\n\n\n\n\n");                
+                }
+            }
+
+            c_iter++;
+        }
+
+
+        RCLCPP_ERROR(boss->get_logger(), "Done"); 
+
+
+    }
+    */
     void ScanProcessor::splitConnected(float thresh){
 
         // Holds our temporary list of split clusters 

@@ -47,6 +47,8 @@ typedef Leg::PositionMeasurementModel<T> PositionModel;
 
             geometry_msgs::msg::Point get_speed(walker_msgs::msg::StepStamped step, walker_msgs::msg::StepStamped prev_step);
             
+            geometry_msgs::msg::Point get_dist(walker_msgs::msg::StepStamped step, walker_msgs::msg::StepStamped prev_step);
+            
             void enable_log();
         private:
             std::ofstream myfile;

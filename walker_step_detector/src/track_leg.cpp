@@ -105,7 +105,7 @@
             //           kalman filter measurement
 
             if (is_debug)
-                RCLCPP_DEBUG(node->get_logger(), "%d measurements available for EFK update", step_list.size());
+                RCLCPP_DEBUG(node->get_logger(), "%ld measurements available for EFK update", step_list.size());
 
             if (step_list.size() > 0) {
                 // find closest to current step position
@@ -170,10 +170,10 @@
         return pred_step;
     }
 
-
-    geometry_msgs::msg::Point TrackLeg::get_speed(walker_msgs::msg::StepStamped step, walker_msgs::msg::StepStamped prev_step){
+    geometry_msgs::msg::Point TrackLeg::get_speed(walker_msgs::msg::StepStamped step, walker_msgs::msg::StepStamped prev_step)
+    {
         
-        double inc_x, inc_y, inc_z, inc_t, st, pst;
+        double inc_t, st, pst;
         geometry_msgs::msg::Point vel;
         vel.x = vel.y = vel.z = 0;
 
@@ -207,13 +207,37 @@
         // data is sane.
         inc_t = st - pst;
 
+        vel = get_dist( step, prev_step);
+        vel.x = vel.x / inc_t;
+        vel.y = vel.y / inc_t;
+        vel.z = vel.z / inc_t;                        
+     
+        return vel;
+    }    
+
+    geometry_msgs::msg::Point TrackLeg::get_dist(walker_msgs::msg::StepStamped step, walker_msgs::msg::StepStamped prev_step){
+        
+        double inc_x, inc_y, inc_z;
+        geometry_msgs::msg::Point ans;
+        ans.x = ans.y = ans.z = 0;
+
+        // check confidence problems
+        // if (step.confidence==0) {
+        //         RCLCPP_ERROR(node->get_logger(), "get_dist: step confidence == 0 ");    
+        //         return ans;
+        // }
+        // if (prev_step.confidence==0){
+        //         RCLCPP_ERROR(node->get_logger(), "get_dist: prev step confidence == 0 ");    
+        //         return ans;
+        // }
+
         inc_x = step.position.point.x - prev_step.position.point.x;
         inc_y = step.position.point.y - prev_step.position.point.y;
         inc_z = step.position.point.z - prev_step.position.point.z;
 
-        vel.x = inc_x / inc_t;
-        vel.y = inc_y / inc_t;
-        vel.z = inc_z / inc_t;                        
+        ans.x = inc_x;
+        ans.y = inc_y;
+        ans.z = inc_z;                        
      
-        return vel;
+        return ans;
     }    

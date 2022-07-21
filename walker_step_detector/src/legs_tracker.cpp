@@ -54,25 +54,30 @@
                     r_tracker.add(first_step);                
                 }            
             } else if (n_points>2) { // 3 points at least ...
-            detect_steps.sort(CompareSteps()); // sorted right-left
-            // pick most extreme ones
-            first_step = detect_steps.front();
-            r_tracker.add(first_step);
-            last_step = detect_steps.back();
-            l_tracker.add(last_step);
-            
-            // add all to kalman and let it smooth it
-            // while(detect_steps.size()>0){  
-            //     first_step = detect_steps.front();
-            //     detect_steps.pop_front();
-            //     r_tracker.add(first_step);
-            //     if (detect_steps.size()>0){
-            //         last_step = detect_steps.back();
-            //         detect_steps.pop_back();
-            //         l_tracker.add(last_step);
-            //     }
-            // }
-        }
+                detect_steps.sort(CompareSteps()); // sorted right-left
+
+                // TODO: add an option to decide how to include multiple detections for each leg.
+
+                // Option 1: pick most extreme ones
+                //first_step = detect_steps.front();
+                //r_tracker.add(first_step);
+                //last_step = detect_steps.back();
+                //l_tracker.add(last_step);
+                
+                // Option 2: add all to kalman and let it smooth it
+                while(detect_steps.size()>0){  
+                    first_step = detect_steps.front();
+                    detect_steps.pop_front();
+                    r_tracker.add(first_step);
+                    if (detect_steps.size()>0){
+                        last_step = detect_steps.back();
+                        detect_steps.pop_back();
+                        l_tracker.add(last_step);
+                    }
+                }
+
+
+            }
         }
     }
 

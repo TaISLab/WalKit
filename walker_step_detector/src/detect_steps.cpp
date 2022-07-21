@@ -38,15 +38,17 @@
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/create_timer_interface.h>
 #include <tf2_ros/create_timer_ros.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <tf2/transform_datatypes.h> 
 #include <sensor_msgs/msg/laser_scan.hpp>
 #include <geometry_msgs/msg/point_stamped.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
+#include <geometry_msgs/msg/pose_array.hpp>
+//#include <sensor_msgs/msg/point_cloud2.hpp>
+//#include <pcl_conversions/pcl_conversions.h>
 
 #include "rcutils/error_handling.h"
-
 
 // Local Headers
 #include "walker_step_detector/laser_processor.h"
@@ -95,6 +97,10 @@ public:
         this->declare_parameter<bool>("plot_leg_kalman",                  false);
         this->declare_parameter<bool>("plot_leg_clusters",                false);
         this->declare_parameter<bool>("use_scan_header_stamp_for_tfs",    false);
+        this->declare_parameter<std::vector<double>>("fixed_frame_active_area_x", 
+                    std::vector<double>({-0.75, 0.4}));
+        this->declare_parameter<std::vector<double>>("fixed_frame_active_area_y", 
+                    std::vector<double>({-0.4, 0.4}));
 
         this->get_parameter("scan_topic",                    scan_topic);
         this->get_parameter("fixed_frame",                   fixed_frame_);
@@ -114,6 +120,8 @@ public:
         this->get_parameter("plot_leg_kalman",               plot_leg_kalman_);
         this->get_parameter("plot_leg_clusters",             plot_leg_clusters_);
         this->get_parameter("use_scan_header_stamp_for_tfs", use_scan_header_stamp_for_tfs_);
+        this->get_parameter("fixed_frame_active_area_x", act_a_x_);
+        this->get_parameter("fixed_frame_active_area_y", act_a_y_);
 
         // Load kalman tracker
         kalman_tracker.init(this, d0, a0, f0, p0 );
@@ -144,6 +152,8 @@ public:
             RCLCPP_INFO(this->get_logger(), "max_detect_distance: %.2f", max_detect_distance_);
             RCLCPP_INFO(this->get_logger(), "use_scan_header_stamp_for_tfs: %d", use_scan_header_stamp_for_tfs_);
             RCLCPP_INFO(this->get_logger(), "max_detected_clusters: %d", max_detected_clusters_);
+            RCLCPP_INFO(this->get_logger(), "active area:  [%.2f, %.2f] , [%.2f, %.2f] ", 
+                            act_a_x_[0], act_a_x_[1], act_a_y_[0], act_a_y_[1]);
         } else {
             RCLCPP_INFO(this->get_logger(), "Step detector loading. Set plot vars to true for debug.");
         }
@@ -156,6 +166,9 @@ public:
 
         left_detected_step_pub_ = this->create_publisher<walker_msgs::msg::StepStamped>(detected_steps_topic_name_ + "_left", 20);
         right_detected_step_pub_ = this->create_publisher<walker_msgs::msg::StepStamped>(detected_steps_topic_name_ + "_right", 20);
+        //laser_cloud_pub_= this->create_publisher<sensor_msgs::msg::PointCloud2>("laser_cloud", 20);
+        points_pub_= this->create_publisher<geometry_msgs::msg::PoseArray>("laser_poses", 20);
+
 
         if (is_debug){
             markers_array_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("clusters", 20);
@@ -178,6 +191,8 @@ private:
     
     std::string forest_file;
             
+    std::vector<double> act_a_x_;
+    std::vector<double> act_a_y_;
     
     int scan_num_;
     int num_prev_markers_published_;
@@ -206,6 +221,8 @@ private:
     //rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub_;
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr markers_array_pub_;
     rclcpp::TimerBase::SharedPtr timer_;
+    //rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr laser_cloud_pub_;
+    rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr points_pub_;
 
     // Tracker assigns scan clusters to legs and keeps track of them
     LegsTracker kalman_tracker;
@@ -396,7 +413,69 @@ private:
         walker_msgs::msg::StepStamped left_detected_step;
         walker_msgs::msg::StepStamped right_detected_step;
 
+        //Set area of interest
+        double range;
+        bool is_valid;
+        geometry_msgs::msg::PointStamped laser_point;
+        geometry_msgs::msg::PointStamped position_new;
+
+        //pcl::PointCloud<pcl::PointXYZRGB> laser_cloud;
+
+        geometry_msgs::msg::PoseArray poses;
+        poses.header = scan->header;
+        poses.header.frame_id = fixed_frame_;
+
+        for (unsigned long int i = 0; i < scan->ranges.size(); i++)
+        {
+            range = scan->ranges[i];
+            is_valid  = (range > scan->range_min && range < scan->range_max);
+        
+            if (is_valid)
+            {
+                laser_point.header = scan->header;
+                laser_point.point.x = cos( scan->angle_min + i * scan->angle_increment ) * range;
+                laser_point.point.y = sin( scan->angle_min + i * scan->angle_increment ) * range;
+                
+                // transform    
+                try {
+                    buffer_->transform(laser_point, position_new, fixed_frame_);
+                    is_valid  = ( position_new.point.x >= act_a_x_[0] ) && ( position_new.point.x <= act_a_x_[1] );
+                    is_valid &= ( position_new.point.y >= act_a_y_[0] ) && ( position_new.point.y <= act_a_y_[1] );                    
+                } catch (tf2::TransformException &e){
+                    is_valid = false;
+                    RCLCPP_ERROR (this->get_logger(), "Cant transform laser point [%s]", e.what());
+                }
+            }
+
+            if (!is_valid) // either out of range or out of aoi: remove it
+            {
+                scan->ranges[i] = -1;
+            } else {                
+                //pcl::PointXYZRGB pt;
+                //pt = pcl::PointXYZRGB(1.0f, 0.2f, 0.0f);
+                //pt.x = position_new.point.x;
+                //pt.y = position_new.point.y;
+                //pt.z = 0.4;
+                //laser_cloud.points.push_back(pt);
+
+                geometry_msgs::msg::Pose p;
+                p.position = position_new.point;
+                poses.poses.push_back(p);
+            }
+            
+        }
+        
+        //auto pc2_msg_ = std::make_shared<sensor_msgs::msg::PointCloud2>();
+        //pcl::toROSMsg(laser_cloud, *pc2_msg_);
+        //pc2_msg_->header.frame_id = fixed_frame_;
+        //pc2_msg_->header.stamp = scan->header.stamp;
+        //laser_cloud_pub_->publish(*pc2_msg_);
+        points_pub_->publish(poses);        
+
+
         processor.setScan(*scan);
+
+        //processor.removeLines(20,this);
         processor.splitConnected(cluster_dist_euclid_);
 
         if (is_debug){
@@ -469,9 +548,11 @@ private:
         kalman_tracker.get_steps(&step_r, &step_l, t);
 
         // publish lets
-        right_detected_step_pub_->publish(step_r);
-        left_detected_step_pub_->publish(step_l);
-        
+        if (kalman_tracker.is_init){
+            right_detected_step_pub_->publish(step_r);
+            left_detected_step_pub_->publish(step_l);
+        }
+
         if (is_debug){
             publish_leg(step_r, 0);
             publish_leg(step_l, 1);

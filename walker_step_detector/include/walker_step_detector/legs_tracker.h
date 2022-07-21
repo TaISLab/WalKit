@@ -21,11 +21,12 @@
 
             void get_steps(walker_msgs::msg::StepStamped* step_r, walker_msgs::msg::StepStamped* step_l, double t);
             void enable_log();
+            bool is_init;
         private:
             TrackLeg l_tracker;
             TrackLeg r_tracker;
             rclcpp::Node *node;
-            bool is_init;
+            
             bool is_debug;
     };
 

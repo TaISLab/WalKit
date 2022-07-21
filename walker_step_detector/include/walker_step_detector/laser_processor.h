@@ -56,7 +56,7 @@
 
 #include <sensor_msgs/msg/laser_scan.hpp>
 #include <sensor_msgs/msg/point_cloud.hpp>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include "std_msgs/msg/header.hpp"
 
 // Custom Messages related Headers
@@ -165,6 +165,8 @@ namespace laser_processor
             * @param num Minimum number of points in cluster
             */
             void removeLessThan(uint32_t num);
+
+            void removeLines(double threshold, rclcpp::Node *boss);
 
             /**
             * @brief Split scan into clusters

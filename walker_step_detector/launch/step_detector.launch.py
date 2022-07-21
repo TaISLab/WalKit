@@ -40,14 +40,16 @@ def generate_launch_description():
                 {"forest_file" : forest_file_path},
                 {"detection_threshold": 0.001},
                 {"cluster_dist_euclid": 0.02},
-                {"min_points_per_cluster":  3},
+                {"min_points_per_cluster":  5},
                 {"detect_distance_frame_id": "base_link"},
                 {"max_detect_distance": 0.45},
                 {"use_scan_header_stamp_for_tfs": False},
-                {"max_detected_clusters": 2},
+                {"max_detected_clusters": 4},
                 {"plot_all_clusters": False},
                 {"plot_leg_kalman": False},
-                {"plot_leg_clusters": False}
+                {"plot_leg_clusters": False},
+                {"fixed_frame_active_area_x": [-0.75, 0.4]},
+                {"fixed_frame_active_area_y": [-0.4, 0.4]}
             ],
         # Cheap way to reuse node with recorded rosbags
         #remappings=[ ("detected_step_left", "new_detected_step_left"),
