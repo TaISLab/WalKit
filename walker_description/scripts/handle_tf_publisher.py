@@ -20,6 +20,7 @@ class HandleTfPublisher(Node):
                  ('child_frame_id_suffix', '_handle_id' ),
                  ('handle_height_topic_name', '/handle_height'),
                  ('handle_height', -1),
+                 ('period', 0.5),
             ]
         )
 
@@ -28,6 +29,7 @@ class HandleTfPublisher(Node):
         self.child_frame_id_suffix = self.get_parameter('child_frame_id_suffix').value
         self.handle_calibration_file = self.get_parameter('handle_calibration_file').value
         self.handle_height = int(self.get_parameter('handle_height').value)
+        self.period = self.get_parameter('period').value
 
         with open(self.handle_calibration_file, 'r') as stream:
             try:
@@ -44,12 +46,16 @@ class HandleTfPublisher(Node):
 
         if (self.handle_height>-1): 
             self.get_logger().info("handle height read from config")  
-            self.publish_handles()
+
         else:
             self.get_logger().info("handle height read from topic")              
             self.handle_height_sub = self.create_subscription(Int32, self.handle_height_topic_name, self.handle_height_cb, 10)
        
+        self.tmr = self.create_timer(self.period, self.timer_callback)
         self.get_logger().info("handle tf publisher started")  
+
+    def timer_callback(self):
+        self.publish_handles()
 
     def handle_height_cb(self, msg):  
         if self.num_configs>msg.data:
@@ -81,7 +87,7 @@ class HandleTfPublisher(Node):
             # See https://answers.ros.org/question/287469/unable-to-publish-multiple-static-transformations-using-tf/
 
             self.tf_publisher.sendTransform([right_handle_tf, left_handle_tf])
-            self.get_logger().info("New data sent!")
+            #self.get_logger().info("New data sent!")
 
 def main(args=None):
     rclpy.init(args=args)
