@@ -133,10 +133,8 @@
       clear: both;
     }
   </style>
-  <link rel="stylesheet" href="https://pyscript.net/alpha/pyscript.css" />
-  <script defer type="text/javascript" src="https://pyscript.net/alpha/pyscript.js"></script>
 
-  <script type="text/javascript" src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <script type="text/javascript" src="cdn.plot.ly/plotly-latest.min.js"></script>
   <script type="text/javascript" src="static.robotwebtools.org/roslibjs/current/roslib.min.js"></script>
   <script type="text/javascript" src="requirejs.org/docs/release/2.3.5/minified/require.js"></script>
   
@@ -157,26 +155,6 @@
 
     ros.on('close', function () {
       document.getElementById("status").innerHTML = "Closed";
-    });
-
-    var right_handle_listener = new ROSLIB.Topic({
-      ros: ros,
-      name: '/right_handle',
-      messageType: 'walker_msgs/msg/ForceStamped'
-    });
-
-    right_handle_listener.subscribe(function (m) {
-      document.getElementById("right_handle_force").innerHTML = Math.round((m.force + Number.EPSILON) * 100) / 100;
-    });
-
-    var left_handle_listener = new ROSLIB.Topic({
-      ros: ros,
-      name: '/left_handle',
-      messageType: 'walker_msgs/msg/ForceStamped'
-    });
-
-    left_handle_listener.subscribe(function (m) {
-      document.getElementById("left_handle_force").innerHTML = Math.round((m.force + Number.EPSILON) * 100) / 100;
     });
 
     var left_wheel_listener = new ROSLIB.Topic({
@@ -216,6 +194,7 @@
       handle_height_listener.publish(var_handle);
     }
 
+    /////////////////////////////////////////////
 
     left_load_listener = new ROSLIB.Topic({
       ros: ros,
@@ -227,14 +206,20 @@
     left_load_listener.subscribe(function (m) {
       var new_x = m.position.point.x;
       var new_y = m.position.point.y;
+      var color = m.load;
+      document.getElementById("left_leg_load").innerHTML = Math.round((m.load + Number.EPSILON) * 100) / 100;
+
       //TODO: check frame_id== base_link 
       if ((new_x !=0.0) | (new_y!=0.0))  {
         var graphDiv = document.getElementById('myPlot')
         var dataRetrievedLater = graphDiv.data;
         var layoutRetrievedLater = graphDiv.layout;
-      
+    
+        //console.log(dataRetrievedLater[0])
+
         dataRetrievedLater[0].x = [-new_y];
         dataRetrievedLater[0].y = [ new_x];
+        dataRetrievedLater[0].marker.color = [color];
 
         var new_range_x = layoutRetrievedLater.xaxis.range
         new_range_x[0] = Math.min(new_range_x[0], dataRetrievedLater[0].x )
@@ -272,6 +257,8 @@
       }
     });
 
+    ////////////////////////////////////////////
+
     right_load_listener = new ROSLIB.Topic({
       ros: ros,
       name: "/right_loads",
@@ -282,6 +269,9 @@
     right_load_listener.subscribe(function (m) {
       var new_x = m.position.point.x
       var new_y = m.position.point.y
+      var color = m.load;
+      
+      document.getElementById("right_leg_load").innerHTML = Math.round((m.load + Number.EPSILON) * 100) / 100;
       
       //TODO: check frame_id == base_link 
       if ((new_x !=0.0) | (new_y!=0.0)) {
@@ -291,15 +281,15 @@
       
         dataRetrievedLater[1].x = [-new_y];
         dataRetrievedLater[1].y = [ new_x];
-
+        dataRetrievedLater[1].marker.color = [color];
 
         var new_range_x = layoutRetrievedLater.xaxis.range
-        new_range_x[0] = Math.min(new_range_x[0], dataRetrievedLater[0].x )
-        new_range_x[1] = Math.max(new_range_x[1], dataRetrievedLater[0].x )
+        new_range_x[0] = Math.min(new_range_x[0], dataRetrievedLater[1].x )
+        new_range_x[1] = Math.max(new_range_x[1], dataRetrievedLater[1].x )
 
         var new_range_y = layoutRetrievedLater.yaxis.range
-        new_range_y[0] = Math.min(new_range_y[0], dataRetrievedLater[0].y )
-        new_range_y[1] = Math.max(new_range_y[1], dataRetrievedLater[0].y )
+        new_range_y[0] = Math.min(new_range_y[0], dataRetrievedLater[1].y )
+        new_range_y[1] = Math.max(new_range_y[1], dataRetrievedLater[1].y )
 
         //console.log(layoutRetrievedLater);
         var layout = {
@@ -330,53 +320,104 @@
     });
 
     ////////////////////////////////////////////
-/* TODO: create a dummy module to provide laser points in base_link frame
+
     laser_listener = new ROSLIB.Topic({
       ros: ros,
-      name: "/scan_filtered",
-      messageType: 'sensor_msgs/msg/LaserScan',
+      name: "/laser_poses",
+      messageType: 'geometry_msgs/msg/PoseArray',
       latch: false
     });
 
     laser_listener.subscribe(function (m) {
-      //var new_x = m.position.point.x
-      //var new_y = m.position.point.y
+      var new_x = []
+      var new_y = []
 
-      //if ((new_x !=0.0) | (new_y!=0.0)) 
-      if (false){
+      for (const pose of m.poses) {
+        new_x.push(-pose.position.y)
+        new_y.push(pose.position.x)        
+      }
+
+      var graphDiv = document.getElementById('myPlot')
+      var dataRetrievedLater = graphDiv.data;
+      var layoutRetrievedLater = graphDiv.layout;
+    
+      dataRetrievedLater[2].x =  new_x;
+      dataRetrievedLater[2].y =  new_y;
+
+      var new_range_x = layoutRetrievedLater.xaxis.range;
+      new_range_x[0] = Math.min(new_range_x[0],Math.min(...dataRetrievedLater[2].x ));
+      new_range_x[1] = Math.max(new_range_x[1],Math.max(...dataRetrievedLater[2].x ));
+
+      var new_range_y = layoutRetrievedLater.yaxis.range
+      new_range_y[0] = Math.min(new_range_y[0], Math.min(...dataRetrievedLater[2].y ));
+      new_range_y[1] = Math.max(new_range_y[1], Math.max(...dataRetrievedLater[2].y ));
+
+      //console.log(layoutRetrievedLater);
+      var layout = {
+        xaxis: {
+          autorange: false,
+          range: new_range_x
+        },
+        yaxis: {
+          autorange: false,
+          range: new_range_y
+        }
+      };
+
+      Plotly.react(graphDiv, dataRetrievedLater, layout);        
+           
+    });
+
+    /////////////////////////////////////////////
+
+    left_hand_load_listener = new ROSLIB.Topic({
+      ros: ros,
+      name: "/left_hand_loads",
+      messageType: 'walker_msgs/msg/ForceStamped',
+      latch: false
+    });
+
+    left_hand_load_listener.subscribe(function (m) {
+      document.getElementById("left_handle_force").innerHTML = Math.round((m.force + Number.EPSILON) * 100) / 100;
+      var color = m.force;
+      
+      if (true) {
         var graphDiv = document.getElementById('myPlot')
         var dataRetrievedLater = graphDiv.data;
         var layoutRetrievedLater = graphDiv.layout;
-      
-        dataRetrievedLater[1].x = [-new_y];
-        dataRetrievedLater[1].y = [ new_x];
-
-        var new_range_x = layoutRetrievedLater.xaxis.range
-        new_range_x[0] = Math.min(new_range_x[0], dataRetrievedLater[0].x )
-        new_range_x[1] = Math.max(new_range_x[1], dataRetrievedLater[0].x )
-
-        var new_range_y = layoutRetrievedLater.yaxis.range
-        new_range_y[0] = Math.min(new_range_y[0], dataRetrievedLater[0].y )
-        new_range_y[1] = Math.max(new_range_y[1], dataRetrievedLater[0].y )
-
-        //console.log(layoutRetrievedLater);
-        var layout = {
-          xaxis: {
-            autorange: false,
-            range: new_range_x
-          },
-          yaxis: {
-            autorange: false,
-            range: new_range_y
-          }
-        };
-
-        Plotly.react(graphDiv, dataRetrievedLater, layout);        
+    
+        //console.log(m);
+        dataRetrievedLater[4].marker.color[0] = color;
+        
+        Plotly.react(graphDiv, dataRetrievedLater, layoutRetrievedLater);
       }      
     });
-*/
     /////////////////////////////////////////////
 
+    right_hand_load_listener = new ROSLIB.Topic({
+      ros: ros,
+      name: "/right_hand_loads",
+      messageType: 'walker_msgs/msg/ForceStamped',
+      latch: false
+    });
+
+    right_hand_load_listener.subscribe(function (m) {
+      var color = m.force;
+      document.getElementById("right_handle_force").innerHTML = Math.round((m.force + Number.EPSILON) * 100) / 100;
+
+      if (true) {
+        var graphDiv = document.getElementById('myPlot')
+        var dataRetrievedLater = graphDiv.data;
+        var layoutRetrievedLater = graphDiv.layout;
+    
+        //console.log(m);
+        dataRetrievedLater[4].marker.color[1] = color;
+        
+        Plotly.react(graphDiv, dataRetrievedLater, layoutRetrievedLater);
+      }      
+    });
+
+    ////////////////////////////////////////////
     
 
     user_listener = new ROSLIB.Topic({
@@ -475,8 +516,12 @@
   <div class="row">
     <div class="column">
       <p>Connection status: <span id="status"></span></p>
-      <p>Left handle force: <span id="left_handle_force"></span></p>
-      <p>Right handle force: <span id="right_handle_force"></span></p>
+      <p>Left handle load (kg): <span id="left_handle_force"></span></p>
+      <p>Right handle load (kg): <span id="right_handle_force"></span></p>
+
+      <p>Left leg load (kg): <span id="left_leg_load"></span></p>
+      <p>Right leg load (kg): <span id="right_leg_load"></span></p>
+
       <p>Left wheel encoder: <span id="left_wheel_encoder"></span></p>
       <p>Right wheel encoder: <span id="right_wheel_encoder"></span></p>
       <p>user_desc var: <span id="user_desc_data"></span></p>
@@ -499,7 +544,9 @@
     var right_x = -orig_right_y;
     var right_y = orig_right_x;
 
-
+    // fields in  data:
+    //     0          1       2         3            4
+    // left_feet right_feet laser walker_advance handles(l,r)
     var data = [{
       x: [left_x],
       y: [left_y],
@@ -507,13 +554,11 @@
       mode: 'markers',
       name: 'left',
       marker: {
-        color: 'rgb(255, 0, 0)',
+        color: [0],
         size: 20,
-        symbol: 'square',
-        line: {
-          color: 'rgb(255, 0, 100)',
-          width: 2
-        }
+        colorscale: 'Bluered',
+        cmin: 0,
+        cmax: 50,
       },
       showlegend: false
       }, {
@@ -523,11 +568,15 @@
       mode: 'markers',
       name: 'right',
       marker: {
-        color: 'rgb(0, 0, 255)',
+        color: [0],
         size: 20,
-        line: {
-          color: 'rgb(0, 255, 100)',
-          width: 2
+        symbol: 'square',
+        colorscale: 'Bluered',
+        cmin: 0,
+        cmax: 50,
+        colorbar: {
+          title: 'Load(kg.)',
+          titleside: 'top',
         }
       },
       showlegend: false
@@ -560,6 +609,21 @@
           color: 'rgb(0, 0, 0)',
           width: 2
         }
+      },
+      showlegend: false
+    },{
+      x: [-0.5, 0.5],  // left, right
+      y: [0.5, 0.5],
+      type: 'scatter',
+      mode: 'markers',
+      name: 'handles',
+      marker: {
+        color: [0, 50],
+        size: 10,
+        symbol: 'diamond-tall',
+        colorscale: 'Bluered',
+        cmin: 0,
+        cmax: 50,
       },
       showlegend: false
     }]
