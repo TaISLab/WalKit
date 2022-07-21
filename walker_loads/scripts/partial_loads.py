@@ -19,12 +19,16 @@ class PartialLoads(Node):
 
     def __init__(self):
         super().__init__('partial_loads')
+        self.get_logger().fatal("USE CPP VERSION! ...")
+    
         self.declare_parameters(
             namespace='',
             parameters=[
                  ('handle_calibration_file', os.path.join(get_package_share_directory('walker_loads'), "config", "params.yaml") ),
                  ('left_loads_topic_name', '/left_loads'),
-                 ('right_loads_topic_name', '/right_loads'),
+                 ('right_loads_topic_name', '/right_hand_loads'),
+                 ('left_hand_loads_topic_name', '/left_hand_loads'),
+                 ('right_hand_loads_topic_name', '/right_loads'),                 
                  ('left_handle_topic_name', '/left_handle'),
                  ('right_handle_topic_name', '/right_handle'),
                  ('left_steps_topic_name', '/detected_step_left'),
@@ -38,6 +42,8 @@ class PartialLoads(Node):
 
         self.left_loads_topic_name = self.get_parameter('left_loads_topic_name').value
         self.right_loads_topic_name = self.get_parameter('right_loads_topic_name').value
+        self.left_hand_loads_topic_name = self.get_parameter('left_hand_loads_topic_name').value
+        self.right_hand_loads_topic_name = self.get_parameter('right_hand_loads_topic_name').value
         self.left_handle_topic_name = self.get_parameter('left_handle_topic_name').value
         self.right_handle_topic_name= self.get_parameter('right_handle_topic_name').value
         self.left_steps_topic_name= self.get_parameter('left_steps_topic_name').value
@@ -80,6 +86,8 @@ class PartialLoads(Node):
         # ROS stuff
         self.left_load_pub  = self.create_publisher(StepStamped, self.left_loads_topic_name,  10)
         self.right_load_pub = self.create_publisher(StepStamped, self.right_loads_topic_name, 10)
+        self.left_hand_load_pub  = self.create_publisher(StepStamped, self.left_hand_loads_topic_name,  10)
+        self.right_hand_load_pub = self.create_publisher(StepStamped, self.right_hand_loads_topic_name, 10)
 
         self.left_handle_sub = self.create_subscription(ForceStamped, self.left_handle_topic_name, self.handle_lc, 10) 
         self.right_handle_sub = self.create_subscription(ForceStamped, self.right_handle_topic_name, self.handle_lc, 10) 
@@ -133,10 +141,21 @@ class PartialLoads(Node):
                 self.right_step_msg = msg
                 self.right_speed = self.right_step_msg.speed
                 self.new_data_available = True
+
+                hand_msg = self.right_handle_msg
+                hand_msg.force = self.right_handle_weight
+                self.right_hand_load_pub.publish(hand_msg)
+                self.get_logger().error("handle published(r)]")    
         elif (id==0):
                 self.left_step_msg = msg
                 self.left_speed = self.left_step_msg.speed
                 self.new_data_available = True
+
+                hand_msg = self.left_handle_msg
+                hand_msg.force = self.left_handle_weight
+                self.left_hand_load_pub.publish(hand_msg)
+                self.get_logger().error("handle published(r)]")    
+
         else:
             self.get_logger().error("Don't know about which step are you talking [" + id + "]")    
             return          
@@ -181,6 +200,7 @@ class PartialLoads(Node):
                     msg = self.right_step_msg                
                     msg.load = self.right_leg_load
                     self.right_load_pub.publish(msg)
+
                     #self.get_logger().warn("Weight distribution on legs L(" + str(self.left_leg_load) + ") - R(" + str(self.right_leg_load) + ")")
             else:                
                 pass

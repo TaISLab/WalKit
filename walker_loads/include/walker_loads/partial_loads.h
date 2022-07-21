@@ -45,6 +45,8 @@ class PartialLoads : public rclcpp::Node{
       // ROS objects
       rclcpp::Publisher<walker_msgs::msg::StepStamped>::SharedPtr left_load_pub_;
       rclcpp::Publisher<walker_msgs::msg::StepStamped>::SharedPtr right_load_pub_;
+      rclcpp::Publisher<walker_msgs::msg::ForceStamped>::SharedPtr left_hand_load_pub_;
+      rclcpp::Publisher<walker_msgs::msg::ForceStamped>::SharedPtr right_hand_load_pub_;
 
       rclcpp::TimerBase::SharedPtr timer_;
 
@@ -59,6 +61,8 @@ class PartialLoads : public rclcpp::Node{
       std::string scan_topic;
       std::string left_loads_topic_name_;
       std::string right_loads_topic_name_;
+      std::string left_hand_loads_topic_name_;
+      std::string right_hand_loads_topic_name_;
       std::string left_handle_topic_name_;
       std::string right_handle_topic_name_;
       std::string left_steps_topic_name_;
@@ -73,8 +77,12 @@ class PartialLoads : public rclcpp::Node{
       SplineFunction fr_;
 
       // Internal state
+      // as provided by sensor
       walker_msgs::msg::ForceStamped left_handle_msg_;
       walker_msgs::msg::ForceStamped right_handle_msg_;
+      // data in kg
+      walker_msgs::msg::ForceStamped left_hand_msg_;
+      walker_msgs::msg::ForceStamped right_hand_msg_;
       walker_msgs::msg::StepStamped left_step_msg_;
       walker_msgs::msg::StepStamped right_step_msg_;
 
@@ -83,8 +91,6 @@ class PartialLoads : public rclcpp::Node{
       geometry_msgs::msg::Point left_speed_;
 
       int weight_ = 100;
-      double right_handle_weight_ = 0;
-      double left_handle_weight_  = 0;
       double leg_load_ = 0;
       bool new_data_available_ = false;
       bool first_data_ready_ = false;

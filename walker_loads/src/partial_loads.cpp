@@ -8,6 +8,8 @@ PartialLoads::PartialLoads() : Node("partial_loads"){
         this->declare_parameter<std::string>("scan_topic",              "/scan");
         this->declare_parameter<std::string>("left_loads_topic_name",   "/left_loads");
         this->declare_parameter<std::string>("right_loads_topic_name",  "/right_loads");
+        this->declare_parameter<std::string>("left_hand_loads_topic_name",   "/left_hand_loads");
+        this->declare_parameter<std::string>("right_hand_loads_topic_name",  "/right_hand_loads");
         this->declare_parameter<std::string>("left_handle_topic_name",  "/left_handle");
         this->declare_parameter<std::string>("right_handle_topic_name", "/right_handle");
         this->declare_parameter<std::string>("left_steps_topic_name",   "/detected_step_left");
@@ -22,6 +24,8 @@ PartialLoads::PartialLoads() : Node("partial_loads"){
         this->get_parameter("scan_topic",              scan_topic);
         this->get_parameter("left_loads_topic_name",   left_loads_topic_name_);
         this->get_parameter("right_loads_topic_name",  right_loads_topic_name_);
+        this->get_parameter("left_hand_loads_topic_name",   left_hand_loads_topic_name_);
+        this->get_parameter("right_hand_loads_topic_name",  right_hand_loads_topic_name_);
         this->get_parameter("left_handle_topic_name",  left_handle_topic_name_);
         this->get_parameter("right_handle_topic_name", right_handle_topic_name_);
         this->get_parameter("left_steps_topic_name",   left_steps_topic_name_);
@@ -43,8 +47,10 @@ PartialLoads::PartialLoads() : Node("partial_loads"){
         right_step_msg_.position.header.frame_id = "NONE";
         speed_diff_ = 0;
         weight_ = 100;
-        right_handle_weight_ = 0;
-        left_handle_weight_  = 0;
+        right_hand_msg_.header.frame_id = "NONE";
+        left_hand_msg_.header.frame_id = "NONE";
+        right_hand_msg_.force = 0;
+        left_hand_msg_.force  = 0;
         leg_load_ = 0;
         new_data_available_ = false;
         first_data_ready_ = false;    
@@ -82,6 +88,8 @@ PartialLoads::PartialLoads() : Node("partial_loads"){
         // Publishers       
         left_load_pub_  = this->create_publisher<walker_msgs::msg::StepStamped>(left_loads_topic_name_, 20);
         right_load_pub_ = this->create_publisher<walker_msgs::msg::StepStamped>( right_loads_topic_name_, 20);
+        left_hand_load_pub_  = this->create_publisher<walker_msgs::msg::ForceStamped>(left_hand_loads_topic_name_, 20);
+        right_hand_load_pub_ = this->create_publisher<walker_msgs::msg::ForceStamped>( right_hand_loads_topic_name_, 20);
 
         // Subscribers
         left_handle_sub_ = this->create_subscription<walker_msgs::msg::ForceStamped>( left_handle_topic_name_, default_qos, std::bind(&PartialLoads::handle_lc, this, std::placeholders::_1));
@@ -93,7 +101,7 @@ PartialLoads::PartialLoads() : Node("partial_loads"){
         // timers
         timer_ = create_wall_timer( std::chrono::milliseconds(ms_period_), std::bind(&PartialLoads::timer_callback, this));
 
-        RCLCPP_INFO(this->get_logger(), "load detector started");
+        RCLCPP_INFO(this->get_logger(), "CPP load detector started");
     }
 
     void PartialLoads::loadHandleCalibration(){
@@ -148,19 +156,23 @@ PartialLoads::PartialLoads() : Node("partial_loads"){
 
         if (frame_id.find("right") != std::string::npos){
             right_handle_msg_ = *msg;
-            right_handle_weight_ = fr_.interp(msg->force);
+            right_hand_msg_ = *msg;
+            right_hand_msg_.force = fr_.interp(msg->force);
             new_data_available_ = true;
+            right_hand_load_pub_->publish(right_hand_msg_); 
         } else if (frame_id.find("left") != std::string::npos){
             left_handle_msg_ = *msg;
-            left_handle_weight_ = fl_.interp(msg->force);
+            left_hand_msg_ = *msg;
+            left_hand_msg_.force = fl_.interp(msg->force);
             new_data_available_ = true;
+            left_hand_load_pub_->publish(left_hand_msg_); 
         } else{
             RCLCPP_ERROR(this->get_logger(), "Don't know about which handle are you talking [%s]", frame_id.c_str());
             return;
         }
 
         if ( has_data(left_handle_msg_.header) &  has_data(right_handle_msg_.header) ){ 
-            double force_diff = left_handle_weight_ - right_handle_weight_;
+            double force_diff = left_hand_msg_.force - right_hand_msg_.force;
             // Kalman this!
             double t = (this->now()).nanoseconds();
             kalman_tracker_.add_force_measurement(force_diff, t);
@@ -249,7 +261,7 @@ PartialLoads::PartialLoads() : Node("partial_loads"){
 
             if ( first_data_ready_ ){
                     // amount of weight on legs
-                    leg_load_ = weight_ - left_handle_weight_ - right_handle_weight_;
+                    leg_load_ = weight_ - left_hand_msg_.force - right_hand_msg_.force;
                     
                     speed_diff_ = kalman_tracker_.get_speed_diff();
 
