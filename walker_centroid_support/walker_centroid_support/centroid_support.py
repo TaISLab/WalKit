@@ -174,20 +174,20 @@ class CentroidSupport(Node):
                     self.centroid_pub.publish(centroid_msg)
 
             else:
-                #pass
-                self.get_logger().error("Not all data received yet ...")
-                if (self.left_handle_msg is None):
-                    self.get_logger().error("\tleft_handle" )
-                if (self.right_handle_msg is None):
-                    self.get_logger().error("\tright_handle" )
-                if (self.left_step_msg is None):
-                    self.get_logger().error("\tleft_step" )
-                if (self.right_step_msg is None):
-                    self.get_logger().error("\tright_step" )
-                if (self.right_handle_pose is None):
-                    self.get_logger().error("\tright_handle_pose" )
-                if (self.left_handle_pose is None):
-                    self.get_logger().error("\tleft_handle_pose" )
+                pass
+                #self.get_logger().error("Not all data received yet ...")
+                #if (self.left_handle_msg is None):
+                #    self.get_logger().error("\tleft_handle" )
+                #if (self.right_handle_msg is None):
+                #    self.get_logger().error("\tright_handle" )
+                #if (self.left_step_msg is None):
+                #    self.get_logger().error("\tleft_step" )
+                #if (self.right_step_msg is None):
+                #    self.get_logger().error("\tright_step" )
+                #if (self.right_handle_pose is None):
+                #    self.get_logger().error("\tright_handle_pose" )
+                #if (self.left_handle_pose is None):
+                #    self.get_logger().error("\tleft_handle_pose" )
 
     # We take 0,0,0 in handles frame and cast it to steps frame.
     def get_handle_pose(self, step_msg, handle_msg):
