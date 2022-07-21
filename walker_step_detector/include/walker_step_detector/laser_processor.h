@@ -166,8 +166,6 @@ namespace laser_processor
             */
             void removeLessThan(uint32_t num);
 
-            void removeLines(double threshold, rclcpp::Node *boss);
-
             /**
             * @brief Split scan into clusters
             * @param thresh Euclidian distance threshold for clustering
