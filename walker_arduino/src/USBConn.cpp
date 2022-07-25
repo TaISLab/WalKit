@@ -122,15 +122,16 @@ void HandlePublisher::start(){
                     data = ss.str();
                     f_measurement_.header.stamp = e_measurement_.header.stamp = this->get_clock()->now();
                     // remove preamble and cast data to number:
-                    
-                    if (data_type_.compare("float")==0) {
-                        f_measurement_.force = std::stof(data.substr(preamble_.length()));
-                        RCLCPP_DEBUG(this->get_logger(), "data is: [%3.2f]", f_measurement_.force);
-                    } else if (data_type_.compare("int")==0) {
-                        e_measurement_.encoder = std::stoi(data.substr(preamble_.length()));
-                        RCLCPP_DEBUG(this->get_logger(), "data is: [%d]", e_measurement_.encoder);
-                    }
 
+                    if (data.size()>0){
+                        if (data_type_.compare("float")==0) {
+                            f_measurement_.force = std::stof(data.substr(preamble_.length()));
+                            RCLCPP_DEBUG(this->get_logger(), "data is: [%3.2f]", f_measurement_.force);
+                        } else if (data_type_.compare("int")==0) {
+                            e_measurement_.encoder = std::stoi(data.substr(preamble_.length()));
+                            RCLCPP_DEBUG(this->get_logger(), "data is: [%d]", e_measurement_.encoder);
+                        }
+                    }
                     // clear stream and carry on
                     ss.str(std::string());
                     can_publish_ = true;
