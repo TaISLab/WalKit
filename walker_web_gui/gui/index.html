@@ -154,9 +154,9 @@
       <p>Left wheel encoder: <span id="left_wheel_encoder"></span></p>
       <p>Right wheel encoder: <span id="right_wheel_encoder"></span></p>
       
-      <p>IMU ANGLE x: <span id="imu_angle_x"></span></p>
-      <p>IMU ANGLE y: <span id="imu_angle_y"></span></p>
-      <p>IMU ANGLE z: <span id="imu_angle_z"></span></p>
+      <p>IMU angle (deg) x: <span id="imu_angle_x"></span></p>
+      <p>IMU angle (deg) y: <span id="imu_angle_y"></span></p>
+      <p>IMU angle (deg) z: <span id="imu_angle_z"></span></p>
 
       <p>user_desc var: <span id="user_desc_data"></span></p>
       <p>handle_height var: <span id="handle_height_data"></span></p>
@@ -260,9 +260,9 @@
     });
 
     imu_angle_listener.subscribe(function (m) {
-      document.getElementById("imu_angle_x").innerHTML = m.x;
-      document.getElementById("imu_angle_y").innerHTML = m.y;
-      document.getElementById("imu_angle_z").innerHTML = m.z; 
+      document.getElementById("imu_angle_x").innerHTML = Math.round((m.x + Number.EPSILON) * 100) / 100;
+      document.getElementById("imu_angle_y").innerHTML = Math.round((m.y + Number.EPSILON) * 100) / 100;
+      document.getElementById("imu_angle_z").innerHTML = Math.round((m.z + Number.EPSILON) * 100) / 100; 
     });
 
     /////////////////////////////////////////////
