@@ -17,9 +17,9 @@
     <xacro:arg name="lidar_pos_x_prop" default="0.55"/>
     <xacro:arg name="lidar_pos_y_prop" default="0.0"/>
     <xacro:arg name="lidar_pos_z_prop" default="0.21"/>
-    <xacro:arg name="witmotion_pos_x_prop" default="0.55"/>
+    <xacro:arg name="witmotion_pos_x_prop" default="0.565"/>
     <xacro:arg name="witmotion_pos_y_prop" default="0.0"/>
-    <xacro:arg name="witmotion_pos_z_prop" default="0.474"/>
+    <xacro:arg name="witmotion_pos_z_prop" default="0.305"/>
     <xacro:arg name="witmotion_size_x_prop" default="0.0513"/>
     <xacro:arg name="witmotion_size_y_prop" default="0.036"/>
     <xacro:arg name="witmotion_size_z_prop" default="0.015"/>    
