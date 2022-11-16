@@ -24,6 +24,7 @@ def generate_launch_description():
     ld.add_action(Node(
         package='usb_cam', executable='usb_cam_node_exe', output='screen',
         name='usb_cam_node',
+        namespace='usb_cam',
         parameters=[params_path]
         ))
 
