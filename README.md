@@ -37,14 +37,7 @@ WalKit is an open hardware project created to monitor the elderly. It is modular
 
 <!-- USAGE EXAMPLES -->
 ## Usage
-We use Marc-Hanheide's [TMuLE](https://github.com/marc-hanheide/TMuLE) program to configure and manage a [tmux](https://github.com/tmux/tmux) session running all the components.
-
-TMuLE can be installed with:
-```
-sudo -H pip3 install tmule
-```
-
-And the system can be launched with the following:
+The system can be launched with the following:
 ```
 cd ~/walker_ws/src/WalKit/walker_bringup/config/
 tmule -c walker.yaml launch --tag core
@@ -56,8 +49,10 @@ ROS launch files can be monitored at the tmux session. You can attach to it with
 tmux a -t walker_ros2
 ```
 
-
-
+You may have noticed we use Marc-Hanheide's [TMuLE](https://github.com/marc-hanheide/TMuLE) program to configure and manage a [tmux](https://github.com/tmux/tmux) session running all the components. TMuLE can be installed with:
+```
+sudo -H pip3 install tmule
+```
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
