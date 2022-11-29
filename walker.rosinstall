@@ -33,6 +33,16 @@
     local-name: csm
     version: ros2_csm_eigen  
 
+- git:
+    uri: https://github.com/ajtudela/slg_msgs.git 
+    local-name: ajt_segment/slg_msgs
+    version: humble
+
+- git:
+    uri: https://github.com/MFernandezCarmona/laser_segmentation.git
+    local-name: ajt_segment/laser_segmentation
+    version: humble
+
 #- git:
 #    uri: https://github.com/TaISLab/ros2_leg_detector.git
 #    local-name: ros2_leg_detector
