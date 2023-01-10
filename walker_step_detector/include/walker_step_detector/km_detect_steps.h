@@ -1,6 +1,5 @@
-#ifndef DETECTSTEPSS_HH
-#define DETECTSTEPSS_HH
-
+#ifndef KM_DETECTSTEPS_HH
+#define KM_DETECTSTEPS_HH
 
 
 // ROS related Headers
@@ -14,20 +13,18 @@
 
 // ROS MSGS
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-
 #include <geometry_msgs/msg/point_stamped.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 #include <geometry_msgs/msg/pose_array.hpp>
+#include <sensor_msgs/msg/laser_scan.hpp>
 
 // Local Headers
 #include "walker_step_detector/legs_tracker.h"
 #include "walker_step_detector/color_tools.h"
 
 // Custom Messages related Headers
-#include "slg_msgs/msg/segment_array.hpp"
 #include "walker_msgs/msg/step_stamped.hpp"
-#include "slg_msgs/segment2D.hpp"
 
 
 // general cpp stuff
@@ -54,13 +51,13 @@ private:
     double marker_display_lifetime_;
     
     // configuration parameters
-    std::string segments_topic_;
+    std::string scan_topic_;
     std::string detected_steps_topic_name_;
     std::string detected_steps_frame_;
     double kalman_model_d0_, kalman_model_a0_, kalman_model_f0_, kalman_model_p0_;
     bool plot_leg_kalman_;
     bool plot_leg_clusters_;
-    bool use_segment_header_stamp_for_tfs_;
+    bool use_scan_header_stamp_for_tfs_;
     std::vector<double> act_a_x_;
     std::vector<double> act_a_y_;
 
@@ -78,11 +75,11 @@ private:
     rclcpp::Publisher<walker_msgs::msg::StepStamped>::SharedPtr left_detected_step_pub_;
     rclcpp::Publisher<walker_msgs::msg::StepStamped>::SharedPtr right_detected_step_pub_;
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr markers_array_pub_;
-    rclcpp::Subscription<slg_msgs::msg::SegmentArray>::SharedPtr segments_sub_;
+    rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;
 
     //..........................................................................
-    std::list<walker_msgs::msg::StepStamped> getCentroids(std::string  fixed_frame_id, slg_msgs::msg::SegmentArray::SharedPtr segments_msg, std::shared_ptr<tf2_ros::Buffer> tf_buff);
-    void segmentsCallback(const slg_msgs::msg::SegmentArray::SharedPtr segments_array);
+    std::list<walker_msgs::msg::StepStamped> getCentroids(std::string  fixed_frame_id, sensor_msgs::msg::LaserScan::SharedPtr scan, std::shared_ptr<tf2_ros::Buffer> tf_buff);
+    void laserCallback(const sensor_msgs::msg::LaserScan::SharedPtr scan);
 
     visualization_msgs::msg::Marker get_marker(const walker_msgs::msg::StepStamped* step, int id );
 
@@ -92,4 +89,4 @@ private:
 
 };
 
-#endif //DETECTSTEPSS_HH
+#endif //KM_DETECTSTEPS_HH

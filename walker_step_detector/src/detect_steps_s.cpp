@@ -78,6 +78,7 @@ DetectStepsS::DetectStepsS() : Node("detect_steps"){
     }
 
 
+
 std::list<walker_msgs::msg::StepStamped> DetectStepsS::getCentroids(std::string  fixed_frame_id, slg_msgs::msg::SegmentArray::SharedPtr segments_msg, std::shared_ptr<tf2_ros::Buffer> tf_buff){
         std::list<walker_msgs::msg::StepStamped> centroids;
 

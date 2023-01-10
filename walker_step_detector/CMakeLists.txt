@@ -60,8 +60,19 @@ add_executable (detect_steps
                 include/walker_step_detector/cluster_features.h
                 )
 
-target_link_libraries(detect_steps ${catkin_LIBRARIES}) #${PCL_LIBRARIES})
-ament_target_dependencies(detect_steps rclcpp walker_msgs OpenCV sensor_msgs geometry_msgs tf2 tf2_geometry_msgs tf2_ros visualization_msgs) # pcl_conversions) 
+target_link_libraries(detect_steps ${catkin_LIBRARIES})
+
+ament_target_dependencies(detect_steps 
+  rclcpp 
+  walker_msgs 
+  OpenCV 
+  sensor_msgs 
+  geometry_msgs 
+  tf2 
+  tf2_geometry_msgs
+  tf2_ros
+  visualization_msgs
+) 
 
 install (TARGETS
 detect_steps
@@ -104,6 +115,7 @@ ament_target_dependencies(km_detect_steps
   tf2 
   tf2_geometry_msgs 
   tf2_ros
+  sensor_msgs 
 )
 target_link_libraries(km_detect_steps)
 
