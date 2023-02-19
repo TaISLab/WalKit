@@ -190,6 +190,8 @@ std::list<walker_msgs::msg::StepStamped> KMDetectSteps::getCentroids(sensor_msgs
     }
 
     // km ...
+    //TODO: 
+    double max_d;
 
     // 1.- Init: cluster centroids in the middle of left/right active areas
     double lcx, lcy, rcx, rcy;
@@ -200,18 +202,27 @@ std::list<walker_msgs::msg::StepStamped> KMDetectSteps::getCentroids(sensor_msgs
 
     // 2.- Assign: assign points to nearest cluster (poses are in same frame than centroid)
     double dr,dl;
+    std::list<unsigned int> r_points;
+    std::list<unsigned int> l_points;
     for (unsigned long int i = 0; i < laser_x.size(); i++){
-        dr = distance(laser_x[i], laser_y[i], rcx,rcy);
-        dl = distance(laser_x[i], laser_y[i], lcx,lcy);
+        dr = distance(laser_x[i], laser_y[i], rcx, rcy);
+        dl = distance(laser_x[i], laser_y[i], lcx, lcy);
 
-        if 
-
+        if (dr=<dl){
+            //TODO: assign to right cluster: build a list ordered by distance
+            
+        } else{
+            //TODO: assign to right cluster: build a list ordered by distance
+        }
     }
 
-
     // 3.- Get new centroid
+    double lcx_new, lcy_new, rcx_new, rcy_new;
 
     // 4.- Points too far are removed
+        // avoid points too far from the centroids
+        if (dl<max_d)|(dr<max_d) {
+        }
     
     // 5.- If changed: repeat
     
