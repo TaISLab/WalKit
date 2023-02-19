@@ -48,7 +48,7 @@ ament_export_dependencies(
     rclcpp
 )
 
-# detect_steps executable
+# detect_steps executable: uses kalman + classic leg detector ..................
 add_executable (detect_steps
                 src/detect_steps.cpp
                 src/laser_processor.cpp
@@ -74,12 +74,13 @@ ament_target_dependencies(detect_steps
   visualization_msgs
 ) 
 
+
 install (TARGETS
 detect_steps
   DESTINATION lib/${PROJECT_NAME}
 )
 
-# 2 executable node
+# detect_steps_s executable: uses kalman + segment detector ....................
 add_executable (detect_steps_s
     src/detect_steps_s.cpp
     src/compare_steps.cpp
@@ -103,7 +104,7 @@ detect_steps_s
   DESTINATION lib/${PROJECT_NAME}
 )
 
-# 3 executable node
+# km_detect_steps executable: uses kalman + kmeans aggregator  .................
 add_executable (km_detect_steps
     src/km_detect_steps.cpp
 )
