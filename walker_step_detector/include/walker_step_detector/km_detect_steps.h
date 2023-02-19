@@ -30,8 +30,10 @@
 // general cpp stuff
 #include <fstream>
 #include <memory>
+#include <tuple>
 
 using namespace std::chrono_literals;
+
 
 
 class KMDetectSteps : public rclcpp::Node
@@ -78,15 +80,17 @@ private:
     rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;
 
     //..........................................................................
-    std::list<walker_msgs::msg::StepStamped> getCentroids(std::string  fixed_frame_id, sensor_msgs::msg::LaserScan::SharedPtr scan, std::shared_ptr<tf2_ros::Buffer> tf_buff);
+    std::list<walker_msgs::msg::StepStamped> getCentroids(sensor_msgs::msg::LaserScan::SharedPtr scan);
     void laserCallback(const sensor_msgs::msg::LaserScan::SharedPtr scan);
+
+    std::tuple<double, double> find_centroid(std::vector<double>& x, std::vector<double>& y, std::vector<unsigned int>& selected_indexs, std::vector<double>& selected_dists, double max_d);
 
     visualization_msgs::msg::Marker get_marker(const walker_msgs::msg::StepStamped* step, int id );
 
     void delete_markers();
 
     void publish_leg(walker_msgs::msg::StepStamped step, int sid);
-
+    double distance(double ax, double ay, double bx, double by);
 };
 
 #endif //KM_DETECTSTEPS_HH

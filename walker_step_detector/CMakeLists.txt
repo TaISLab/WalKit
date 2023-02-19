@@ -33,8 +33,6 @@ find_package(message_filters REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(slg_msgs REQUIRED) 
-#find_package(pcl_conversions REQUIRED)
-#find_package(PCL COMPONENTS common REQUIRED)
 
 set (OpenCV_DIR /usr/local/include)
 include_directories(
@@ -107,6 +105,9 @@ detect_steps_s
 # km_detect_steps executable: uses kalman + kmeans aggregator  .................
 add_executable (km_detect_steps
     src/km_detect_steps.cpp
+    src/compare_steps.cpp
+    src/legs_tracker.cpp
+    src/track_leg.cpp
 )
 
 ament_target_dependencies(km_detect_steps

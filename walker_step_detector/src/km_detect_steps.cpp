@@ -1,9 +1,5 @@
 #include "walker_step_detector/km_detect_steps.h"
 
-#include "walker_step_detector/detect_steps_s.h"
-
-
-
 KMDetectSteps::KMDetectSteps() : Node("detect_steps"){
     //Get ROS parameters
     this->declare_parameter<std::string>("scan_topic",                "/scan");
@@ -125,7 +121,7 @@ void KMDetectSteps::laserCallback(const sensor_msgs::msg::LaserScan::SharedPtr s
             delete_markers();
         }
 
-        std::list<walker_msgs::msg::StepStamped> points = getCentroids(detected_steps_frame_, scan, buffer_);
+        std::list<walker_msgs::msg::StepStamped> points = getCentroids(scan);
         kalman_tracker.add_detections(points);
     }
 
@@ -149,7 +145,7 @@ void KMDetectSteps::laserCallback(const sensor_msgs::msg::LaserScan::SharedPtr s
     }
 }
 
-std::list<walker_msgs::msg::StepStamped> KMDetectSteps::getCentroids(sensor_msgs::msg::LaserScan::SharedPtr scan, std::shared_ptr<tf2_ros::Buffer> tf_buff){
+std::list<walker_msgs::msg::StepStamped> KMDetectSteps::getCentroids(sensor_msgs::msg::LaserScan::SharedPtr scan){
     // find centroids using kmeans
     std::list<walker_msgs::msg::StepStamped> centroids;
     
@@ -161,7 +157,7 @@ std::list<walker_msgs::msg::StepStamped> KMDetectSteps::getCentroids(sensor_msgs
     std::vector<double> laser_x;
     std::vector<double> laser_y;
 
-
+    // get laser data in cartesians
     for (unsigned long int i = 0; i < scan->ranges.size(); i++){
         range = scan->ranges[i];
         is_valid  = (range > scan->range_min && range < scan->range_max);
@@ -173,7 +169,7 @@ std::list<walker_msgs::msg::StepStamped> KMDetectSteps::getCentroids(sensor_msgs
             
             // transform    
             try {
-                buffer_->transform(laser_point, position_new, fixed_frame_);
+                buffer_->transform(laser_point, position_new, detected_steps_frame_);
                 is_valid  = ( position_new.point.x >= act_a_x_[0] ) && ( position_new.point.x <= act_a_x_[1] );
                 is_valid &= ( position_new.point.y >= act_a_y_[0] ) && ( position_new.point.y <= act_a_y_[1] );                    
             } catch (tf2::TransformException &e){
@@ -190,45 +186,114 @@ std::list<walker_msgs::msg::StepStamped> KMDetectSteps::getCentroids(sensor_msgs
     }
 
     // km ...
-    //TODO: 
+    int attempts, max_attempts;
     double max_d;
-
-    // 1.- Init: cluster centroids in the middle of left/right active areas
+    double dr,dl;
     double lcx, lcy, rcx, rcy;
+    bool has_moved = true;
+
+    // COW any point further than this from centroid, won't be used
+    // COW three km iterations
+    max_d = 0.5;
+    max_attempts = 3;
+
+    // Init: cluster centroids in the middle of left/right active areas
     rcx = lcx = (act_a_x_[0] + act_a_x_[1]) / 2.0;
     
     rcy = (act_a_y_[0]*0.75) + (act_a_y_[1]*0.25);
     lcy = (act_a_y_[0]*0.25) + (act_a_y_[1]*0.75);
+    attempts = 0;
 
-    // 2.- Assign: assign points to nearest cluster (poses are in same frame than centroid)
-    double dr,dl;
-    std::list<unsigned int> r_points;
-    std::list<unsigned int> l_points;
-    for (unsigned long int i = 0; i < laser_x.size(); i++){
-        dr = distance(laser_x[i], laser_y[i], rcx, rcy);
-        dl = distance(laser_x[i], laser_y[i], lcx, lcy);
+    while ((has_moved) & (attempts<max_attempts)){
+        attempts = attempts + 1;
+        // Assign: assign points to nearest cluster (poses are in same frame than centroid)
+        std::vector<unsigned int> r_points;
+        std::vector<double> r_dists;
+        std::vector<unsigned int> l_points;
+        std::vector<double> l_dists;
+        for (unsigned long int i = 0; i < laser_x.size(); i++){
+            dr = distance(laser_x[i], laser_y[i], rcx, rcy);
+            dl = distance(laser_x[i], laser_y[i], lcx, lcy);
 
-        if (dr=<dl){
-            //TODO: assign to right cluster: build a list ordered by distance
-            
-        } else{
-            //TODO: assign to right cluster: build a list ordered by distance
+            if (dr<=dl){
+                // assign to right cluster
+                r_points.push_back(i);
+                r_dists.push_back(dr);
+            } else{
+                // assign to left cluster
+                l_points.push_back(i);
+                l_dists.push_back(dl);            
+            }
         }
+
+        // Get new centroid: far points are skipped from centroid
+        auto [rcx_new, rcy_new] = find_centroid(laser_x, laser_y, r_points, r_dists, max_d);
+        auto [lcx_new, lcy_new] = find_centroid(laser_x, laser_y, l_points, l_dists, max_d);
+
+        // If changed: repeat, but no more than n times
+        has_moved = ( distance(rcx_new, rcy_new, rcx, rcy) > 0.05 ) |
+                    ( distance(lcx_new, lcy_new, lcx, lcy) > 0.05 );
+
+        // update values
+        rcx = rcx_new; 
+        rcy = rcy_new; 
+        lcx = lcx_new; 
+        lcy = lcy_new; 
     }
 
-    // 3.- Get new centroid
-    double lcx_new, lcy_new, rcx_new, rcy_new;
 
-    // 4.- Points too far are removed
-        // avoid points too far from the centroids
-        if (dl<max_d)|(dr<max_d) {
-        }
-    
-    // 5.- If changed: repeat
-    
+    walker_msgs::msg::StepStamped r_step;
+    r_step.position.header = laser_point.header; // sime time
+    r_step.position.header.frame_id = detected_steps_frame_; // different frame_id
+    r_step.position.point.x = rcx;
+    r_step.position.point.y = rcy;
+    r_step.confidence = 1;  // COW ! TODO!
+    centroids.push_back(r_step);
+
+    walker_msgs::msg::StepStamped l_step;
+    l_step.position.header = laser_point.header; // sime time
+    l_step.position.header.frame_id = detected_steps_frame_; // different frame_id
+    l_step.position.point.x = lcx;
+    l_step.position.point.y = lcy;
+    l_step.confidence = 1;  // COW ! TODO!
+    centroids.push_back(l_step);
+
     return centroids;
 }
 
+double KMDetectSteps::distance(double ax, double ay, double bx, double by){
+    return std::sqrt(std::pow(ax - bx, 2) + std::pow(ay - by, 2) );
+}
+
+std::tuple<double, double> KMDetectSteps::find_centroid(std::vector<double>& x, 
+                                  std::vector<double>& y,
+                                  std::vector<unsigned int>& selected_indexs,
+                                  std::vector<double>& selected_dists, 
+                                  double max_d) {
+
+   
+    double cx = 0;
+    double cy = 0;
+    double used_points = 0;
+    unsigned int i;
+    double d;
+    
+    for (unsigned long int it = 0; it < selected_indexs.size(); it++){
+        i = selected_indexs[it];
+        d = selected_dists[it];
+        // Points too far are not used: avoid points far from previous centroid
+        if (d<max_d) {
+            cx += x[i];
+            cy += y[i];
+            used_points = used_points + 1; 
+        }
+
+    }
+    cx = cx/used_points;
+    cy = cy/used_points;
+
+    return  {cx, cy};
+}
 
 
 void KMDetectSteps::delete_markers(){        
