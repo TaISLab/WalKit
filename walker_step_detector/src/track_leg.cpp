@@ -68,7 +68,15 @@
             step_list.push_back(step);
             //RCLCPP_ERROR (node->get_logger(), "(%s) has new step  [%3.3f, %3.3f, (%s)]",name.c_str(), step.position.point.x, step.position.point.y, step.position.header.frame_id.c_str());
         } 
+    }
 
+    walker_msgs::msg::StepStamped TrackLeg::last_data(){
+        walker_msgs::msg::StepStamped ans;
+        if (is_init){
+            ans = step_list.back();
+        }
+
+        return ans;        
     }
 
     walker_msgs::msg::StepStamped TrackLeg::get_step(){

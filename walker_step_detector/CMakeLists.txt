@@ -33,6 +33,7 @@ find_package(message_filters REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(slg_msgs REQUIRED) 
+find_package (Eigen3 3.3 REQUIRED)
 
 set (OpenCV_DIR /usr/local/include)
 include_directories(
@@ -111,6 +112,7 @@ add_executable (km_detect_steps
 )
 
 ament_target_dependencies(km_detect_steps
+  OpenCV
   rclcpp
   visualization_msgs
   walker_msgs
@@ -119,7 +121,7 @@ ament_target_dependencies(km_detect_steps
   tf2_ros
   sensor_msgs 
 )
-target_link_libraries(km_detect_steps)
+target_link_libraries(km_detect_steps Eigen3::Eigen)
 
 install (TARGETS
 km_detect_steps
