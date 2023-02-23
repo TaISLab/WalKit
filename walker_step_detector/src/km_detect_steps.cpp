@@ -240,8 +240,8 @@ std::list<walker_msgs::msg::StepStamped> KMDetectSteps::getCentroids(sensor_msgs
         lcy = (act_a_y_[0]*0.25) + (act_a_y_[1]*0.75);
         attempts = 0;
 
-        RCLCPP_INFO(this->get_logger(), "(%d): \n\tright centroid:\t[%.2f, %.2f] \n\tleft centroid\t[%.2f, %.2f] ", 
-                                attempts, rcx, rcy, lcx, lcy);   
+        //RCLCPP_INFO(this->get_logger(), "(%d): \n\tright centroid:\t[%.2f, %.2f] \n\tleft centroid\t[%.2f, %.2f] ", 
+        //                        attempts, rcx, rcy, lcx, lcy);   
         while ((has_moved) & (attempts<max_attempts)){
             attempts = attempts + 1;
             // Assign: assign points to nearest cluster (poses are in same frame than centroid)
@@ -292,8 +292,8 @@ std::list<walker_msgs::msg::StepStamped> KMDetectSteps::getCentroids(sensor_msgs
             rcy = rcy_new; 
             lcx = lcx_new; 
             lcy = lcy_new; 
-            RCLCPP_INFO(this->get_logger(), "(%d): \n\tright centroid:\t[%.2f, %.2f] \n\tleft centroid\t[%.2f, %.2f] ", 
-                                attempts, rcx, rcy, lcx, lcy);   
+            //RCLCPP_INFO(this->get_logger(), "(%d): \n\tright centroid:\t[%.2f, %.2f] \n\tleft centroid\t[%.2f, %.2f] ", 
+            //                    attempts, rcx, rcy, lcx, lcy);   
         }
 
         if (fit_ellipse_){
@@ -352,7 +352,7 @@ std::tuple<double, double> KMDetectSteps::find_centroid(std::vector<double>& x,
     double y_max;
 
     keepGoing = selected_indexs.size()>0;
-    RCLCPP_INFO(this->get_logger(), "Searchin centroid of (%ld) points ", selected_indexs.size()); 
+    //RCLCPP_INFO(this->get_logger(), "Searchin centroid of (%ld) points ", selected_indexs.size()); 
     while (keepGoing){
         y_min=1000;
         y_max=0;
@@ -382,7 +382,7 @@ std::tuple<double, double> KMDetectSteps::find_centroid(std::vector<double>& x,
             keepGoing = false;
         }
     }
-    RCLCPP_INFO(this->get_logger(), "Used (%d) points ", used_points); 
+    //RCLCPP_INFO(this->get_logger(), "Used (%d) points ", used_points); 
     cx = cx/used_points;
     cy = cy/used_points;
 

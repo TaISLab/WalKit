@@ -28,7 +28,7 @@ def generate_launch_description():
                 {"kalman_model_a0": 0.001},
                 {"kalman_model_f0": 0.001},
                 {"kalman_model_p0": 0.001},
-                {"plot_leg_kalman": True},
+                {"plot_leg_kalman": False},
                 {"plot_leg_clusters": False},
                 {"use_scan_header_stamp_for_tfs": False},
                 {"fixed_frame_active_area_x": [-0.75, 0.4]},
