@@ -1,7 +1,7 @@
 # Keep same order in usb plugs and this will work
-KERNEL=="ttyUSB*", KERNELS=="1-1.2.4.4.2", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", MODE:="0777", SYMLINK+="rplidar"
+KERNEL=="ttyUSB*", KERNELS=="1-1.2.1", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", MODE:="0777", SYMLINK+="rplidar"
 KERNEL=="ttyUSB*", KERNELS=="1-1.2.4.4.4", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", MODE:="0777", SYMLINK+="witmotion"
 KERNEL=="ttyUSB*", KERNELS=="1-1.2.4.3", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", MODE:="0777", SYMLINK+="left_wheel"
 KERNEL=="ttyUSB*", KERNELS=="1-1.2.3", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", MODE:="0777", SYMLINK+="right_handle"
 KERNEL=="ttyUSB*", KERNELS=="1-1.2.2", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", MODE:="0777", SYMLINK+="left_handle"
-KERNEL=="ttyUSB*", KERNELS=="1-1.2.1", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", MODE:="0777", SYMLINK+="right_wheel"
+KERNEL=="ttyUSB*", KERNELS=="1-1.2.4.2", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", MODE:="0777", SYMLINK+="right_wheel"

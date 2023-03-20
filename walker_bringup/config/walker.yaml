@@ -38,7 +38,7 @@ windows:
   - name: gait_analysis
     tags: ['core']
     panes:
-      - ros2 launch walker_step_detector step_detector.launch.py
+      - ros2 launch walker_step_detector step_detector_km.launch.py
       - ros2 launch walker_loads partial_loads.launch.py
       - ros2 launch walker_centroid_support centroid_support.launch.py
   - name: visualization

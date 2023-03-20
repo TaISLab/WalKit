@@ -12,3 +12,5 @@ udevadm control --reload-rules && udevadm trigger
 ```bash
 screen /dev/left_handle 115200
 ```
+# Solve problem arduinos not appearing as ttyUSBx
+Remove brtty
