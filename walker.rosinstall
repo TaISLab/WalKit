@@ -4,16 +4,6 @@
     version: humble
 
 - git:
-    uri: https://github.com/TaISLab/aws-robomaker-hospital-world.git
-    local-name: aws-robomaker-hospital-world
-    version: ros2
-
-- git:
-    uri: https://github.com/TaISLab/leap_motion.git
-    local-name: leap_motion
-    version: humble
-
-- git:
     uri: https://github.com/TaISLab/rplidar_ros.git
     local-name: rplidar_ros2
     version: humble
@@ -43,16 +33,50 @@
     local-name: ajt_segment/laser_segmentation
     version: humble
 
+- git:
+    uri: https://github.com/MOCAP4ROS2-Project/mocap_msgs.git
+    local-name: mocap/mocap_msgs
+    version: master
+
+- git:
+    uri: https://github.com/MOCAP4ROS2-Project/mocap.git 
+    local-name: mocap/mocap
+    version: main
+
+- git:
+    uri: https://github.com/MOCAP4ROS2-Project/mocap4ros2_vicon.git     
+    local-name: mocap/mocap4ros2_vicon
+    version: clean
+
+#  Takes ages to download. We need rethinking the simulation system
+#- git:
+#    uri: https://github.com/TaISLab/aws-robomaker-hospital-world.git
+#    local-name: aws-robomaker-hospital-world
+#    version: ros2
+#
+#  Not supported for arm64 yet
+#
+#- git:
+#    uri: https://github.com/TaISLab/leap_motion.git
+#    local-name: leap_motion
+#    version: humble
+#
+#  This fork is not needed anymore. We use step detector instead  
+#
 #- git:
 #    uri: https://github.com/TaISLab/ros2_leg_detector.git
 #    local-name: ros2_leg_detector
 #    version: foxy    
-
+#
+#  In humble laser_filters work flawlessly. 
+#
 #- git:
 #    uri: https://github.com/TaISLab/laser_filters.git
 #    local-name: laser_filters
 #    version: ros2    
-
+#
+#  In humble rosbag2 work flawlessly. 
+#
 #- git:
 #    uri: https://github.com/ros2/rosbag2.git
 #    local-name: rosbag2
