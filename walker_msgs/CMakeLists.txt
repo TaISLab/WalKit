@@ -15,6 +15,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Step.msg"
   "msg/StepStamped.msg"
   "msg/StepArray.msg"
+  "msg/StabilityStamped.msg"
   DEPENDENCIES builtin_interfaces std_msgs geometry_msgs
  )
  
