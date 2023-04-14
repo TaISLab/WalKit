@@ -3,6 +3,7 @@ project(stability_grid_map)
 
 ## Find ament_cmake macros and libraries
 find_package(rclcpp REQUIRED)
+find_package(walker_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(grid_map_msgs REQUIRED)
@@ -22,6 +23,7 @@ endif()
 set(dependencies
   grid_map_msgs
   grid_map_ros
+  walker_msgs
   rclcpp
 )
 
