@@ -8,10 +8,11 @@
 #include <list>
 #include <tuple>
 #include <map>
+#include <chrono>
 
 //#include <boost/random.hpp>
 //#include <boost/random/normal_distribution.hpp>
-#include <boost/math/distributions/normal.hpp> // for normal_distribution
+// #include <boost/math/distributions/normal.hpp> // for normal_distribution
 
 #include <rclcpp/rclcpp.hpp>
 #include <grid_map_ros/grid_map_ros.hpp>
@@ -28,6 +29,7 @@
 
 
 #include "walker_msgs/msg/stability_stamped.hpp"
+ 
 
 namespace stability_grid_map
 {
@@ -76,6 +78,8 @@ public:
   void merge_msg(const walker_msgs::msg::StabilityStamped::SharedPtr stab_msg);
 
 private:
+  const std::string fusionLayerName_ = "fusion";
+
   std::list<walker_msgs::msg::StabilityStamped> msgLog_;
   
   grid_map::GridMap maps_;
@@ -100,10 +104,12 @@ private:
   double mapsOriginX_;
   double mapsOriginY_;
   double updateRadius_;
+  int mapFusionTimerPeriodMilis_;
+  int mapPublishTimerPeriodMilis_;
 
   int nCols_ ;
   int nRows_ ;
-  double initLogProb_;
+  double initMapVal_;
 
   //! stability subscriber
   rclcpp::Subscription<walker_msgs::msg::StabilityStamped>::SharedPtr subscriber_;
@@ -111,6 +117,12 @@ private:
   //! Grid map publisher.
   rclcpp::Publisher<grid_map_msgs::msg::GridMap>::SharedPtr publisher_;
   
+  rclcpp::TimerBase::SharedPtr mapFusionTimer_;
+  rclcpp::TimerBase::SharedPtr mapPublishTimer_;
+
+double normal_log_pdf(double x, double m, double s);
+double normal_pdf(double x, double m, double s);
+
 };
 
 }  // namespace grid_map_demos

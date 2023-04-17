@@ -15,12 +15,9 @@ StabilityGridMap::StabilityGridMap()
   nCols_ = maps_.getSize()(0);
   nRows_ = maps_.getSize()(1);
   
-  // initial uniform prob is 1/numCells, so log prob is...
-  initLogProb_ = - std::log(nCols_) - std::log(nRows_);
-
-  //TODO: create timer callbacks: map rebuild
-  //TODO: create timer callbacks: map publish
-
+  // layer containing all users data
+  maps_.add( fusionLayerName_ , initMapVal_);
+  
   // transform buffer
   buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
   tfl_ = std::make_shared<tf2_ros::TransformListener>(*buffer_);
@@ -29,7 +26,6 @@ StabilityGridMap::StabilityGridMap()
                                                       this->get_node_timers_interface());
   buffer_->setCreateTimerInterface(timer_interface);
 
-
   publisher_ = this->create_publisher<grid_map_msgs::msg::GridMap>(
     outputTopic_,
     rclcpp::QoS(1).transient_local());
@@ -37,6 +33,15 @@ StabilityGridMap::StabilityGridMap()
   subscriber_ = this->create_subscription<walker_msgs::msg::StabilityStamped>(
     inputTopic_, 1,
     std::bind(&StabilityGridMap::callback, this, std::placeholders::_1));
+
+  //create timer callbacks: map rebuild
+  mapFusionTimer_ = this->create_wall_timer(std::chrono::milliseconds(mapFusionTimerPeriodMilis_), std::bind(&StabilityGridMap::map_fusion_callback, this) );
+
+  //create timer callbacks: map publish
+  mapPublishTimer_ = this->create_wall_timer(std::chrono::milliseconds(mapPublishTimerPeriodMilis_), std::bind(&StabilityGridMap::map_publishg_callback, this) );
+  if (isVerbose_) {
+    RCLCPP_INFO(this->get_logger(), "Node started");
+  }
 }
 
 StabilityGridMap::~StabilityGridMap(){
@@ -54,7 +59,12 @@ bool StabilityGridMap::readParameters(){
   this->declare_parameter<double>("maps_origin_x",    6.0);
   this->declare_parameter<double>("maps_origin_y",    5.0);
   this->declare_parameter<double>("maps_origin_y",    5.0);
+  // TODO: how far do we update?
   this->declare_parameter<double>("update_radius",    1.2);
+  this->declare_parameter<double>("initial_map_value",0.5);
+  // TODO: how often do we update and publish?
+  this->declare_parameter<int>("map_fusion_timer_ms", 500);
+  this->declare_parameter<int>("map_publish_timer_ms", 1000); 
 
   // read params ............
   this->get_parameter("input_topic", inputTopic_);
@@ -65,10 +75,11 @@ bool StabilityGridMap::readParameters(){
   this->get_parameter("maps_size_y", mapsSizeY_);
   this->get_parameter("maps_resolution", mapsResolution_);
   this->get_parameter("maps_origin_x", mapsOriginX_);
-  this->get_parameter("maps_origin_y", mapsOriginY_);
-  // TODO: how far do we update?
+  this->get_parameter("maps_origin_y", mapsOriginY_);  
   this->get_parameter("update_radius", updateRadius_);
-
+  this->get_parameter("initial_map_value", initMapVal_);
+  this->get_parameter("map_fusion_timer_ms", mapFusionTimerPeriodMilis_);
+  this->get_parameter("map_publish_timer_ms", mapPublishTimerPeriodMilis_);
 
   // print params ............
   if (isVerbose_) {
@@ -81,22 +92,46 @@ bool StabilityGridMap::readParameters(){
     RCLCPP_INFO(this->get_logger(), "maps_origin_x: [%3.3f]", mapsOriginX_);
     RCLCPP_INFO(this->get_logger(), "maps_origin_y: [%3.3f]", mapsOriginY_);
     RCLCPP_INFO(this->get_logger(), "update_radius: [%3.3f]", updateRadius_);
+    RCLCPP_INFO(this->get_logger(), "initial_map_value: [%3.3f]", initMapVal_);
+    RCLCPP_INFO(this->get_logger(), "map_fusion_timer_ms: [%d]", mapFusionTimerPeriodMilis_);
+    RCLCPP_INFO(this->get_logger(), "map_publish_timer_ms: [%d]", mapPublishTimerPeriodMilis_);    
   }
 
   return true;
 }
 
-//TODO: timer callbacks: map rebuild
+//global map rebuild
 void StabilityGridMap::map_fusion_callback(){
+  std::vector<std::string> layerNameList;
 
-// TODO: for all users in system
-// TODO: read parameters and map
-// TODO: merge down
+  // one layer is the final fusion
+  int numLayers = layerNameList.size()-1;
+
+  if (isVerbose_) {
+    RCLCPP_INFO(this->get_logger(), "Fusing maps from [%d] users", numLayers);
+  }
+
+  //TODO which weight do we add to each layer??
+  //TODO do we even want to use a linear combination
+  double weight = 1.0/numLayers;
+
+  // iterate over layers in map collection
+  for (const auto & layerName : layerNameList) {
+    
+    if (layerName != fusionLayerName_){
+      // merge down
+      maps_[fusionLayerName_] += weight * maps_[layerName];
+    }
+  }
+  //once added: reescale average layer, so that every cell is between 0-1
+  // const double minValue = maps_.get(fusionLayerName_).minCoeffOfFinites();
+  const double maxValue = maps_.get(fusionLayerName_).maxCoeffOfFinites();
+  
+  maps_[fusionLayerName_] = maps_[fusionLayerName_]/maxValue;
 
 }
 
 void StabilityGridMap::map_publishg_callback(){
-
   if (isVerbose_){
     RCLCPP_INFO(this->get_logger(), "publishing merged map");
   }
@@ -136,36 +171,73 @@ void StabilityGridMap::merge_msg(const walker_msgs::msg::StabilityStamped::Share
   center.x() = localPose.pose.position.x;
   center.y() = localPose.pose.position.y;
 
-  boost::math::normal_distribution<double> nd(0, 1/stab_msg->tin);
+  //boost::math::normal_distribution<double> nd(0, 1/stab_msg->tin);
 
   // we will update a circle around event position center.
   // TODO: ANY SHAPE IS POSSIBLE ...
   for (grid_map::CircleIterator iterator(maps_, center, updateRadius_); !iterator.isPastEnd(); ++iterator) {
 
-    ind = *iterator;
-    // get cell center of current cell in the map frame.            
-    maps_.getPosition(ind, point);
+      ind = *iterator;
+      // get cell center of current cell in the map frame.            
+      maps_.getPosition(ind, point);
 
-    // distance to iteration center:
-    radius = std::sqrt( std::pow(center.x()-point.x(), 2.0) + std::pow(center.y()-point.y(), 2.0) );
+      // distance to iteration center:
+      radius = std::sqrt( std::pow(center.x()-point.x(), 2.0) + std::pow(center.y()-point.y(), 2.0) );
 
-    // prior value
-    // maps_.at(stab_msg->uid, *iterator);
+      // prior value
+      // maps_.at(stab_msg->uid, *iterator);
 
-    /*TODO: magic goes here. We have:
-      - radius         distance to event 
-      - stab_msg->sta  event value
-      - stab_msg->tin  user "confidence"?
+      /*TODO: magic goes here. We have:
+        - radius         distance to event 
+        - stab_msg->sta  event value
+        - stab_msg->tin  user "confidence"?
 
-    */ 
-  
-    cellValue = stab_msg->sta * boost::math::pdf(nd, radius);
+      */ 
+    
+      //cellValue = stab_msg->sta * boost::math::pdf(nd, radius);
+      cellValue = stab_msg->sta * normal_pdf(radius, 0, 1/stab_msg->tin );
 
-    // update value
-    maps_.at(stab_msg->uid, *iterator) += cellValue;
+      // update value
+      maps_.at(stab_msg->uid, *iterator) *= cellValue;
   }
 
+  if (isVerbose_) {
+    RCLCPP_INFO(this->get_logger(), "Stability msg from user [%s] merged",stab_msg->uid.c_str() );
+  }
+}
 
+/*
+A gaussian with probability density given by:
+    pdf = 1/(s*sqrt(2*pi))  * exp(- (x-m)^2/(2*s^2)  )
+Will have a log probability as:
+    ln_pdf = -ln(s) - 0.5 ln(2*pi)  - (x-m)^2/(2*s^2)  
+*/
+
+double StabilityGridMap::normal_log_pdf(double x, double m, double s){
+    static const double half_ln_2pi = 0.918938533;
+    double a    = (x - m) / s;
+    double ln_s = std::log(s);
+    
+    double log_pdf = - ( ln_s + half_ln_2pi + (a * a * 0.5) );
+
+    return log_pdf;
+}
+
+/*
+Let x be a random var with 
+  mean m 
+  standard deviation s
+Its probability will be:
+    pdf = 1/(s*sqrt(2*pi))  * exp(- (x-m)^2/(2*s^2)
+*/
+
+double StabilityGridMap::normal_pdf(double x, double m, double s){
+    static const double  inv_sqrt_2pi = 0.3989422804014327;
+    double a    = (x - m) / s; 
+    
+    double pdf_x = inv_sqrt_2pi / s * std::exp(-0.5 * a * a);
+
+    return pdf_x;
 }
 
 void StabilityGridMap::callback(const walker_msgs::msg::StabilityStamped::SharedPtr stab_msg){
@@ -176,10 +248,13 @@ void StabilityGridMap::callback(const walker_msgs::msg::StabilityStamped::Shared
   // create the the layer if does not exitst
   if (!maps_.exists(stab_msg->uid)) {   
     // we use an uniform log(Prob) 
-    maps_.add(stab_msg->uid, initLogProb_); 
+    maps_.add(stab_msg->uid, initMapVal_); 
+    if (isVerbose_) {
+      RCLCPP_INFO(this->get_logger(), "First msg from user [%s]",stab_msg->uid.c_str() );
+    }
   }
 
-  // TODO merge reading with layer
+  // merge reading with its layer
   merge_msg(stab_msg);
 
 }

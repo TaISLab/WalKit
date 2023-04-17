@@ -1,5 +1,3 @@
-#include <rclcpp/rclcpp.hpp>
-#include <memory>
 #include "stability_grid_map/stability_grid_map.hpp"
 
 int main(int argc, char ** argv)
