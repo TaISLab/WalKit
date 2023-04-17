@@ -19,6 +19,11 @@
   <depend>grid_map_core</depend>
   <depend>grid_map_msgs</depend>
   <depend>grid_map_ros</depend>
+  <!-- <depend>libboost-random-dev</depend> -->
+  <depend>libboost-math-dev</depend>
+  <depend>tf2</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <depend>tf2_ros</depend>
 
   <export>
     <build_type>ament_cmake</build_type>

@@ -9,8 +9,23 @@
 #include <tuple>
 #include <map>
 
+//#include <boost/random.hpp>
+//#include <boost/random/normal_distribution.hpp>
+#include <boost/math/distributions/normal.hpp> // for normal_distribution
+
 #include <rclcpp/rclcpp.hpp>
 #include <grid_map_ros/grid_map_ros.hpp>
+
+
+#include <tf2_ros/transform_listener.h>
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/create_timer_interface.h>
+#include <tf2_ros/create_timer_ros.h>
+#include <tf2/transform_datatypes.h> 
+
+// ROS MSGS
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+
 
 #include "walker_msgs/msg/stability_stamped.hpp"
 
@@ -74,13 +89,21 @@ private:
   //! Be verbose ...
   bool isVerbose_;
 
+  // tf2 objects
+  std::shared_ptr<tf2_ros::Buffer> buffer_;
+  std::shared_ptr<tf2_ros::TransformListener> tfl_;
+
   std::string mapsFrameID_;
   double mapsSizeX_;
   double mapsSizeY_;
   double mapsResolution_;
   double mapsOriginX_;
   double mapsOriginY_;
+  double updateRadius_;
 
+  int nCols_ ;
+  int nRows_ ;
+  double initLogProb_;
 
   //! stability subscriber
   rclcpp::Subscription<walker_msgs::msg::StabilityStamped>::SharedPtr subscriber_;

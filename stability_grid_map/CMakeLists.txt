@@ -9,7 +9,11 @@ find_package(geometry_msgs REQUIRED)
 find_package(grid_map_msgs REQUIRED)
 find_package(grid_map_ros REQUIRED)
 find_package(grid_map_core REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
 find_package(ament_cmake REQUIRED)
+find_package(Boost REQUIRED) # random
 
 # Default to C++14
 if(NOT CMAKE_CXX_STANDARD)
@@ -21,9 +25,13 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 set(dependencies
+  Boost
   grid_map_msgs
   grid_map_ros
   walker_msgs
+  tf2 
+  tf2_geometry_msgs
+  tf2_ros
   rclcpp
 )
 
