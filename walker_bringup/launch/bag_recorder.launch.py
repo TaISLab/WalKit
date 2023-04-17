@@ -30,7 +30,7 @@ def launch_setup(context, *args, **kwargs):
 def generate_launch_description():    
     return LaunchDescription([
         DeclareLaunchArgument("log_level", default_value=TextSubstitution(text="DEBUG")),
-        DeclareLaunchArgument('topic_list', default_value=TextSubstitution(text='/left_handle /left_wheel /odom /odom_lscm /right_handle /right_wheel /scan_filtered /sensor/bwt901cl/Angle /sensor/bwt901cl/Imu /sensor/bwt901cl/MagneticField /sensor/bwt901cl/Temperature /tf /tf_static /detected_step_left /detected_step_right /left_loads /right_loads /user_desc /handle_height')),
+        DeclareLaunchArgument('topic_list', default_value=TextSubstitution(text='/left_handle             /odom /odom_lscm /right_handle              /scan_filtered /sensor/bwt901cl/Angle /sensor/bwt901cl/Imu /sensor/bwt901cl/MagneticField /sensor/bwt901cl/Temperature /tf /tf_static /detected_step_left /detected_step_right /left_loads /right_loads /user_desc /handle_height')),  # /left_wheel /right_wheel 
         DeclareLaunchArgument('bag_name', default_value=TextSubstitution(text= time.strftime("%Y%m%d-%H%M%S-bag"))),
         SetEnvironmentVariable('RCUTILS_LOGGING_BUFFERED_STREAM', '1'),
         OpaqueFunction(function = launch_setup)
