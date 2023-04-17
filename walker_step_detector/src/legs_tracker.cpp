@@ -3,6 +3,7 @@
     LegsTracker::LegsTracker(){
         is_init = false;
         is_debug = false;
+        status_ = false;
     }
 
     void LegsTracker::init(rclcpp::Node *node_,double d0, double a0, double f0, double p0){
@@ -81,14 +82,29 @@
         }
     }
 
+    void LegsTracker::set_status(bool new_status){
+        status_ = new_status;
+    }
+
     void LegsTracker::get_steps(walker_msgs::msg::StepStamped* step_r, walker_msgs::msg::StepStamped* step_l, double t){
         
-        *step_r = r_tracker.predict_step(t);
-        *step_l = l_tracker.predict_step(t);
+        if (status_){
+            *step_r = r_tracker.predict_step(t);
+            *step_l = l_tracker.predict_step(t);
 
-        if (is_debug){
-            RCLCPP_DEBUG (node->get_logger(), "Prediction requested at time (%3.3f)",t*1e-9);
+            if (is_debug){
+                RCLCPP_DEBUG (node->get_logger(), "Prediction requested at time (%3.3f)",t*1e-9);
+            }
+
+        } else {
+            *step_r = r_tracker.last_data();
+            *step_l = l_tracker.last_data();        
+            if (is_debug){
+                RCLCPP_DEBUG (node->get_logger(), "DATA requested !");
+            }
+
         }
+
 
     }
 
