@@ -49,8 +49,8 @@ StabilityGridMap::~StabilityGridMap(){
 
 bool StabilityGridMap::readParameters(){
   // declare params ............
-  this->declare_parameter<std::string>("input_topic",std::string("input"));
-  this->declare_parameter<std::string>("output_topic", std::string("output"));
+  this->declare_parameter<std::string>("stability_topic",std::string("user_stability"));
+  this->declare_parameter<std::string>("stability_map_topic", std::string("stability_map"));
   this->declare_parameter<bool>("is_verbose", true );
   this->declare_parameter<std::string>("maps_frame_id", std::string("map"));
   this->declare_parameter<double>("maps_size_x",      12.0);
@@ -67,8 +67,8 @@ bool StabilityGridMap::readParameters(){
   this->declare_parameter<int>("map_publish_timer_ms", 1000); 
 
   // read params ............
-  this->get_parameter("input_topic", inputTopic_);
-  this->get_parameter("output_topic", outputTopic_);
+  this->get_parameter("stability_topic", inputTopic_);
+  this->get_parameter("stability_map_topic", outputTopic_);
   this->get_parameter("is_verbose", isVerbose_);
   this->get_parameter("maps_frame_id", mapsFrameID_);
   this->get_parameter("maps_size_x", mapsSizeX_);

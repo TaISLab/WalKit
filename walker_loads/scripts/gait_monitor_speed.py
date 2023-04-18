@@ -8,6 +8,7 @@ from tf2_ros.transform_listener import TransformListener
 from walker_msgs.msg import StepStamped, GaitStamped, WalkStats
 import numpy as np
 from nav_msgs.msg import Odometry
+import sys
 
 
 '''
