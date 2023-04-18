@@ -23,7 +23,8 @@
    ================================================================ */
 
 #include <SPI.h>
-#include <AS5601.h>
+#include "Wire.h"
+#include <AS5600.h>
 
 /* ================================================================
    Definición de pines
@@ -62,7 +63,7 @@
    Drivers
    ================================================================ */
 
-AS5601 Sensor;
+AS5600 Sensor;
 
 /* ================================================================
    Inicialización
@@ -71,8 +72,14 @@ AS5601 Sensor;
 void setup() {
   //Inicialización de puerto serie, velocidad 115200 baudios
   Serial.begin( SERIAL_BAUDRATE );
+
+  Wire.begin();
+
+  Sensor.begin(4);  //  set direction pin.
+  Sensor.setDirection(AS5600_CLOCK_WISE);  // default, just be explicit.
+  
   //Establecer posición a 0
-  Sensor.setZeroPosition();
+  Sensor.resetPosition();
 }
 
 /* ================================================================
@@ -80,18 +87,14 @@ void setup() {
    ================================================================ */
 
 void loop() {
-
-    // query status register
-    unsigned char status = Sensor.readRaw8( AS5601::ByteRegister::STATUS );
-
     // Is magnet too strong?
-    bool isMagnetStrong = bitRead( status, 3 ) == 1 ? true : false;
+    bool isMagnetStrong = Sensor.magnetTooStrong();
 
     // Is magnet too weak?
-    bool isMagnetWeak = bitRead( status, 4 ) == 1 ? true : false;
+    bool isMagnetWeak = Sensor.magnetTooWeak();
 
     // Is magnet detected?
-    bool isMagnetDetected = bitRead( status, 5 ) == 1 ? true : false;
+    bool isMagnetDetected = Sensor.detectMagnet();
 
     Serial.print( WHEEL_SIDE );  
     
@@ -102,7 +105,7 @@ void loop() {
     } else if (isMagnetStrong){
       Serial.print( ERROR_MAGNET_STRONG);  
     } else if ( (!isMagnetStrong) && (!isMagnetWeak) && (isMagnetDetected) ){
-    Serial.print( Sensor.getAngle());
+    Serial.print( Sensor.readAngle());
     } 
 
     Serial.print( END_CHAR);  
