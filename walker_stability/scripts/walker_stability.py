@@ -5,9 +5,13 @@ from os.path import join
 from sys import stderr
 
 import rclpy
+from rclpy.time import Time
+from rclpy.duration import Duration
 from rclpy.node import Node
 from rclpy.qos import QoSDurabilityPolicy, QoSHistoryPolicy, QoSReliabilityPolicy
 from rclpy.qos import QoSProfile
+from tf2_ros.buffer import Buffer
+from tf2_ros.transform_listener import TransformListener
 from ament_index_python.packages import get_package_share_directory
 
 from std_msgs.msg import String
@@ -25,27 +29,40 @@ class WalkerStability(Node):
                  ('antropometric_data_file_uri', join(get_package_share_directory('walker_stability'), "config", "Correlationes.xlsx") ),
                  ('stability_topic_name', '/user_stability'),
                  ('centroid_topic_name', '/support_centroid'),
-                 ('user_desc_topic_name', '/user_desc')
+                 ('user_desc_topic_name', '/user_desc'),
+                 ('left_handle_frame', 'left_handle_id'),
+                 ('right_handle_frame', 'right_handle_id')
             ]
         )
 
-        self.antropometric_data_file_uri= self.get_parameter('antropometric_data_file_uri').value
-        self.stability_topic_name= self.get_parameter('stability_topic_name').value
-        self.centroid_topic_name= self.get_parameter('centroid_topic_name').value
-        self.user_desc_topic_name= self.get_parameter('user_desc_topic_name').value
-        
+        self.antropometric_data_file_uri = self.get_parameter('antropometric_data_file_uri').value
+        self.stability_topic_name = self.get_parameter('stability_topic_name').value
+        self.centroid_topic_name = self.get_parameter('centroid_topic_name').value
+        self.user_desc_topic_name = self.get_parameter('user_desc_topic_name').value
+        self.left_handle_frame = self.get_parameter('left_handle_frame').value
+        self.right_handle_frame = self.get_parameter('right_handle_frame').value
+
         # stored data
+        self.has_user_data = False
         self.user_desc = ''
-        self.age = 0
-        self.height = 0
-        self.weight = 0
+        self.user_age = 0
+        self.user_height = 0
+        self.user_weight = 0
         self.user_id = ''
-        self.gender = ''
-        self.tinetti = 0
-        self.description = ''
-        self.bos_x = 0
-        
+        self.user_gender = ''
+        self.user_tinetti = 0
+        self.user_description = ''
+        self.bos_x_min = 0
+        self.bos_x_max = 0
+        self.handle_z = 0
+        self.handle_x = 0
+        self.handle_y_max = 0
+        self.handle_y_min = 0
+
         # ROS stuff
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
+
         self.stability_pub  = self.create_publisher(StabilityStamped, self.stability_topic_name,  10)
         
         self.centroid_sub = self.create_subscription(String, self.centroid_topic_name, self.centroid_callback, 10)
@@ -110,20 +127,55 @@ class WalkerStability(Node):
 
     def user_desc_callback(self, msg):
         user_fields = msg.data.split(':')
-        if (len(user_fields)>6) and (msg.data != self.user_desc):
-            self.user_desc = msg.data
-            self.age = int(user_fields[0])
-            self.height = int(user_fields[1])
-            self.weight = int(user_fields[2])
-            self.user_id = user_fields[3]
-            self.gender = user_fields[4] # Femenino or Masculino
-            self.tinetti = int(user_fields[5])
-            self.description = user_fields[6]
+        if (msg.data != self.user_desc):   
+            if (len(user_fields)<6):
+                self.get_logger().warn("User descr is too short! [" + str(len(user_fields)) + "]")
+                return 
             
-            self.bos_x = self.get_bos_x(self.gender, self.age, self.user_height, handlebar_height_m)
+            self.get_logger().info("Valid user data data received.")
+            self.has_user_data = True
+
+            if (len(user_fields)==6) or (len(user_fields)==7):
+                self.user_desc = msg.data
+                self.user_age = int(user_fields[0])
+                self.user_height = int(user_fields[1])
+                self.user_weight = int(user_fields[2])
+                self.user_id = user_fields[3]
+                self.user_gender = user_fields[4] # Femenino or Masculino
+
+            if (len(user_fields)==7):
+                self.user_tinetti = int(user_fields[5])
+                self.user_description = user_fields[6]
+                
+            if (len(user_fields)==6):
+                self.get_logger().warn("No tinetti in user descr. Assuming 50%.")
+                self.user_tinetti = 50
+                self.user_description = user_fields[5]
+            
 
     def centroid_callback(self, msg):
-        
+
+        if self.has_user_data:    
+            # Get current handle positions in local coordinates
+            centroid_frame_id = msg.header.frame_id
+            # get latest tf
+            try:
+                left_handle_transformation = self.tf_buffer.lookup_transform(centroid_frame_id, self.left_handle_frame, Time(seconds=0, nanoseconds=0), Duration(seconds=1.0))
+                right_handle_transformation = self.tf_buffer.lookup_transform(centroid_frame_id, self.right_handle_frame, Time(seconds=0, nanoseconds=0), Duration(seconds=1.0))
+                self.handle_z = left_handle_transformation.transform.translation.z
+                self.handle_x = left_handle_transformation.transform.translation.x
+                self.handle_y_max = left_handle_transformation.transform.translation.y
+                self.handle_y_min = right_handle_transformation.transform.translation.y
+            except Exception as e:
+                self.get_logger().error("Can't GET transform from handles frame  [" + self.left_handle_frame + ", " + self.right_handle_frame + "] into centroid frame [" + centroid_frame_id + "]: [" + str(e) + "]")   
+                return 
+            
+            (self.bos_x_min,self.bos_x_max)  = self.get_bos_x(self.user_gender, self.user_age, self.user_height, self.handle_z)
+            # TODO magic here
+            
+        else:
+            self.get_logger().warn("No user description received yet. Ignoring centroid msg.")   
+
 
 
 
