@@ -30,6 +30,7 @@ class WalkerStability(Node):
                  ('stability_topic_name', '/user_stability'),
                  ('centroid_topic_name', '/support_centroid'),
                  ('user_desc_topic_name', '/user_desc'),
+                 ('base_footprint_frame', 'base_footprint'),
                  ('left_handle_frame', 'left_handle_id'),
                  ('right_handle_frame', 'right_handle_id')
             ]
@@ -39,6 +40,7 @@ class WalkerStability(Node):
         self.stability_topic_name = self.get_parameter('stability_topic_name').value
         self.centroid_topic_name = self.get_parameter('centroid_topic_name').value
         self.user_desc_topic_name = self.get_parameter('user_desc_topic_name').value
+        self.base_footprint_frame = self.get_parameter('base_footprint_frame').value
         self.left_handle_frame = self.get_parameter('left_handle_frame').value
         self.right_handle_frame = self.get_parameter('right_handle_frame').value
 
@@ -65,7 +67,7 @@ class WalkerStability(Node):
 
         self.stability_pub  = self.create_publisher(StabilityStamped, self.stability_topic_name,  10)
         
-        self.centroid_sub = self.create_subscription(String, self.centroid_topic_name, self.centroid_callback, 10)
+        self.centroid_sub = self.create_subscription(PointStamped, self.centroid_topic_name, self.centroid_callback, 10)
 
         # for user description topic, we mimic a ROS1 'latched' topic
         latched_profile = QoSProfile(depth=1)
@@ -77,7 +79,7 @@ class WalkerStability(Node):
         
         self.get_logger().info("user stability node started")  
 
-    def get_bos_x(self, gender, age, user_height_m, handlebar_height_m):
+    def get_bos_x(self, gender, age, user_height_m, handlebar_x_m, handlebar_height_m):
         user_height = user_height_m *1000
         handlebar_height = handlebar_height_m *1000
 
@@ -122,6 +124,9 @@ class WalkerStability(Node):
             min_d = min([row[2] for row in result]) / 1000
             self.get_logger().debug("Max distance: " +str(max_d) + " m. min distance: " + str(min_d) + " m.")
             self.get_logger().debug("Current handlebar height: " +str(handlebar_height) + " mm. recommended: " + str((user_height) * 0.45 + 87 ))
+        
+        HERE!!!
+        min_d + self.handle_x
         return (min_d, max_d)
 
 
@@ -156,23 +161,26 @@ class WalkerStability(Node):
     def centroid_callback(self, msg):
 
         if self.has_user_data:    
-            # Get current handle positions in local coordinates
-            centroid_frame_id = msg.header.frame_id
             # get latest tf
             try:
-                left_handle_transformation = self.tf_buffer.lookup_transform(centroid_frame_id, self.left_handle_frame, Time(seconds=0, nanoseconds=0), Duration(seconds=1.0))
-                right_handle_transformation = self.tf_buffer.lookup_transform(centroid_frame_id, self.right_handle_frame, Time(seconds=0, nanoseconds=0), Duration(seconds=1.0))
+                left_handle_transformation = self.tf_buffer.lookup_transform(self.base_footprint_frame, self.left_handle_frame, Time(seconds=0, nanoseconds=0), Duration(seconds=1.0))
+                right_handle_transformation = self.tf_buffer.lookup_transform(self.base_footprint_frame, self.right_handle_frame, Time(seconds=0, nanoseconds=0), Duration(seconds=1.0))
+                # Get current handle positions in local coordinates too
+                centroid = self.tf_buffer.transform(msg, self.base_footprint_frame)
                 self.handle_z = left_handle_transformation.transform.translation.z
                 self.handle_x = left_handle_transformation.transform.translation.x
                 self.handle_y_max = left_handle_transformation.transform.translation.y
                 self.handle_y_min = right_handle_transformation.transform.translation.y
             except Exception as e:
-                self.get_logger().error("Can't GET transform from handles frame  [" + self.left_handle_frame + ", " + self.right_handle_frame + "] into centroid frame [" + centroid_frame_id + "]: [" + str(e) + "]")   
+                self.get_logger().error("Can't GET transform from handles frame  [" + self.left_handle_frame + ", " + self.right_handle_frame + "] into centroid frame [" + self.base_footprint_frame + "]: [" + str(e) + "]")   
                 return 
             
-            (self.bos_x_min,self.bos_x_max)  = self.get_bos_x(self.user_gender, self.user_age, self.user_height, self.handle_z)
-            # TODO magic here
-            
+            (self.bos_x_min,self.bos_x_max)  = self.get_bos_x(self.user_gender, self.user_age, self.user_height, self.handle_x, self.handle_z)
+            # Stability depends on centroid distance to these
+            # centroid.x,self.bos_x_min,self.bos_x_max
+            # centroid.y,self.handle_y_min,self.handle_y_max
+
+            # publish ....
         else:
             self.get_logger().warn("No user description received yet. Ignoring centroid msg.")   
 
