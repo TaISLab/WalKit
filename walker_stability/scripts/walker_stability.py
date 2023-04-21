@@ -15,7 +15,7 @@ from tf2_ros.transform_listener import TransformListener
 from ament_index_python.packages import get_package_share_directory
 
 from std_msgs.msg import String
-from geometry_msgs.msg import PointStamped
+from geometry_msgs.msg import PointStamped, PoseStamped
 from walker_msgs.msg import StabilityStamped
 
 class WalkerStability(Node):
@@ -79,7 +79,7 @@ class WalkerStability(Node):
         
         self.get_logger().info("user stability node started")  
 
-    def get_bos_x(self, gender, age, user_height_m, handlebar_x_m, handlebar_height_m):
+    def get_bos_x(self, gender, age, user_height_m, handlebar_height_m):
         user_height = user_height_m *1000
         handlebar_height = handlebar_height_m *1000
 
@@ -110,7 +110,7 @@ class WalkerStability(Node):
                 if ((elbow_extension>=20) and (elbow_extension<=30) and (math.fabs(forearm*math.sin(alpha)+arm*math.sin(beta)-shoulder_height_translated)<threshold)):
                     result.append([alpha, beta,forearm*math.cos(alpha)+arm*math.cos(beta)])
 
-        print("user_height " + str(user_height) + " mm. \n" +
+        self.get_logger().debug("user_height " + str(user_height) + " mm. \n" +
             "handlebar_height " + str(handlebar_height) + " mm. \n" +
             "age " + str(age) +"\n" + 
             "gender " + " " + gender )
@@ -125,8 +125,6 @@ class WalkerStability(Node):
             self.get_logger().debug("Max distance: " +str(max_d) + " m. min distance: " + str(min_d) + " m.")
             self.get_logger().debug("Current handlebar height: " +str(handlebar_height) + " mm. recommended: " + str((user_height) * 0.45 + 87 ))
         
-        HERE!!!
-        min_d + self.handle_x
         return (min_d, max_d)
 
 
@@ -174,13 +172,50 @@ class WalkerStability(Node):
             except Exception as e:
                 self.get_logger().error("Can't GET transform from handles frame  [" + self.left_handle_frame + ", " + self.right_handle_frame + "] into centroid frame [" + self.base_footprint_frame + "]: [" + str(e) + "]")   
                 return 
-            
+
             (self.bos_x_min,self.bos_x_max)  = self.get_bos_x(self.user_gender, self.user_age, self.user_height, self.handle_x, self.handle_z)
             # Stability depends on centroid distance to these
-            # centroid.x,self.bos_x_min,self.bos_x_max
-            # centroid.y,self.handle_y_min,self.handle_y_max
+            feet_handle_dist_x = self.handle_x - centroid.x
 
-            # publish ....
+            # stability in y axis: 0 in border or larger, max in center            
+            if (centroid.y<self.handle_y_min):
+                y_sta = 0
+            elif (centroid.y>self.handle_y_max):
+                y_sta = 0
+            else:
+                y_sta = (centroid.y - self.handle_y_min) / (self.handle_y_max - self.handle_y_min)
+
+            # stability in x axis: 0 in border or larger, max in center            
+            if (feet_handle_dist_x<self.bos_x_min):
+                x_sta = 0
+            elif (feet_handle_dist_x>self.bos_x_max):
+                x_sta = 0
+            else:
+                x_sta = (feet_handle_dist_x - self.bos_x_min) / (self.bos_x_max - self.bos_x_min)
+
+
+            # publish Stability data
+            outMsg = StabilityStamped()
+
+            # User ID
+            outMsg.uid = self.user_id
+
+            # User Tineti score
+            outMsg.tin = self.user_tinetti
+
+            # Stability value (0-1)
+            outMsg.sta = x_sta * y_sta
+
+            # User pose for given stability (m)  
+            outMsg.pose = PoseStamped()
+            # note: we could use walker pose instead, so it could have correct orientation
+            outMsg.pose.header = centroid.header
+            outMsg.pose.pose.position = centroid.point
+            outMsg.pose.pose.orientation.w = 1
+
+            # and publish 
+            self.stability_pub.publish(outMsg)
+
         else:
             self.get_logger().warn("No user description received yet. Ignoring centroid msg.")   
 
