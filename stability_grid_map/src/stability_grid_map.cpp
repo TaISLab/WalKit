@@ -195,7 +195,7 @@ void StabilityGridMap::merge_msg(const walker_msgs::msg::StabilityStamped::Share
       */ 
     
       //cellValue = stab_msg->sta * boost::math::pdf(nd, radius);
-      cellValue = stab_msg->sta * normal_pdf(radius, 0, 1/stab_msg->tin );
+      cellValue = stab_msg->sta * normal_pdf(radius, 0, 1/(stab_msg->tin +0.001));
 
       // update value
       maps_.at(stab_msg->uid, *iterator) *= cellValue;

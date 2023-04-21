@@ -147,12 +147,12 @@ class WalkerStability(Node):
                 self.user_gender = user_fields[4] # Femenino or Masculino
 
             if (len(user_fields)==7):
-                self.user_tinetti = int(user_fields[5])
+                self.user_tinetti = int(user_fields[5])/28.0
                 self.user_description = user_fields[6]
                 
             if (len(user_fields)==6):
-                self.get_logger().warn("No tinetti in user descr. Assuming 50%.")
-                self.user_tinetti = 50
+                self.get_logger().warn("No tinetti in user descr. Assuming 24 points")
+                self.user_tinetti = 24.0/28.0
                 self.user_description = user_fields[5]
             
 
