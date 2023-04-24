@@ -8,7 +8,7 @@ class FindMinimus(Node):
 
     def __init__(self, min_val_):
         super().__init__('minimus_finder')
-        self.subscription = self.create_subscription( LaserScan, 'scan_filtered', self.listener_callback, 10)
+        self.subscription = self.create_subscription( LaserScan, 'scan_nav', self.listener_callback, 10)
         self.min_val = min_val_
 
 
@@ -25,7 +25,7 @@ class FindMinimus(Node):
 def main(args=None):
     rclpy.init(args=args)
 
-    minimal_finder = FindMinimus(0.6)
+    minimal_finder = FindMinimus(0.8)
 
     rclpy.spin(minimal_finder)
 

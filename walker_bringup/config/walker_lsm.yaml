@@ -1,0 +1,72 @@
+laser_scan_matcher_node:
+  ros__parameters:
+    frequency: 30.0
+    delay: 3.0
+    magnetic_declination_radians: 0.0429351  # For lat/long 55.944831, -3.186998
+    yaw_offset: 1.570796327  # IMU reads 0 facing magnetic north, not east
+    zero_altitude: false
+    broadcast_utm_transform: true
+    publish_filtered_gps: false
+    use_odometry_yaw: false
+    wait_for_datum: false
+    publish_odom: /odom              # odometry topic name from laser_scan. Empty if not publishing
+    publish_tf: true                 # true if publish tf odom_frame -> base_frame"
+    base_frame: base_footprint       # robot base frame
+    odom_frame: odom                 # odom frame
+    map_frame: map                   # map frame
+    laser_scan_frame: laser          # laser frame
+    laser_scan_topic: /scan_nav      # Which topic to subscribe for the laser_scan
+    kf_dist_linear: 0.10             #  When to generate keyframe scan
+    kf_dist_angular: 0.087           # (~5.0º) When to generate keyframe scan
+  
+    # Laser params
+    range_min: -10.0              # Minimum range of the scan_laser_sensor. If -10 it will acquire the value of the laser_scan_topic.
+    range_max: -10.0              # Maximum range of the scan_laser_sensor. If -10 it will acquire the value of the laser_scan_topic.
+    angle_min: -10.0              # Minimum angle of the scan_laser_sensor. If -10 it will acquire the value of the laser_scan_topic.
+    range_samples_size: -10       # Number of samples of the scan_laser_sensor. If -10 it will acquire the value of the laser_scan_topic.
+    angle_increment: -10.0        # Angle increment of the scan_laser_sensor. If -10 it will acquire the value of the laser_scan_topic.
+
+    # CSM parameters - comments copied from algos.h (by Andrea Censi)
+    max_angular_correction_deg: 45.0         # Maximum angular displacement between scans.
+    max_linear_correction: 0.5               # Maximum translation between scans (m).
+    max_iterations: 40                       # Maximum ICP cycle iterationsr.
+    epsilon_xy: 0.000001                     # A threshold for stopping (m).
+    epsilon_theta: 0.000001                  # A threshold for stopping (rad).
+    max_correspondence_dist: 0.3             # Maximum distance for a correspondence to be valid.
+    sigma: 0.010                             # Noise in the scan (m).
+    use_corr_tricks: 1                       # Use smart tricks for finding correspondences.
+    restart: 0                               # Restart if error is over threshold.
+    restart_threshold_mean_error: 0.01       # Threshold for restarting.
+    restart_dt: 1.0                          # Displacement for restarting. (m).
+    restart_dtheta: 0.1                      # Displacement for restarting. (rad).
+    clustering_threshold: 0.25               # Max distance for staying in the same clustering.
+    orientation_neighbourhood: 20            # Number of neighbour rays used to estimate the orientation.
+    use_point_to_line_distance: 1            # If 0, it's vanilla ICP.
+    do_alpha_test: 0                         # Discard correspondences based on the angles.
+    do_alpha_test_thresholdDeg: 20.0         # Discard correspondences based on the angles - threshold angle, in degrees.
+    outliers_maxPerc: 0.9                    # Percentage of correspondences to consider: if 0.9, always discard the top 10% of correspondences with more error"
+  
+    # Parameters describing a simple adaptive algorithm for discarding.
+    #  1) Order the errors.
+    #  2) Choose the percentile according to outliers_adaptive_order.
+    #     (if it is 0.7, get the 70% percentile)
+    #  3) Define an adaptive threshold multiplying outliers_adaptive_mult
+    #     with the value of the error at the chosen percentile.
+    #  4) Discard correspondences over the threshold.
+    #  This is useful to be conservative; yet remove the biggest errors.
+    outliers_adaptive_order: 0.7
+    outliers_adaptive_mult: 2.0
+
+    # If you already have a guess of the solution, you can compute the polar angle
+    # of the points of one scan in the new position. If the polar angle is not a monotone
+    # function of the readings index, it means that the surface is not visible in the
+    # next position. If it is not visible, then we don't use it for matching.
+    do_visibility_test: 1
+    outliers_remove_doubles: 1  # No two points in laser_sens can have the same corr
+    do_compute_covariance: 0    # If 1, computes the covariance of ICP using the method http://purl.org/censi/2006/icpcov
+    debug_verify_tricks: 0      # Checks that find_correspondences_tricks gives the right answer.
+    use_ml_weights: 0           # If 1, the field 'true_alpha' (or 'alpha') in the first scan is used to 
+                                # compute the incidence beta, and the factor (1/cos^2(beta)) used to weight the 
+                                # correspondence.
+    use_sigma_weights: 0        # If 1, the field 'readings_sigma' in the second scan is used to weight the correspondence by 1/sigma^2
+    

@@ -16,13 +16,14 @@ windows:
     tags: ['core']
     panes:
       - ros2 launch rplidar_ros2  rplidar_launch.py inverted:=true
-      - ros2 run bwt901cl_pkg imu_bwt901cl      
-      - ros2 launch walker_diff_odom walker_diff_odom.launch.py
+      - ros2 launch walker_bringup laser_filter.launch.py
+      - ros2 launch walker_bringup nav_laser_filter.launch.py
+      - ros2 launch walker_bringup walker_lsm.launch.py
   - name: sensors2
     tags: ['core']
     panes:
-      - ros2 launch walker_bringup laser_filter.launch.py
-      - ros2 launch ros2_laser_scan_matcher demo_lsm.launch.py
+      - ros2 run bwt901cl_pkg imu_bwt901cl      
+#     - ros2 launch walker_diff_odom walker_diff_odom.launch.py
   - name: walker_description
     tags: ['core']
     panes:
@@ -41,14 +42,20 @@ windows:
       - ros2 launch walker_step_detector step_detector.launch.py
       - ros2 launch walker_loads partial_loads.launch.py
       - ros2 launch walker_centroid_support centroid_support.launch.py
+      - ros2 launch walker_stability walker_stability.launch.py
   - name: visualization
     tags: ['core']
     panes:
       - ros2 launch walker_step_detector plot_steps.launch.py      
       - ros2 run walker_plot plot_forces         # should add params and launch file ...
       - ros2 run walker_loads plot_loads.py      # should add params and launch file ...
+  - name: localisation
+    tags: ['localisation']
+    panes:
+      - ros2 launch walker_bringup walker_amcl.launch.py
+      # map should be read from somewhere more elegant ...
+      - ros2 launch walker_bringup walker_map_server.launch.py map:=/home/mfcarmona/workspace/walker_ws/src/WalKit/walker_bringup/maps/map_slam_interior.yaml
   - name: record
     tags: ['record']
     panes:
       - ros2 launch walker_bringup bag_recorder.launch.py
-

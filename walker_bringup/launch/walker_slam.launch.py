@@ -20,15 +20,12 @@ def generate_launch_description():
     declare_use_sim_time_argument = DeclareLaunchArgument(
         'use_sim_time',
         default_value='false',
-        description='Use simulation/Gazebo clock'
-    )
-
+        description='Use simulation/Gazebo clock')
     declare_slam_params_file_cmd = DeclareLaunchArgument(
         'slam_params_file',
-        default_value=os.path.join(get_package_share_directory("walker_slam"),
-                                   'config', 'mapper_params_online_async.yaml'),
-        description='Full path to the ROS2 parameters file to use for the slam_toolbox node'
-    )
+        default_value=os.path.join(get_package_share_directory("walker_bringup"),
+                                   'config', 'walker_slam.yaml'),
+        description='Full path to the ROS2 parameters file to use for the slam_toolbox node')
 
     start_async_slam_toolbox_node = Node(
         parameters=[
