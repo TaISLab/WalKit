@@ -3,6 +3,7 @@
 # These two variables should be adjusted accordingly. WARNING: Dont use '~' for home folder
 ROS2_WORKSPACE="/home/ubuntu/workspace/walker_ws"
 NETWORK_INTERFACE="wlan0"
+MAP_YAML=/home/ubuntu/workspace/walker_ws/src/WalKit/walker_bringup/maps/lab_1_3_10.yaml
 
 # This should grab IP address on wireless interface. It is needed for the web interface
 ROS2_IP=$(/sbin/ip -o -4 addr list $NETWORK_INTERFACE | grep dynamic | awk '{print $4}' | cut -d/ -f1)
