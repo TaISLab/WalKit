@@ -192,7 +192,6 @@
     <input type="range" min="1" max="100" value="42" class="slider" id="ageRange">
   </div>
 
-
   <!-- Height  -->
   <div class="slidecontainer">
     <p>Height: <span id="heightValue"></span> cm.</p>
@@ -205,6 +204,11 @@
     <input type="range" min="20" max="210" value="92" class="slider" id="WeightRange">
   </div>
 
+  <!-- Tinetti a.k.a. overall statiblity  -->
+  <div class="slidecontainer">
+    <p>Age: <span id="tinettiValue"></span> years</p>
+    <input type="range" min="0" max="28" value="24" class="slider" id="tinettiRange">
+  </div>
 
   <!-- medical condition -->
   <div id="condition_div">
@@ -256,6 +260,7 @@
     var imu_angle_listener = new ROSLIB.Topic({
       ros: ros,
       name: '/sensor/bwt901cl/Angle',
+      queue_length: 0,
       messageType: 'geometry_msgs/msg/Vector3'
     });
 
@@ -269,6 +274,7 @@
     var left_wheel_listener = new ROSLIB.Topic({
       ros: ros,
       name: '/left_wheel',
+      queue_length: 0,
       messageType: 'walker_msgs/msg/EncoderStamped'
     });
 
@@ -280,6 +286,7 @@
     var right_wheel_listener = new ROSLIB.Topic({
       ros: ros,
       name: '/right_wheel',
+      queue_length: 0,
       messageType: 'walker_msgs/msg/EncoderStamped'
     });
 
@@ -291,7 +298,7 @@
     var handle_height_listener = new ROSLIB.Topic({
       ros: ros,
       name: "/handle_height",
-      messageType: 'std_msgs/Int32',
+      messageType: 'std_msgs/Int32'
     });
 
     handle_height_listener.subscribe(function (m) {
@@ -311,6 +318,7 @@
       ros: ros,
       name: "/left_loads",
       messageType: 'walker_msgs/msg/StepStamped',
+      queue_length: 0,
       latch: false
     });
 
@@ -375,6 +383,7 @@
       ros: ros,
       name: "/odom",
       messageType: 'nav_msgs/msg/Odometry',
+      queue_length: 0,
       latch: false
     });
 
@@ -423,6 +432,7 @@
       ros: ros,
       name: "/right_loads",
       messageType: 'walker_msgs/msg/StepStamped',
+      queue_length: 0,
       latch: false
     });
 
@@ -486,6 +496,7 @@
       ros: ros,
       name: "/laser_poses",
       messageType: 'geometry_msgs/msg/PoseArray',
+      queue_length: 0,
       latch: false
     });
 
@@ -536,6 +547,7 @@
       ros: ros,
       name: "/left_hand_loads",
       messageType: 'walker_msgs/msg/ForceStamped',
+      queue_length: 0,
       latch: false
     });
 
@@ -565,6 +577,7 @@
       ros: ros,
       name: "/right_hand_loads",
       messageType: 'walker_msgs/msg/ForceStamped',
+      queue_length: 0,
       latch: false
     });
 
@@ -608,6 +621,7 @@
           document.getElementById("WeightValue").innerHTML + ':' +
           document.getElementById("user_id").value + ':' +
           document.getElementById('gender_tag_status').innerHTML + ':' +
+          document.getElementById("tinettiValue").innerHTML + ':' +
           document.getElementById("myTextarea").value
       });
       user_listener.publish(user_info);
@@ -819,6 +833,7 @@
       }
       user();
     };
+
     var slider_a = document.getElementById("ageRange");
     var output_a = document.getElementById("ageValue");
     output_a.innerHTML = slider_a.value;
@@ -853,6 +868,15 @@
 
     slider_hh.oninput = function () {
       output_hh.innerHTML = this.value;
+      user();
+    }
+
+    var slider_tin = document.getElementById("tinettiRange");
+    var output_tin = document.getElementById("tinettiValue");
+    output_tin.innerHTML = slider_tin.value;
+
+    slider_tin.oninput = function () {
+      output_tin.innerHTML = this.value;
       user();
     }
 

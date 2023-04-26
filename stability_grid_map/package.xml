@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>stability_grid_map</name>
+  <version>0.0.1</version>
+  <description>Node merging stability from multiple users.</description>
+  <author email="manolofc@gmail.com">Manuel Fernandez Carmona</author>
+  <maintainer email="manolofc@gmail.com">Manuel Fernandez Carmona</maintainer>
+
+  <license>BSD</license>
+  
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <build_depend>grid_map_cmake_helpers</build_depend>
+  
+  <depend>rclcpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>walker_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>grid_map_core</depend>
+  <depend>grid_map_msgs</depend>
+  <depend>grid_map_ros</depend>
+  <!-- 
+    MFC: overkill ...
+  <depend>libboost-random-dev
+  <depend>libboost-math-dev</depend>
+  </depend> -->
+  <depend>tf2</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <depend>tf2_ros</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

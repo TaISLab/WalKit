@@ -12,7 +12,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 
 
-install(DIRECTORY launch param script config
+install(DIRECTORY launch param script config maps
   DESTINATION share/${PROJECT_NAME}/
 )
 

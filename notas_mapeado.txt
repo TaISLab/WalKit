@@ -1,0 +1,36 @@
+
+source ~/workspace/walker_ws/install/setup.bash
+ros2 launch walker_bringup nav_laser_filter.launch.py use_sim_time:=True
+
+source ~/workspace/walker_ws/install/setup.bash
+ros2 launch walker_bringup walker_lsm.launch.py use_sim_time:=true
+
+source ~/workspace/walker_ws/install/setup.bash
+ros2 launch walker_bringup walker_rviz2.launch.py params_file:=/home/mfcarmona/.rviz2/default.rviz use_sim_time:=True
+
+source ~/workspace/walker_ws/install/setup.bash
+ros2 launch walker_bringup walker_amcl.launch.py use_sim_time:=true log_level:=debug
+
+source ~/workspace/walker_ws/install/setup.bash
+ros2 launch walker_bringup walker_map_server.launch.py use_sim_time:=True
+
+
+source ~/Descargas slam
+ros2 bag play slam2 --topics /robot_description /tf /scan /tf_static /scan_filtered --clock
+
+
+
+
+
+
+
+ros2 param get /map_server use_sim_time
+ros2 param get /rviz use_sim_time
+ros2 param get /amcl use_sim_time
+ros2 param get /laser_scan_matcher_node use_sim_time
+ros2 param get /scan_to_scan_filter_chain use_sim_time
+ros2 param get /transform_listener_impl_55db26a20aa0 use_sim_time
+ros2 param get /transform_listener_impl_55eb4b2c3eb0 use_sim_time
+ros2 param get /transform_listener_impl_56303c122720 use_sim_time
+
+ros2 param get /rosbag2_player use_sim_time
