@@ -86,8 +86,8 @@
         status_ = new_status;
     }
 
-    void LegsTracker::get_steps(walker_msgs::msg::StepStamped* step_r, walker_msgs::msg::StepStamped* step_l, double t){
-        
+    bool LegsTracker::get_steps(walker_msgs::msg::StepStamped* step_r, walker_msgs::msg::StepStamped* step_l, double t){
+        bool isDone = false;
         if (status_){
             *step_r = r_tracker.predict_step(t);
             *step_l = l_tracker.predict_step(t);
@@ -105,6 +105,10 @@
 
         }
 
+        //mfc dirty cheap trick
+        isDone = (step_r->position.header.frame_id != "ERROR") || (step_l->position.header.frame_id != "ERROR");
+
+        return isDone;
 
     }
 

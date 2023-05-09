@@ -72,8 +72,11 @@
 
     walker_msgs::msg::StepStamped TrackLeg::last_data(){
         walker_msgs::msg::StepStamped ans;
+        //mfc dirty cheap trick
+        ans.position.header.frame_id = "ERROR"; 
         if (is_init){
-            ans = step_list.back();
+            if (step_list.size()>=1)
+                ans = step_list.back();
         }
 
         return ans;        
@@ -107,6 +110,7 @@
             u.dt() = (ti-t)*1e-9;
 
             auto ekf_state = ekf.predict(sys, u);
+
 
             // option 1: consider closest detection 
             //           to current step position as

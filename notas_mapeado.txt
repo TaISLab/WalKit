@@ -5,8 +5,7 @@
 ros2 launch walker_analysis replay_rosbag.launch.py bag_folder:='/home/mfcarmona/bagsFolder/macrosad_mapping' bag_name:=20230320-170048-bag
 
 
-ros2 launch walker_analysis process_rosbag.launch.py  save_folder:='/media/mfcarmona/TOSHIBA EXT/SAVIA/rosbags_v1/new_csvs' bag_name:=20220218-175523-bag
-
+ros2 launch walker_analysis process_rosbag_stability.launch.py 
 
 
 

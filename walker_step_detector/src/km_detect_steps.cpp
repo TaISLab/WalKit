@@ -133,6 +133,9 @@ void KMDetectSteps::laserCallback(const sensor_msgs::msg::LaserScan::SharedPtr s
         }
 
         std::list<walker_msgs::msg::StepStamped> points = getCentroids(scan);
+
+
+
         kalman_tracker.add_detections(points);
     }
 
@@ -141,19 +144,24 @@ void KMDetectSteps::laserCallback(const sensor_msgs::msg::LaserScan::SharedPtr s
     walker_msgs::msg::StepStamped step_l;
     double t = (this->now()).nanoseconds();
 
-    kalman_tracker.get_steps(&step_r, &step_l, t);
+    bool got_steps = kalman_tracker.get_steps(&step_r, &step_l, t);
 
-    // publish lets
-    if (kalman_tracker.is_init){
-        right_detected_step_pub_->publish(step_r);
-        left_detected_step_pub_->publish(step_l);
-    }
+    if (got_steps){
 
-    if (is_debug){
-        publish_leg(step_r, 0);
-        publish_leg(step_l, 1);
-        publish_active_area();
-        RCLCPP_DEBUG(this->get_logger(), ".......\n\n"); 
+        // publish lets
+        if (kalman_tracker.is_init){
+            right_detected_step_pub_->publish(step_r);
+            left_detected_step_pub_->publish(step_l);
+        }
+
+        if (is_debug){
+            publish_leg(step_r, 0);
+            publish_leg(step_l, 1);
+            publish_active_area();
+            RCLCPP_DEBUG(this->get_logger(), ".......\n\n"); 
+        }
+    }else{
+        RCLCPP_WARN(this->get_logger(), "No valid clusters found, skipping");
     }
 }
 
