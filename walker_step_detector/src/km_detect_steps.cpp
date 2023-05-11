@@ -104,28 +104,28 @@ void KMDetectSteps::laserCallback(const sensor_msgs::msg::LaserScan::SharedPtr s
 
 
     // Find out which timestamp should be used for tfs
-    bool transform_available;
-    rclcpp::Time tf_time;
+//    bool transform_available;
+    rclcpp::Time tf_time = this->now();
 
     // Use time from scan header
     if (use_scan_header_stamp_for_tfs_){
         tf_time = scan->header.stamp;
-        try {
-            buffer_->lookupTransform(detected_steps_frame_, scan->header.frame_id, tf_time, rclcpp::Duration::from_seconds(1.0));
-            transform_available = buffer_->canTransform(detected_steps_frame_, scan->header.frame_id, tf_time);              
-        } catch(tf2::TransformException &e) {
-            RCLCPP_WARN(this->get_logger(), "No tf available");
-            transform_available = false;
-            
-        }
-    } else {
+//        try {
+//            buffer_->lookupTransform(detected_steps_frame_, scan->header.frame_id, tf_time, rclcpp::Duration::from_seconds(1.0));
+//            transform_available = buffer_->canTransform(detected_steps_frame_, scan->header.frame_id, tf_time);              
+//        } catch(tf2::TransformException &e) {
+//            RCLCPP_WARN (this->get_logger(), "No tf available from [%s] to [%s]. Reason [%s]", detected_steps_frame_.c_str(), scan->header.frame_id.c_str(), e.what());
+//            transform_available = false;
+//            
+//        }
+//    } else {
         // Otherwise just use the latest tf available
-        transform_available = buffer_->canTransform(detected_steps_frame_, scan->header.frame_id, tf_time);
+//        transform_available = buffer_->canTransform(detected_steps_frame_, scan->header.frame_id, tf_time);
     }
 
-    if(!transform_available) {
-        RCLCPP_WARN(this->get_logger(), "No TF available: step position will be extrapolated");
-    } else {     
+//    if(!transform_available) {
+//        RCLCPP_WARN (this->get_logger(), "Step position will be extrapolated: No tf available from [%s] to [%s]", detected_steps_frame_.c_str(), scan->header.frame_id.c_str());
+//    } else {     
 
         // clear rviz 
         if (is_debug){
@@ -137,7 +137,7 @@ void KMDetectSteps::laserCallback(const sensor_msgs::msg::LaserScan::SharedPtr s
 
 
         kalman_tracker.add_detections(points);
-    }
+//    }
 
     // get steps from Kalman set
     walker_msgs::msg::StepStamped step_r;
@@ -161,7 +161,7 @@ void KMDetectSteps::laserCallback(const sensor_msgs::msg::LaserScan::SharedPtr s
             RCLCPP_DEBUG(this->get_logger(), ".......\n\n"); 
         }
     }else{
-        RCLCPP_WARN(this->get_logger(), "No valid clusters found, skipping");
+        RCLCPP_WARN(this->get_logger(), "No valid clusters found, skipping\n");
     }
 }
 

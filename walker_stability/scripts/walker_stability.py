@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import pandas as pd
 import math
 import numpy as np
@@ -5,6 +7,7 @@ from os.path import join
 from sys import stderr
 
 import rclpy
+import tf2_geometry_msgs
 from rclpy.time import Time
 from rclpy.duration import Duration
 from rclpy.node import Node
@@ -79,7 +82,7 @@ class WalkerStability(Node):
         
         self.get_logger().info("user stability node started")  
 
-    def get_bos_x(self, gender, age, user_height_m, handlebar_height_m):
+    def get_bos_x(self, gender, age, user_height_m, handlebar_dist_m, handlebar_height_m):
         user_height = user_height_m *1000
         handlebar_height = handlebar_height_m *1000
 
@@ -112,11 +115,12 @@ class WalkerStability(Node):
 
         self.get_logger().debug("user_height " + str(user_height) + " mm. \n" +
             "handlebar_height " + str(handlebar_height) + " mm. \n" +
+            "handlebar_dist " + str(handlebar_dist_m*1000) + " mm. \n" +
             "age " + str(age) +"\n" + 
             "gender " + " " + gender )
         
         if (len(result)==0):
-            self.get_logger().warn("No solution recommended handlebar height: " + str((user_height) * 0.45 + 87 ))
+            self.get_logger().warn("No solution. Recommended handlebar height: " + str((user_height) * 0.45 + 87 ) + " mm.")
             max_d = 1
             min_d = -1
         else:
@@ -125,6 +129,9 @@ class WalkerStability(Node):
             self.get_logger().debug("Max distance: " +str(max_d) + " m. min distance: " + str(min_d) + " m.")
             self.get_logger().debug("Current handlebar height: " +str(handlebar_height) + " mm. recommended: " + str((user_height) * 0.45 + 87 ))
         
+        # dists asume handles are at x==0, so we need to adjust:
+        max_d = max_d + handlebar_dist_m
+        min_d = min_d + handlebar_dist_m
         return (min_d, max_d)
 
 
@@ -141,7 +148,7 @@ class WalkerStability(Node):
             if (len(user_fields)==6) or (len(user_fields)==7):
                 self.user_desc = msg.data
                 self.user_age = int(user_fields[0])
-                self.user_height = int(user_fields[1])
+                self.user_height = int(user_fields[1])/100.0
                 self.user_weight = int(user_fields[2])
                 self.user_id = user_fields[3]
                 self.user_gender = user_fields[4] # Femenino or Masculino
@@ -159,39 +166,74 @@ class WalkerStability(Node):
     def centroid_callback(self, msg):
 
         if self.has_user_data:    
-            # get latest tf
+
+            # Get current handle positions in local coordinates too
             try:
                 left_handle_transformation = self.tf_buffer.lookup_transform(self.base_footprint_frame, self.left_handle_frame, Time(seconds=0, nanoseconds=0), Duration(seconds=1.0))
-                right_handle_transformation = self.tf_buffer.lookup_transform(self.base_footprint_frame, self.right_handle_frame, Time(seconds=0, nanoseconds=0), Duration(seconds=1.0))
-                # Get current handle positions in local coordinates too
-                centroid = self.tf_buffer.transform(msg, self.base_footprint_frame)
-                self.handle_z = left_handle_transformation.transform.translation.z
-                self.handle_x = left_handle_transformation.transform.translation.x
-                self.handle_y_max = left_handle_transformation.transform.translation.y
-                self.handle_y_min = right_handle_transformation.transform.translation.y
             except Exception as e:
-                self.get_logger().error("Can't GET transform from handles frame  [" + self.left_handle_frame + ", " + self.right_handle_frame + "] into centroid frame [" + self.base_footprint_frame + "]: [" + str(e) + "]")   
+                self.get_logger().error("Can't GET transform from handle frame  [" + self.left_handle_frame +  "] into local frame [" + self.base_footprint_frame + "]: [" + str(e) + "]")   
+                return 
+            
+            try:            
+                right_handle_transformation = self.tf_buffer.lookup_transform(self.base_footprint_frame, self.right_handle_frame, Time(seconds=0, nanoseconds=0), Duration(seconds=1.0))
+            except Exception as e:
+                self.get_logger().error("Can't GET transform from handle frame  [" + self.right_handle_frame + "] into local frame [" + self.base_footprint_frame + "]: [" + str(e) + "]")   
                 return 
 
+            # get latest tf            
+            try:               
+                centroid = self.tf_buffer.transform(msg, self.base_footprint_frame)
+            except Exception as e:
+                self.get_logger().error("Can't GET transform from centroid frame  [" + msg.header.frame_id + "] into local frame [" + self.base_footprint_frame + "]: [" + str(e) + "]")   
+                return 
+
+            self.handle_z = left_handle_transformation.transform.translation.z
+            self.handle_x = left_handle_transformation.transform.translation.x
+            self.handle_y_max = left_handle_transformation.transform.translation.y
+            self.handle_y_min = right_handle_transformation.transform.translation.y
+
             (self.bos_x_min,self.bos_x_max)  = self.get_bos_x(self.user_gender, self.user_age, self.user_height, self.handle_x, self.handle_z)
-            # Stability depends on centroid distance to these
-            feet_handle_dist_x = self.handle_x - centroid.x
 
             # stability in y axis: 0 in border or larger, max in center            
-            if (centroid.y<self.handle_y_min):
-                y_sta = 0
-            elif (centroid.y>self.handle_y_max):
-                y_sta = 0
+            if (centroid.point.y<self.handle_y_min):
+                y_sta = 0.01
+            elif (centroid.point.y>self.handle_y_max):
+                y_sta = 0.01
             else:
-                y_sta = (centroid.y - self.handle_y_min) / (self.handle_y_max - self.handle_y_min)
+                y_best = (self.handle_y_max + self.handle_y_min)/2.0
+                # distance to the best position
+                y_sta = abs(centroid.point.y - y_best)  
+                # normalize to 0-1
+                y_sta = 2.0 * y_sta / (self.handle_y_max - self.handle_y_min)
 
             # stability in x axis: 0 in border or larger, max in center            
-            if (feet_handle_dist_x<self.bos_x_min):
-                x_sta = 0
-            elif (feet_handle_dist_x>self.bos_x_max):
-                x_sta = 0
+            if (centroid.point.x<self.bos_x_min):
+                x_sta = 0.01
+            elif (centroid.point.x>self.bos_x_max):
+                x_sta = 0.01
             else:
-                x_sta = (feet_handle_dist_x - self.bos_x_min) / (self.bos_x_max - self.bos_x_min)
+                x_best = (self.bos_x_max + self.bos_x_min)/2.0
+                # distance to the best position
+                x_sta = abs(centroid.point.x - x_best)  
+                # normalize to 0-1
+                x_sta = 2.0 * x_sta / (self.bos_x_max - self.bos_x_min)
+
+
+            self.get_logger().debug("x    BOS:")
+            self.get_logger().debug("Min    [" + str(round( self.bos_x_min, 2)) + "]")
+            self.get_logger().debug("Max    [" + str(round( self.bos_x_max, 2)) + "]")        
+            self.get_logger().debug("Middle [" + str(round((self.bos_x_max+self.bos_x_min)/2.0, 2)) + "]")   
+            self.get_logger().debug("Width  [" + str(round((self.bos_x_max-self.bos_x_min)/2.0, 2)) + "]\n")   
+            self.get_logger().debug("Centroid  [" + str(round(centroid.point.x, 2)) + "]")
+            self.get_logger().debug("Stability [" + str(round(x_sta, 2)) + "]\n\n")
+
+            self.get_logger().debug("y    BOS:")
+            self.get_logger().debug("Min    [" + str(round(self.handle_y_min, 2)) + "]")
+            self.get_logger().debug("Max    [" + str(round(self.handle_y_max, 2)) + "]")
+            self.get_logger().debug("Middle [" + str(round((self.handle_y_max+self.handle_y_min)/2.0, 2)) + "]")   
+            self.get_logger().debug("Width  [" + str(round((self.handle_y_max-self.handle_y_min)/2.0, 2)) + "]\n")   
+            self.get_logger().debug("Centroid  [" + str(round(centroid.point.y, 2)) + "]")
+            self.get_logger().debug("Stability [" + str(round(y_sta, 2)) + "]\n\n\n")
 
 
             # publish Stability data
@@ -211,16 +253,13 @@ class WalkerStability(Node):
             # note: we could use walker pose instead, so it could have correct orientation
             outMsg.pose.header = centroid.header
             outMsg.pose.pose.position = centroid.point
-            outMsg.pose.pose.orientation.w = 1
+            outMsg.pose.pose.orientation.w = 1.0
 
             # and publish 
             self.stability_pub.publish(outMsg)
 
         else:
             self.get_logger().warn("No user description received yet. Ignoring centroid msg.")   
-
-
-
 
 
 def main(args=None):

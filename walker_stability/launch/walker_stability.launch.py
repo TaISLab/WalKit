@@ -15,31 +15,21 @@ def generate_launch_description():
     ld = LaunchDescription()
 
     # Launching walker_loads node
-    walker_loads_node = Node(
-            package="walker_loads",
-            executable="partial_loads",
-            name="partial_loads",
+    walker_stability_node = Node(
+            package="walker_stability",
+            executable="walker_stability.py",
+            name="walker_stability_node",
             parameters= [
-                 {'handle_calibration_file': handle_calibration_file_path},
-                 {'left_handle_topic_name': '/left_handle'},
-                 {'right_handle_topic_name': '/right_handle'},
+                 {'stability_topic_name': '/user_stability'},
+                 {'centroid_topic_name': '/support_centroid'},
                  {'user_desc_topic_name': '/user_desc'},
-                 {'period': 0.05},
-                 {'speed_delta': 0.05},
-                 {'left_steps_topic_name': '/detected_step_left'},
-                 {'right_steps_topic_name': '/detected_step_right'},
-                 {'left_loads_topic_name': '/left_loads'},
-                 {'debug_output': False},
-                 {'right_loads_topic_name': '/right_loads'}                 
+                 {'base_footprint_frame': 'base_footprint'},
+                 {'left_handle_frame': 'left_handle_id'},
+                 {'right_handle_frame': 'right_handle_id'}
             ],
-            # Cheap way to reuse node with recorded rosbags
-#            remappings=[ ("detected_step_left", "new_detected_step_left"),
-#                         ("detected_step_right", "new_detected_step_right"),
-#                         ("left_loads", "new_left_loads"),
-#                         ("right_loads", "new_right_loads")]
     )
 
-    ld.add_action(walker_loads_node)
+    ld.add_action(walker_stability_node)
     
     return ld 
  

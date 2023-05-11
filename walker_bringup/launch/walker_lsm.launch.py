@@ -26,7 +26,9 @@ def generate_launch_description():
           {'use_sim_time': use_sim_time},
           {'laser_scan_frame': 'laser'},
           {'laser_scan_topic': '/scan_nav'},
-          {'publish_odom': '/odom'} 
+          {'publish_tf': True},
+          {'publish_odom': '/odom'},
+          {'odom_time_offset_ns': 300000000}
         ],
         package='ros2_laser_scan_matcher',
         executable='laser_scan_matcher',
