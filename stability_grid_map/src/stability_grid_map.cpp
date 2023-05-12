@@ -18,6 +18,9 @@ StabilityGridMap::StabilityGridMap()
   // layer containing all users data
   maps_.add( fusionLayerName_ , initMapVal_);
   
+  // Internal state vars:
+  newData_ = false;
+
   // transform buffer
   buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
   tfl_ = std::make_shared<tf2_ros::TransformListener>(*buffer_);
@@ -34,6 +37,7 @@ StabilityGridMap::StabilityGridMap()
     inputTopic_, 1,
     std::bind(&StabilityGridMap::callback, this, std::placeholders::_1));
 
+  
   //create timer callbacks: map rebuild
   mapFusionTimer_ = this->create_wall_timer(std::chrono::milliseconds(mapFusionTimerPeriodMilis_), std::bind(&StabilityGridMap::map_fusion_callback, this) );
 
@@ -58,10 +62,9 @@ bool StabilityGridMap::readParameters(){
   this->declare_parameter<double>("maps_resolution",  0.1);
   this->declare_parameter<double>("maps_origin_x",    6.0);
   this->declare_parameter<double>("maps_origin_y",    5.0);
-  this->declare_parameter<double>("maps_origin_y",    5.0);
   // TODO: how far do we update?
   this->declare_parameter<double>("update_radius",    1.2);
-  this->declare_parameter<double>("initial_map_value",0.5);
+  this->declare_parameter<double>("initial_map_value",0.0);
   // TODO: how often do we update and publish?
   this->declare_parameter<int>("map_fusion_timer_ms", 500);
   this->declare_parameter<int>("map_publish_timer_ms", 1000); 
@@ -104,42 +107,53 @@ bool StabilityGridMap::readParameters(){
 void StabilityGridMap::map_fusion_callback(){
   std::vector<std::string> layerNameList;
 
-  // one layer is the final fusion
+  layerNameList = maps_.getLayers();
+
+  // We have one layer for the final fusion
   int numLayers = layerNameList.size()-1;
 
-  if (isVerbose_) {
-    RCLCPP_INFO(this->get_logger(), "Fusing maps from [%d] users", numLayers);
-  }
-
-  //TODO which weight do we add to each layer??
-  //TODO do we even want to use a linear combination
-  double weight = 1.0/numLayers;
-
-  // iterate over layers in map collection
-  for (const auto & layerName : layerNameList) {
-    
-    if (layerName != fusionLayerName_){
-      // merge down
-      maps_[fusionLayerName_] += weight * maps_[layerName];
+  if (numLayers>0){
+    if (isVerbose_) {
+      RCLCPP_INFO(this->get_logger(), "Fusing maps from [%d] users", numLayers);
     }
-  }
-  //once added: reescale average layer, so that every cell is between 0-1
-  // const double minValue = maps_.get(fusionLayerName_).minCoeffOfFinites();
-  const double maxValue = maps_.get(fusionLayerName_).maxCoeffOfFinites();
-  
-  maps_[fusionLayerName_] = maps_[fusionLayerName_]/maxValue;
 
+    // fusion map is the weighted overlapping of each users cumulative data.
+    maps_.add(fusionLayerName_,0.0f);
+
+    //TODO which weight do we add to each layer??
+    //TODO do we even want to use a linear combination
+    double weight = 1.0/numLayers;
+
+    // iterate over layers in map collection
+    for (const auto & layerName : layerNameList) {
+      
+      if (layerName != fusionLayerName_){
+        // merge down
+        maps_[fusionLayerName_] += weight * maps_[layerName];
+      }
+    }
+    //once added: reescale average layer, so that every cell is between 0-1
+    // const double minValue = maps_.get(fusionLayerName_).minCoeffOfFinites();
+    const double maxValue = maps_.get(fusionLayerName_).maxCoeffOfFinites();
+    
+    maps_[fusionLayerName_] = maps_[fusionLayerName_]/maxValue;
+  } 
 }
 
 void StabilityGridMap::map_publishg_callback(){
-  if (isVerbose_){
-    RCLCPP_INFO(this->get_logger(), "publishing merged map");
-  }
-
   std::unique_ptr<grid_map_msgs::msg::GridMap> outputMessage;
 
-  outputMessage = grid_map::GridMapRosConverter::toMessage(maps_);
-  publisher_->publish(std::move(outputMessage));
+  if (newData_){
+    outputMessage = grid_map::GridMapRosConverter::toMessage(maps_);
+    outputMessage->header.stamp = this->now();
+    publisher_->publish(std::move(outputMessage));
+
+    if (isVerbose_){
+      RCLCPP_INFO(this->get_logger(), "publishing merged map");
+    }
+
+    newData_ = false;
+  }
 }
 
 void StabilityGridMap::merge_msg(const walker_msgs::msg::StabilityStamped::SharedPtr stab_msg){
@@ -157,22 +171,36 @@ void StabilityGridMap::merge_msg(const walker_msgs::msg::StabilityStamped::Share
   */
 
   globalPose = stab_msg->pose;
+  geometry_msgs::msg::TransformStamped transformStamped;
 
-  //Cast globalPose into map frame and get local center
-  // wait 1 sec until give up transform...
-  try {
-      localPose = buffer_->transform<geometry_msgs::msg::PoseStamped>(globalPose, mapsFrameID_, tf2::Duration(std::chrono::seconds(1)));
+  // transform with "latest" transform available...
+  try {               
+    transformStamped = buffer_->lookupTransform(
+        mapsFrameID_, globalPose.header.frame_id,
+        tf2::TimePointZero, 
+        tf2::Duration(std::chrono::milliseconds(50)));
   } catch (tf2::TransformException &e){
       RCLCPP_ERROR (this->get_logger(), "Cant transform from [%s] to [%s]. Reason [%s]", globalPose.header.frame_id.c_str(), mapsFrameID_.c_str(), e.what());
       return;
   }    
+  
+  tf2::doTransform(globalPose, localPose, transformStamped);
+
+  //if (isVerbose_) {
+  //  RCLCPP_INFO(this->get_logger(), "User is at   [%3.3f, %3.3f] [%s]", globalPose.pose.position.x, globalPose.pose.position.y, globalPose.header.frame_id.c_str() );
+  //  RCLCPP_INFO(this->get_logger(), "In map frame [%3.3f, %3.3f] [%s]", localPose.pose.position.x,  localPose.pose.position.y,  localPose.header.frame_id.c_str() );
+  //}
 
   // Use gridmap object to build circle iterator
   center.x() = localPose.pose.position.x;
   center.y() = localPose.pose.position.y;
 
+
   //boost::math::normal_distribution<double> nd(0, 1/stab_msg->tin);
 
+  if (isVerbose_) {
+    RCLCPP_INFO(this->get_logger(), "Update for user with TIN [%3.3f] Stability value [%3.3f]",stab_msg->tin, stab_msg->sta  );
+  }
   // we will update a circle around event position center.
   // TODO: ANY SHAPE IS POSSIBLE ...
   for (grid_map::CircleIterator iterator(maps_, center, updateRadius_); !iterator.isPastEnd(); ++iterator) {
@@ -195,15 +223,22 @@ void StabilityGridMap::merge_msg(const walker_msgs::msg::StabilityStamped::Share
       */ 
     
       //cellValue = stab_msg->sta * boost::math::pdf(nd, radius);
-      cellValue = stab_msg->sta * normal_pdf(radius, 0, 1/(stab_msg->tin +0.001));
-
+      double dispersion = normal_pdf(radius, 0, 1/(stab_msg->tin +0.001));
+      cellValue = stab_msg->sta * dispersion;
+      
       // update value
-      maps_.at(stab_msg->uid, *iterator) *= cellValue;
+      maps_.at(stab_msg->uid, *iterator) += cellValue;
+      if (isVerbose_) {
+        RCLCPP_INFO(this->get_logger(), "Cell[%3.3f, %3.3f] = sta*[%3.3f] = [%3.3f]", point.x(), point.y(), dispersion, maps_.at(stab_msg->uid, *iterator) );
+      }
+
   }
 
   if (isVerbose_) {
     RCLCPP_INFO(this->get_logger(), "Stability msg from user [%s] merged",stab_msg->uid.c_str() );
   }
+
+  newData_ = true;
 }
 
 /*

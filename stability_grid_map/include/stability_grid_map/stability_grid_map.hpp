@@ -93,6 +93,9 @@ private:
   //! Be verbose ...
   bool isVerbose_;
 
+  //! new messages arrived 
+  bool newData_;
+
   // tf2 objects
   std::shared_ptr<tf2_ros::Buffer> buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tfl_;

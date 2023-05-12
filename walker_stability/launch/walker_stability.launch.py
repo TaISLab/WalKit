@@ -7,9 +7,6 @@ from launch_ros.actions import Node
 import launch
 import os
 
-walker_loads_path = get_package_share_directory('walker_loads')
-handle_calibration_file_path = os.path.join( walker_loads_path, "config", "handle_calib.yaml")
-
 def generate_launch_description():
 
     ld = LaunchDescription()
