@@ -1,8 +1,23 @@
+ros2 bag play 20230320-170048-bag
+
+ros2 launch walker_analysis process_rosbag_stability.launch.py
 
 
 
 
-ros2 launch walker_analysis replay_rosbag.launch.py bag_folder:='/home/mfcarmona/bagsFolder/macrosad_mapping' bag_name:=20230320-165104-bag
+
+
+
+
+
+
+
+
+
+
+
+
+ros2 launch walker_analysis replay_rosbag.launch.py bag_folder:='/home/mfcarmona/bagsFolder/macrosad_mapping' bag_name:=20230320-170048-bag
 
 
 ros2 launch walker_analysis process_rosbag_stability.launch.py
