@@ -30,7 +30,7 @@ def generate_launch_description():
                  {'stability_topic':       'user_stability'},
                  {'stability_map_topic':   '/grid_map'},
                  {'is_verbose':            True },
-                 {'maps_frame_id':         'odom'},
+                 {'maps_frame_id':         'map'},
                  {'maps_size_x':           48.0},
                  {'maps_size_y':           40.0},
                  {'maps_resolution':       0.4},
