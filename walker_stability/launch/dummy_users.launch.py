@@ -6,6 +6,7 @@ from launch_ros.actions import Node
 '''
 ros2 launch stability_grid_map visualize_stability_gridmap.launch.py 
 ros2 launch walker_bringup walker_map_server.launch.py 
+ros2 launch stability_grid_map stability_gridmap.launch.py 
 ros2 launch walker_stability dummy_users.launch.py 
 
 '''
