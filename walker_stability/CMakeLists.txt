@@ -18,6 +18,11 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 
+install(PROGRAMS
+  scripts/dummy_user.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 # Install additional resources
 install(DIRECTORY launch config
   DESTINATION share/${PROJECT_NAME}/
