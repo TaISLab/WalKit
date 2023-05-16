@@ -137,7 +137,7 @@ void StabilityGridMap::map_fusion_callback(){
 
     // iterate over layers in map collection
     for(const auto &iter : tinetti_dict_) {
-      std::string layerName = iter->first;
+      std::string layerName = iter.first;
       weight = tinetti_dict_[layerName]/ totalWeight_;
       // merge down
       maps_[fusionLayerName_] += weight * maps_[layerName] ;
