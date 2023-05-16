@@ -145,7 +145,7 @@ void StabilityGridMap::map_fusion_callback(){
       if (layerName != fusionLayerName_){
         weight = tinetti_dict_[layerName]/ totalWeight_;
         if (isVerbose_) {
-          RCLCPP_INFO(this->get_logger(), "User [%s] weight [%3.3f]",stab_msg->uid.c_str(), weight );
+          RCLCPP_INFO(this->get_logger(), "User [%s] weight [%3.3f]",layerName.c_str(), weight );
         }
         // merge down
         maps_[fusionLayerName_] += weight * maps_[layerName] ;
