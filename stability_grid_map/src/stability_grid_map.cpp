@@ -120,6 +120,7 @@ void StabilityGridMap::map_fusion_callback(){
   if (numLayers>0){
     if (isVerbose_) {
       RCLCPP_INFO(this->get_logger(), "Fusing maps from [%d] users", numLayers);
+      RCLCPP_INFO(this->get_logger(), "Total weight [%3.3f]",totalWeight_ );
     }
 
     // fusion map is the weighted overlapping of each users cumulative data.
@@ -142,9 +143,12 @@ void StabilityGridMap::map_fusion_callback(){
     for (const auto & layerName : layerNameList) {
       
       if (layerName != fusionLayerName_){
-        weight = tinetti_dict_[layerName];
+        weight = tinetti_dict_[layerName]/ totalWeight_;
+        if (isVerbose_) {
+          RCLCPP_INFO(this->get_logger(), "User [%s] weight [%3.3f]",stab_msg->uid.c_str(), weight );
+        }
         // merge down
-        maps_[fusionLayerName_] += weight * maps_[layerName] / totalWeight_;
+        maps_[fusionLayerName_] += weight * maps_[layerName] ;
       }
     }
     //once added: reescale average layer, so that every cell is between 0-1
@@ -252,9 +256,6 @@ void StabilityGridMap::merge_msg(const walker_msgs::msg::StabilityStamped::Share
 
       // update value
       maps_.at(stab_msg->uid, *iterator) = (prev_value*(n_readings-1.0) + cellValue ) / n_readings;
-      if (cellValue < maps_.at(stab_msg->uid, *iterator)){
-        maps_.at(stab_msg->uid, *iterator) = cellValue;
-      }
 
       if (isVerbose_) {
         RCLCPP_INFO(this->get_logger(), "Final val = [%3.3f]", maps_.at(stab_msg->uid, *iterator) );
