@@ -52,4 +52,19 @@ def generate_launch_description():
     )
     ld.add_action(node_4)
 
+    node_zero=Node(
+        package = 'walker_stability',
+        executable = 'dummy_user.py',
+        name = 'dummy_user_zero',
+        parameters = [config]
+    )
+    ld.add_action(node_zero)
+    
+    node_one=Node(
+        package = 'walker_stability',
+        executable = 'dummy_user.py',
+        name = 'dummy_user_one',
+        parameters = [config]
+    )
+    ld.add_action(node_one)
     return ld

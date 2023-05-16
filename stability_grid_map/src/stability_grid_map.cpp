@@ -18,6 +18,15 @@ StabilityGridMap::StabilityGridMap()
   // layer containing all users data
   maps_.add( fusionLayerName_ , initMapVal_);
   
+
+  rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr pub = this->create_publisher<nav_msgs::msg::OccupancyGrid>(
+      "occupancy_grid_global" , rclcpp::QoS(1).transient_local());
+    occGridPubs_[fusionLayerName_] = pub;
+
+
+  // In case we want to draw it
+  maps_.add( "elevation" , -0.01);
+
   // Internal state vars:
   newData_ = false;
   totalWeight_ = 0.0;
@@ -156,11 +165,23 @@ void StabilityGridMap::map_fusion_callback(){
 
 void StabilityGridMap::map_publishg_callback(){
   std::unique_ptr<grid_map_msgs::msg::GridMap> outputMessage;
-
+  nav_msgs::msg::OccupancyGrid occupancyGrid;
+  
   if (newData_ || isVerbose_){
     outputMessage = grid_map::GridMapRosConverter::toMessage(maps_);
     outputMessage->header.stamp = this->now();
     publisher_->publish(std::move(outputMessage));
+
+    for(const auto &iter : tinetti_dict_) {
+      std::string layerName = iter.first;
+
+      grid_map::GridMapRosConverter::toOccupancyGrid(maps_,layerName, 0.0, 1.0, occupancyGrid);
+      occGridPubs_[layerName]->publish(occupancyGrid);
+    }
+
+    grid_map::GridMapRosConverter::toOccupancyGrid(maps_,fusionLayerName_, 0.0, 1.0, occupancyGrid);
+    occGridPubs_[fusionLayerName_]->publish(occupancyGrid);
+  
 
     if (isVerbose_){
       RCLCPP_INFO(this->get_logger(), "publishing merged map");
@@ -245,15 +266,15 @@ void StabilityGridMap::merge_msg(const walker_msgs::msg::StabilityStamped::Share
       cellValue = stab_msg->sta * dispersion;
       
       if (isVerbose_) {
-        RCLCPP_INFO(this->get_logger(), "Cell[%3.3f, %3.3f| %3.3f] = [%3.3f]", point.x(), point.y(),radius, maps_.at(stab_msg->uid, *iterator) );
-        RCLCPP_INFO(this->get_logger(), "sta *dispersion = [%3.3f] * [%3.3f]", cellValue, dispersion);
+        RCLCPP_INFO(this->get_logger(), "Cell[%3.3f, %3.3f][%3.3f] = [%3.3f]", point.x(), point.y(),radius, maps_.at(stab_msg->uid, *iterator) );
+        RCLCPP_INFO(this->get_logger(), "sta *dispersion[%3.3f] =  [%3.3f]", dispersion, cellValue);
       }
 
       // update value
       maps_.at(stab_msg->uid, *iterator) = (prev_value*(n_readings-1.0) + cellValue ) / n_readings;
 
       if (isVerbose_) {
-        RCLCPP_INFO(this->get_logger(), "Final val = [%3.3f]", maps_.at(stab_msg->uid, *iterator) );
+        RCLCPP_INFO(this->get_logger(), "Final val [%3.0f reads] = [%3.3f]", n_readings, maps_.at(stab_msg->uid, *iterator) );
       }
 
   }
@@ -313,6 +334,11 @@ void StabilityGridMap::callback(const walker_msgs::msg::StabilityStamped::Shared
     maps_.add(stab_msg->uid, initMapVal_); 
     // keep count
     maps_.add(stab_msg->uid + "_count", 0); 
+
+    rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr pub = this->create_publisher<nav_msgs::msg::OccupancyGrid>(
+      "occupancy_grid_" + stab_msg->uid , rclcpp::QoS(1).transient_local());
+    occGridPubs_[stab_msg->uid] = pub;
+    
     if (isVerbose_) {
       RCLCPP_INFO(this->get_logger(), "First msg from user [%s]",stab_msg->uid.c_str() );
     }

@@ -54,7 +54,8 @@ def generate_launch_description():
     ld.add_action(declare_rviz_config_file_cmd)
 
     # Add node actions to the launch description
-    ld.add_action(grid_map_visualization_node)
+    # had problems with the visualization node ...
+    #ld.add_action(grid_map_visualization_node)
     ld.add_action(rviz2_node)
 
     return ld

@@ -17,6 +17,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <grid_map_ros/grid_map_ros.hpp>
 
+#include <nav_msgs/msg/occupancy_grid.hpp>
 
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/buffer.h>
@@ -82,6 +83,10 @@ private:
 
   std::list<walker_msgs::msg::StabilityStamped> msgLog_;
   std::map<std::string, double> tinetti_dict_;
+  std::map<std::string, rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr> occGridPubs_;
+
+
+
   double totalWeight_;
 
   grid_map::GridMap maps_;
