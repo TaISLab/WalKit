@@ -110,16 +110,12 @@ bool StabilityGridMap::readParameters(){
 
 //global map rebuild
 void StabilityGridMap::map_fusion_callback(){
-  std::vector<std::string> layerNameList;
-
-  layerNameList = maps_.getLayers();
-
   // We have one layer for the final fusion
-  int numLayers = layerNameList.size()-1;
+  int numUsers = tinetti_dict_.size();
 
-  if (numLayers>0){
+  if (numUsers>0){
     if (isVerbose_) {
-      RCLCPP_INFO(this->get_logger(), "Fusing maps from [%d] users", numLayers);
+      RCLCPP_INFO(this->get_logger(), "Fusing maps from [%d] users", numUsers);
       RCLCPP_INFO(this->get_logger(), "Total weight [%3.3f]",totalWeight_ );
     }
 
@@ -140,16 +136,15 @@ void StabilityGridMap::map_fusion_callback(){
 
 
     // iterate over layers in map collection
-    for (const auto & layerName : layerNameList) {
+    for(std::map<std::string,double>::iterator iter = tinetti_dict_.begin(); iter != tinetti_dict_.end(); ++iter) {
+      std::map<std::string layerName = iter->first;
+      weight = tinetti_dict_[layerName]/ totalWeight_;
+      // merge down
+      maps_[fusionLayerName_] += weight * maps_[layerName] ;
       
-      if (layerName != fusionLayerName_){
-        weight = tinetti_dict_[layerName]/ totalWeight_;
-        if (isVerbose_) {
-          RCLCPP_INFO(this->get_logger(), "User [%s] weight [%3.3f]",layerName.c_str(), weight );
-        }
-        // merge down
-        maps_[fusionLayerName_] += weight * maps_[layerName] ;
-      }
+      if (isVerbose_) {
+        RCLCPP_INFO(this->get_logger(), "User [%s] weight [%3.3f]",layerName.c_str(), weight );
+      }      
     }
     //once added: reescale average layer, so that every cell is between 0-1
     // const double minValue = maps_.get(fusionLayerName_).minCoeffOfFinites();
