@@ -81,7 +81,9 @@ private:
   const std::string fusionLayerName_ = "fusion";
 
   std::list<walker_msgs::msg::StabilityStamped> msgLog_;
-  
+  std::map<std::string, double> tinetti_dict_;
+  double totalWeight_;
+
   grid_map::GridMap maps_;
 
   //! Name of the input stability topic.
@@ -107,6 +109,7 @@ private:
   double mapsOriginX_;
   double mapsOriginY_;
   double updateRadius_;
+  double updateSigma_;
   int mapFusionTimerPeriodMilis_;
   int mapPublishTimerPeriodMilis_;
 

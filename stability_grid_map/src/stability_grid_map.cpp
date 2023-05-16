@@ -20,6 +20,7 @@ StabilityGridMap::StabilityGridMap()
   
   // Internal state vars:
   newData_ = false;
+  totalWeight_ = 0.0;
 
   // transform buffer
   buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
@@ -64,6 +65,8 @@ bool StabilityGridMap::readParameters(){
   this->declare_parameter<double>("maps_origin_y",    5.0);
   // TODO: how far do we update?
   this->declare_parameter<double>("update_radius",    1.2);
+  // TODO: how strong the fadding
+  this->declare_parameter<double>("update_sigma",    1);
   this->declare_parameter<double>("initial_map_value",0.0);
   // TODO: how often do we update and publish?
   this->declare_parameter<int>("map_fusion_timer_ms", 500);
@@ -80,6 +83,7 @@ bool StabilityGridMap::readParameters(){
   this->get_parameter("maps_origin_x", mapsOriginX_);
   this->get_parameter("maps_origin_y", mapsOriginY_);  
   this->get_parameter("update_radius", updateRadius_);
+  this->get_parameter("update_sigma", updateSigma_);
   this->get_parameter("initial_map_value", initMapVal_);
   this->get_parameter("map_fusion_timer_ms", mapFusionTimerPeriodMilis_);
   this->get_parameter("map_publish_timer_ms", mapPublishTimerPeriodMilis_);
@@ -95,6 +99,7 @@ bool StabilityGridMap::readParameters(){
     RCLCPP_INFO(this->get_logger(), "maps_origin_x: [%3.3f]", mapsOriginX_);
     RCLCPP_INFO(this->get_logger(), "maps_origin_y: [%3.3f]", mapsOriginY_);
     RCLCPP_INFO(this->get_logger(), "update_radius: [%3.3f]", updateRadius_);
+    RCLCPP_INFO(this->get_logger(), "update_sigma: [%3.3f]", updateSigma_);
     RCLCPP_INFO(this->get_logger(), "initial_map_value: [%3.3f]", initMapVal_);
     RCLCPP_INFO(this->get_logger(), "map_fusion_timer_ms: [%d]", mapFusionTimerPeriodMilis_);
     RCLCPP_INFO(this->get_logger(), "map_publish_timer_ms: [%d]", mapPublishTimerPeriodMilis_);    
@@ -122,14 +127,24 @@ void StabilityGridMap::map_fusion_callback(){
 
     //TODO which weight do we add to each layer??
     //TODO do we even want to use a linear combination
-    double weight = 1.0/numLayers;
+    double weight;
+      
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // TODO:NO USAR GRIDMAPS: NEGRO INESTABLE Y BLANCO ESTABLE
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+      // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      // TODO: GENERAR MAPAS USUARIOS 1 a 4 y GLOBAL
+      // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 
     // iterate over layers in map collection
     for (const auto & layerName : layerNameList) {
       
       if (layerName != fusionLayerName_){
+        weight = tinetti_dict_[layerName];
         // merge down
-        maps_[fusionLayerName_] += weight * maps_[layerName];
+        maps_[fusionLayerName_] += weight * maps_[layerName] / totalWeight_;
       }
     }
     //once added: reescale average layer, so that every cell is between 0-1
@@ -143,7 +158,7 @@ void StabilityGridMap::map_fusion_callback(){
 void StabilityGridMap::map_publishg_callback(){
   std::unique_ptr<grid_map_msgs::msg::GridMap> outputMessage;
 
-  if (newData_){
+  if (newData_ || isVerbose_){
     outputMessage = grid_map::GridMapRosConverter::toMessage(maps_);
     outputMessage->header.stamp = this->now();
     publisher_->publish(std::move(outputMessage));
@@ -195,15 +210,17 @@ void StabilityGridMap::merge_msg(const walker_msgs::msg::StabilityStamped::Share
   center.x() = localPose.pose.position.x;
   center.y() = localPose.pose.position.y;
 
-
   //boost::math::normal_distribution<double> nd(0, 1/stab_msg->tin);
 
   if (isVerbose_) {
-    RCLCPP_INFO(this->get_logger(), "Update for user with TIN [%3.3f] Stability value [%3.3f]",stab_msg->tin, stab_msg->sta  );
+    RCLCPP_INFO(this->get_logger(), "Update for user [%s] with TIN [%3.3f] Stability value [%3.3f]",stab_msg->uid.c_str(), stab_msg->tin, stab_msg->sta  );
   }
   // we will update a circle around event position center.
   // TODO: ANY SHAPE IS POSSIBLE ...
   for (grid_map::CircleIterator iterator(maps_, center, updateRadius_); !iterator.isPastEnd(); ++iterator) {
+
+      // keep count
+      maps_.at(stab_msg->uid + "_count", *iterator) += 1.0;
 
       ind = *iterator;
       // get cell center of current cell in the map frame.            
@@ -213,8 +230,10 @@ void StabilityGridMap::merge_msg(const walker_msgs::msg::StabilityStamped::Share
       radius = std::sqrt( std::pow(center.x()-point.x(), 2.0) + std::pow(center.y()-point.y(), 2.0) );
 
       // prior value
-      // maps_.at(stab_msg->uid, *iterator);
+      double prev_value = maps_.at(stab_msg->uid, *iterator);
 
+      // number of readings plus one
+      double n_readings =  maps_.at(stab_msg->uid + "_count", *iterator) ;
       /*TODO: magic goes here. We have:
         - radius         distance to event 
         - stab_msg->sta  event value
@@ -222,14 +241,23 @@ void StabilityGridMap::merge_msg(const walker_msgs::msg::StabilityStamped::Share
 
       */ 
     
-      //cellValue = stab_msg->sta * boost::math::pdf(nd, radius);
-      double dispersion = normal_pdf(radius, 0, 1/(stab_msg->tin +0.001));
+      
+      double dispersion = normal_pdf(radius, 0, updateSigma_);
       cellValue = stab_msg->sta * dispersion;
       
-      // update value
-      maps_.at(stab_msg->uid, *iterator) += cellValue;
       if (isVerbose_) {
-        RCLCPP_INFO(this->get_logger(), "Cell[%3.3f, %3.3f] = sta*[%3.3f] = [%3.3f]", point.x(), point.y(), dispersion, maps_.at(stab_msg->uid, *iterator) );
+        RCLCPP_INFO(this->get_logger(), "Cell[%3.3f, %3.3f| %3.3f] = [%3.3f]", point.x(), point.y(),radius, maps_.at(stab_msg->uid, *iterator) );
+        RCLCPP_INFO(this->get_logger(), "sta *dispersion = [%3.3f] * [%3.3f]", cellValue, dispersion);
+      }
+
+      // update value
+      maps_.at(stab_msg->uid, *iterator) = (prev_value*(n_readings-1.0) + cellValue ) / n_readings;
+      if (cellValue < maps_.at(stab_msg->uid, *iterator)){
+        maps_.at(stab_msg->uid, *iterator) = cellValue;
+      }
+
+      if (isVerbose_) {
+        RCLCPP_INFO(this->get_logger(), "Final val = [%3.3f]", maps_.at(stab_msg->uid, *iterator) );
       }
 
   }
@@ -282,8 +310,13 @@ void StabilityGridMap::callback(const walker_msgs::msg::StabilityStamped::Shared
 
   // create the the layer if does not exitst
   if (!maps_.exists(stab_msg->uid)) {   
+    // store its tinetti value
+    tinetti_dict_[stab_msg->uid] = stab_msg->tin;
+    totalWeight_+= stab_msg->tin;
     // we use an uniform log(Prob) 
     maps_.add(stab_msg->uid, initMapVal_); 
+    // keep count
+    maps_.add(stab_msg->uid + "_count", 0); 
     if (isVerbose_) {
       RCLCPP_INFO(this->get_logger(), "First msg from user [%s]",stab_msg->uid.c_str() );
     }

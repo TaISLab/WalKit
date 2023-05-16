@@ -8,6 +8,7 @@ from sys import stderr
 
 import rclpy
 import tf2_geometry_msgs
+import squaternion
 from rclpy.time import Time
 from rclpy.duration import Duration
 from rclpy.node import Node
@@ -17,8 +18,9 @@ from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
 from ament_index_python.packages import get_package_share_directory
 
+
 from std_msgs.msg import String
-from geometry_msgs.msg import PointStamped, PoseStamped
+from geometry_msgs.msg import PointStamped, PoseStamped, Quaternion
 from walker_msgs.msg import StabilityStamped
 
 
@@ -80,6 +82,7 @@ class DummyUser(Node):
 
         # ROS stuff
         self.stability_pub  = self.create_publisher(StabilityStamped, self.stability_topic_name,  10)
+        self.point_pub  = self.create_publisher(PoseStamped, self.user_id + "_pose",  10)
                 
         # Create a timer 
         self.timer = self.create_timer(self.timer_period, self.callback)
@@ -88,7 +91,7 @@ class DummyUser(Node):
 
 
     def callback(self):
-        self.sendStability(self.x_pose[self.i], self.y_pose[self.i], self.s_pose[self.i])
+        self.sendStability()
 
         #self.get_logger().warn("We are at [" + str(round( self.x_pose[self.i],2)) +  ", " + str(round( self.y_pose[self.i],2)) +  " ].\n\n")   
 
@@ -98,7 +101,18 @@ class DummyUser(Node):
             self.i =self.i+1
 
 
-    def sendStability(self, x,y, sta):
+    def sendStability(self):
+        x = self.x_pose[self.i]
+        y = self.y_pose[self.i]
+        sta= self.s_pose[self.i]
+        prev_x = self.x_pose[0]
+        prev_y = self.y_pose[0]
+
+        if (self.i>0):
+            prev_x = self.x_pose[self.i-1]
+            prev_y = self.y_pose[self.i-1]
+        
+
         # Stability msg
         outMsg = StabilityStamped()
 
@@ -118,10 +132,19 @@ class DummyUser(Node):
 
         outMsg.pose.pose.position.x = x
         outMsg.pose.pose.position.y = y
-        outMsg.pose.pose.orientation.w = 1.0
+
+        yaw = np.arctan2(y - prev_y, x - prev_x)
+        quat = squaternion.Quaternion.from_euler(0.0, 0.0, yaw)
+                
+        outMsg.pose.pose.orientation.w = quat[0]
+        outMsg.pose.pose.orientation.x = quat[1]
+        outMsg.pose.pose.orientation.y = quat[2]
+        outMsg.pose.pose.orientation.z = quat[3]
 
         # and publish 
         self.stability_pub.publish(outMsg)
+        # and publish 
+        self.point_pub.publish(outMsg.pose)
         #self.get_logger().warn("We are at [" + str(round(x ,2)) +  ", " + str(round(y ,2)) +  " ].\n\n")   
 
 

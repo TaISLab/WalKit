@@ -1,10 +1,40 @@
 grid_map_visualization:
   ros__parameters:
     grid_map_topic: /grid_map
-    grid_map_visualizations: [occupancy_grid]
+    grid_map_visualizations: [occupancy_grid, occupancy_grid_user_1, occupancy_grid_user_2, occupancy_grid_user_3, occupancy_grid_user_4]
     occupancy_grid:
         type: occupancy_grid
         params:
           layer: fusion
+          data_min: 0.0
+          data_max: 1.0
+    occupancy_grid_user_1:
+        type: occupancy_grid
+        params:
+          layer: user1
+          data_min: 0.0
+          data_max: 1.0
+    occupancy_grid_user_2:
+        type: occupancy_grid
+        params:
+          layer: user1
+          data_min: 0.0
+          data_max: 1.0
+    occupancy_grid_user_2:
+        type: occupancy_grid
+        params:
+          layer: user1
+          data_min: 0.0
+          data_max: 1.0
+    occupancy_grid_user_3:
+        type: occupancy_grid
+        params:
+          layer: user1
+          data_min: 0.0
+          data_max: 1.0
+    occupancy_grid_user_4:
+        type: occupancy_grid
+        params:
+          layer: user4
           data_min: 0.0
           data_max: 1.0

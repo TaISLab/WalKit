@@ -37,9 +37,10 @@ def generate_launch_description():
                  {'maps_origin_x':         0.0},
                  {'maps_origin_y':         0.0},
                  {'update_radius':         1.2},
-                 {'initial_map_value':     0.0},
-                 {'map_fusion_timer_ms':   500},
-                 {'map_publish_timer_ms':  1000},
+                 {'update_sigma':          1.0},
+                 {'initial_map_value':     1.0},
+                 {'map_fusion_timer_ms':   250},
+                 {'map_publish_timer_ms':  500},
                  {'use_sim_time':          use_sim_time}
             ],
     )
