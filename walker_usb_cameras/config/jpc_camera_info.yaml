@@ -1,0 +1,26 @@
+image_width: 800
+image_height: 600
+camera_name: jp_camera
+camera_matrix:
+  rows: 3
+  cols: 3
+  data: [873.95806,   0.     , 412.83788,
+           0.     , 871.86426, 302.696  ,
+           0.     ,   0.     ,   1.     ]
+distortion_model: plumb_bob
+distortion_coefficients:
+  rows: 1
+  cols: 5
+  data: [-0.007350, -0.041411, 0.004148, 0.004260, 0.000000]
+rectification_matrix:
+  rows: 3
+  cols: 3
+  data: [1., 0., 0.,
+         0., 1., 0.,
+         0., 0., 1.]
+projection_matrix:
+  rows: 3
+  cols: 4
+  data: [870.1192 ,   0.     , 414.95169,   0.     ,
+           0.     , 870.0636 , 303.68031,   0.     ,
+           0.     ,   0.     ,   1.     ,   0.     ]
