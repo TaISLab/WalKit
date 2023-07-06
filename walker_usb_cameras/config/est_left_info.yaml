@@ -1,0 +1,26 @@
+image_width: 800
+image_height: 600
+camera_name: est_camera/left
+camera_matrix:
+  rows: 3
+  cols: 3
+  data: [535.92448,   0.     , 408.33149,
+           0.     , 535.56791, 290.58099,
+           0.     ,   0.     ,   1.     ]
+distortion_model: plumb_bob
+distortion_coefficients:
+  rows: 1
+  cols: 5
+  data: [0.027247, -0.064724, -0.004917, 0.013625, 0.000000]
+rectification_matrix:
+  rows: 3
+  cols: 3
+  data: [ 0.99774391,  0.00577536,  0.06688594,
+         -0.00590518,  0.99998104,  0.00174332,
+         -0.0668746 , -0.00213436,  0.99775911]
+projection_matrix:
+  rows: 3
+  cols: 4
+  data: [546.21922,   0.     , 368.24536,   0.     ,
+           0.     , 546.21922, 286.27688,   0.     ,
+           0.     ,   0.     ,   1.     ,   0.     ]

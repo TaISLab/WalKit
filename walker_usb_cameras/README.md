@@ -7,7 +7,9 @@ This file is mostly a summary from info taken at:
 
 [navigation tutorials: calibrating the camera](https://navigation.ros.org/tutorials/docs/camera_calibration.html)
 
-TODO: stereo cams. There is a tutorial [here](http://wiki.ros.org/camera_calibration/Tutorials/StereoCalibration) that can be summarised.
+[stereo calibration](http://wiki.ros.org/camera_calibration/Tutorials/StereoCalibration)
+
+[ros2 stereo calibration](https://jeffzzq.medium.com/ros2-image-pipeline-tutorial-3b18903e7329)
 ## Check USB Camera
 First step is check that camera works on our system.
 
@@ -140,3 +142,18 @@ Inside the tar file, “ost.yaml” file is our camera_info.yaml, save from the 
 
 ## launcher file
 Last step is to create a launch file that uses our params.yaml to configure our camera. There is one at launch folder that can be used as template, just by changing the params.yaml file.
+
+
+
+
+## STEREO USB Cameras
+
+Create configuration file individually for each camera and create a launcher file with two 'usb_cam_node_exe' nodes, one per camera (see est_camera.launch.py as example).
+
+Now proceed with calibration, but tell calibrator to use two cameras, i.e.
+```console
+ros2 run camera_calibration cameracalibrator --size 7x9 --square 0.02 --no-service-check  --approximate=0.3  --ros-args -p camera:=/est_camera  --remap /left:=/camera/left/image_raw   --remap /right:=/camera/right/image_raw
+
+    
+
+```
