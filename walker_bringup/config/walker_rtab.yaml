@@ -1,0 +1,25 @@
+session: walker_ros2
+init_cmd: |
+  # Any config variable goes here.
+  source ~/.walker_cfg.bash
+  # This configures scripts to work and sources workspace
+  source $ROS2_WORKSPACE/src/WalKit/walker_bringup/script/walker_config.bash
+windows:
+  - name: sensors1
+    tags: ['core']
+    panes:
+      - ros2 launch rplidar_ros2  rplidar_launch.py inverted:=true
+      - ros2 launch walker_bringup laser_filter.launch.py
+      - ros2 launch walker_bringup nav_laser_filter.launch.py
+  - name: sensors2
+    tags: ['core']
+    panes:
+      - ros2 run witmotion_ros witmotion_ros_node --ros-args --params-file $ROS2_WORKSPACE/src/WalKit/walker_bringup/config/wt901.yaml
+      - ros2 launch realsense2_camera rs_launch.py enable_sync:=true device_type:=d435 publish_tf:=false global_time_enabled:=false  initial_reset:=true
+
+  - name: walker_description
+    tags: ['core']
+    panes:
+    # walker physical dimensions are in xacro AND  params.yaml files in walker_description package
+      - ros2 launch walker_description walker_state_publisher.launch.py
+      - ros2 run walker_description handle_tf_publisher.py
