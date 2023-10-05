@@ -22,7 +22,10 @@
     <xacro:arg name="witmotion_pos_z_prop" default="0.305"/>
     <xacro:arg name="witmotion_size_x_prop" default="0.0513"/>
     <xacro:arg name="witmotion_size_y_prop" default="0.036"/>
-    <xacro:arg name="witmotion_size_z_prop" default="0.015"/>    
+    <xacro:arg name="witmotion_size_z_prop" default="0.015"/>
+    <xacro:arg name="camera_pos_x_prop" default="0.6"/>
+    <xacro:arg name="camera_pos_y_prop" default="0.00"/>
+    <xacro:arg name="camera_pos_z_prop" default="0.305"/>    
     <!-- Handle links are managed by handle_tf_publisher.py -->
     <!-- leapmotion link should be calculated elsewhere -->
 
@@ -43,6 +46,10 @@
     <xacro:property name="witmotion_size_x" value="$(arg witmotion_size_x_prop)" />
     <xacro:property name="witmotion_size_y" value="$(arg witmotion_size_y_prop)" />
     <xacro:property name="witmotion_size_z" value="$(arg witmotion_size_z_prop)" />
+    
+    <xacro:property name="camera_pos_x" value="$(arg camera_pos_x_prop)" />
+    <xacro:property name="camera_pos_y" value="$(arg camera_pos_y_prop)" />
+    <xacro:property name="camera_pos_z" value="$(arg camera_pos_z_prop)" />
 
     <xacro:property name="model_scale_x" value="0.009" /> <!--long -->
     <xacro:property name="model_scale_y" value="0.0105" /> <!--wide -->
@@ -52,7 +59,7 @@
     <xacro:property name="M_PI_2" value="1.570796327" />
 
     <!-- macros  --> 
-    <xacro:macro name="wheel" params="name origin_xyz">">
+    <xacro:macro name="wheel" params="name origin_xyz"> 
         <link name="wheel_${name}">
             <inertial>
               <mass value="0.2"/>
@@ -182,11 +189,18 @@
     </link>
 
     <joint name="witmotion_joint" type="fixed">
-      <origin xyz="${witmotion_pos_x+witmotion_size_x/2} ${witmotion_pos_y+witmotion_size_y/2} ${witmotion_pos_z+witmotion_size_z/2}" rpy="0 0 0"/>
+      <origin xyz="${witmotion_pos_x} ${witmotion_pos_y} ${witmotion_pos_z}" rpy="0 0 0"/>
       <axis xyz="0 0 1"/> 
       <parent link="base_footprint"/>
       <child link="witmotion"/>
     </joint>
+
+     <!-- realsense camera -->
+    <xacro:include filename="$(find realsense2_description)/urdf/_d435.urdf.xacro"/>
+    <xacro:sensor_d435 name="camera" parent="base_footprint">
+      <origin xyz="${camera_pos_x} ${camera_pos_y} ${camera_pos_z}" rpy="0 0 0"/>
+    </xacro:sensor_d435>
+
     <!-- gazebo stuff 
     <xacro:include filename="package://walker_description/urdf/walker_model.gazebo" />
     --> 

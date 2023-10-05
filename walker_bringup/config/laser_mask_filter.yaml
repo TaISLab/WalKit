@@ -1,4 +1,4 @@
-scan_to_scan_filter_chain:
+laser_filter_chain:
   ros__parameters:
     filter1:
       name: mask
@@ -17,6 +17,10 @@ scan_to_scan_filter_chain:
           - 51.
           - 52.          
           - 53.
+          - 54.          
+          - 55.
+          - 56.
+          - 57.
 # ..............          
           - 173.
           - 174.
@@ -31,7 +35,13 @@ scan_to_scan_filter_chain:
           - 183.
           - 184.
           - 185.          
-# ..............          
+          - 186.
+          - 187.
+          - 188.
+# ..............         
+          - 519.  
+          - 520.
+          - 521.
           - 522.
           - 523.
           - 524.
@@ -54,6 +64,7 @@ scan_to_scan_filter_chain:
           - 645.
           - 646.
 # ..............                    
+          - 654.                   
           - 655.          
           - 656.
           - 657.

@@ -27,8 +27,8 @@ def generate_launch_description():
         ],
         package='laser_filters',
         executable='scan_to_scan_filter_chain',
-        name='scan_to_scan_filter_chain',
-        remappings=[ ("scan_filtered", "scan_nav") ],
+        name='nav_filter_chain',
+        remappings=[ ("scan", "scan_filtered"), ("scan_filtered", "scan_nav") ],
         output='screen')
 
     ld = LaunchDescription()
