@@ -28,8 +28,8 @@ def generate_launch_description():
         parameters=[params_path]
         ))
 
-    ld.add_action(Node(
-        package='rqt_image_view', executable='rqt_image_view', output='screen'
-        ))
+ #   ld.add_action(Node(
+ #       package='rqt_image_view', executable='rqt_image_view', output='screen'
+ #       ))
 
     return ld
