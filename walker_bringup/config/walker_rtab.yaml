@@ -15,7 +15,7 @@ windows:
     tags: ['core']
     panes:
       - ros2 run witmotion_ros witmotion_ros_node --ros-args --params-file $ROS2_WORKSPACE/src/WalKit/walker_bringup/config/wt901.yaml
-      - ros2 launch realsense2_camera rs_launch.py enable_sync:=true device_type:=d435 publish_tf:=false global_time_enabled:=false  initial_reset:=true
+      - ros2 launch realsense2_camera rs_launch.py enable_sync:=true device_type:=d435 publish_tf:=true global_time_enabled:=false  initial_reset:=true
 
   - name: walker_description
     tags: ['core']

@@ -7,11 +7,11 @@
     uri: https://github.com/TaISLab/rplidar_ros.git
     local-name: rplidar_ros2
     version: humble
-
+ 
 - git:
-    uri: https://github.com/TaISLab/bwt901cl_pkg.git
-    local-name: bwt901cl_pkg
-    version: humble
+    uri: https://github.com/ElettraSciComp/witmotion_IMU_ros.git
+    local-name: witmotion_ros
+    version: ros2
 
 - git:
     uri: https://github.com/TaISLab/ros2_laser_scan_matcher.git
@@ -81,3 +81,9 @@
 #    uri: https://github.com/ros2/rosbag2.git
 #    local-name: rosbag2
 #    version: foxy-future
+
+# using another driver
+#- git:
+#    uri: https://github.com/TaISLab/bwt901cl_pkg.git
+#    local-name: bwt901cl_pkg
+#    version: humble
