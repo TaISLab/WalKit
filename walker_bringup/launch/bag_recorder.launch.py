@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
  
+'''
+https://github.com/IntelRealSense/realsense-ros/issues/315
+We need to avoid compressed topics from realsense as they use incompatible formats ...
+ros2 bag record -a -x "(.*)theora(.*)|(.*)compressed(.*)"
+
+'''
+
 from launch import LaunchDescription
 from launch.substitutions import LaunchConfiguration, TextSubstitution
 from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable, ExecuteProcess, OpaqueFunction
