@@ -15,7 +15,7 @@ windows:
     tags: ['core']
     panes:
       - ros2 run witmotion_ros witmotion_ros_node --ros-args --params-file $ROS2_WORKSPACE/src/WalKit/walker_bringup/config/wt901.yaml
-      - ros2 launch realsense2_camera rs_launch.py enable_sync:=true device_type:=d435 publish_tf:=true global_time_enabled:=false  initial_reset:=true
+      - ros2 launch realsense2_camera rs_launch.py device_type:=d435 publish_tf:=true global_time_enabled:=false initial_reset:=true
 
   - name: walker_description
     tags: ['core']
@@ -23,3 +23,6 @@ windows:
     # walker physical dimensions are in xacro AND  params.yaml files in walker_description package
       - ros2 launch walker_description walker_state_publisher.launch.py
       - ros2 run walker_description handle_tf_publisher.py
+
+
+

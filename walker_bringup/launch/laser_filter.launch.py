@@ -13,7 +13,7 @@ def generate_launch_description():
             parameters=[
                 PathJoinSubstitution([
                     get_package_share_directory("walker_bringup"),
-                    "config", "laser_mask_filter.yaml",
+                    "config", "laser_filter.yaml",
                 ])],
         )
     ])

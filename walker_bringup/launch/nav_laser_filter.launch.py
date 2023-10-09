@@ -16,7 +16,7 @@ def generate_launch_description():
 
     declare_params_file_cmd = DeclareLaunchArgument('params_file',
         default_value=PathJoinSubstitution([get_package_share_directory("walker_bringup"),
-                                                        "config", "laser_feet_filter.yaml"]),
+                                                        "config", "nav_laser_filter.yaml"]),
         description='Full path to the ROS2 parameters file with node configuration'
     )
 
