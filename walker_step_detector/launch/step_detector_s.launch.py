@@ -38,7 +38,7 @@ def generate_launch_description():
                 {"fixed_frame" : "base_link"},
                 {"detect_distance_frame_id": "base_link"},
                 {"use_scan_header_stamp_for_tfs": False},
-                {"plot_leg_kalman": False},
+                {"plot_leg_kalman": True},
                 {"plot_leg_clusters": False}
             ],
         # Cheap way to reuse node with recorded rosbags

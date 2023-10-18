@@ -22,6 +22,7 @@
             void get_steps(walker_msgs::msg::StepStamped* step_r, walker_msgs::msg::StepStamped* step_l, double t);
             void set_status(bool new_status);
             void enable_log();
+            unsigned int data_size();
             bool is_init;
             bool status_;
         private:

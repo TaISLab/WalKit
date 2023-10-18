@@ -22,8 +22,8 @@ def generate_launch_description():
             parameters= [
                 {"scan_topic": "/scan_filtered"},
                 {"detected_steps_topic_name": "/detected_step"},
-                {"detected_steps_frame": "/base_link"},
-                {"kalman_enabled": False},
+                {"detected_steps_frame": "base_link"},
+                {"kalman_enabled": True},
                 {"kalman_model_d0": 0.001},
                 {"kalman_model_a0": 0.001},
                 {"kalman_model_f0": 0.001},

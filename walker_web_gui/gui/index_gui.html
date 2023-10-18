@@ -161,6 +161,9 @@
       <p>user_desc var: <span id="user_desc_data"></span></p>
       <p>handle_height var: <span id="handle_height_data"></span></p>
     </div>
+    <div class="column">
+      <div id="myPlot" style="width:100%;max-width:700px"></div>
+    </div>
   </div>
 
 
@@ -326,8 +329,102 @@
 
       document.getElementById("left_leg_load").innerHTML = Math.round((m.load + Number.EPSILON) * 100) / 100;
 
+      //TODO: check frame_id== base_link 
+      if ((new_x !=0.0) | (new_y!=0.0))  {
+        var graphDiv = document.getElementById('myPlot')
+        var dataRetrievedLater = graphDiv.data;
+        var layoutRetrievedLater = graphDiv.layout;
+    
+        //console.log(dataRetrievedLater[0])
+
+        dataRetrievedLater[0].x = [-new_y];
+        dataRetrievedLater[0].y = [ new_x];
+        dataRetrievedLater[0].marker.color = [color];
+
+        var new_range_x = layoutRetrievedLater.xaxis.range
+        //new_range_x[0] = Math.min(new_range_x[0], dataRetrievedLater[0].x )
+        //new_range_x[1] = Math.max(new_range_x[1], dataRetrievedLater[0].x )
+
+        var new_range_y = layoutRetrievedLater.yaxis.range
+        //new_range_y[0] = Math.min(new_range_y[0], dataRetrievedLater[0].y )
+        //new_range_y[1] = Math.max(new_range_y[1], dataRetrievedLater[0].y )
+
+        //console.log(layoutRetrievedLater);
+        layoutRetrievedLater.xaxis = {
+            autorange: false,
+            range: new_range_x
+            //showgrid: false,
+            //zeroline: false,
+            //showline: false,
+            //autotick: true,
+            //ticks: '',
+            //showticklabels: false
+          };
+        layoutRetrievedLater.yaxis = {
+            autorange: false,
+            range: new_range_y,
+            scaleanchor: "x",
+            scaleratio: 1
+            //showgrid: false,
+            //zeroline: false,
+            //showline: false,
+            //autotick: true,
+            //ticks: '',
+            //showticklabels: false
+          }
+        
+
+        Plotly.react(graphDiv, dataRetrievedLater, layoutRetrievedLater);          
+      }
     });
 
+    ////////////////////////////////////////////
+    odom_listener = new ROSLIB.Topic({
+      ros: ros,
+      name: "/odom",
+      messageType: 'nav_msgs/msg/Odometry',
+      queue_length: 0,
+      latch: false
+    });
+
+    odom_listener.subscribe(function (m) {
+
+      var new_ang_speed = m.twist.twist.angular.x;
+      var new_lin_speed = m.twist.twist.linear.x;      
+      var ang_factor = -0.2;
+      var lin_factor = -0.2;
+      var ang_threshold = 0.15;
+      var lin_threshold = 0.05;
+
+      if (Math.abs(new_ang_speed) < ang_threshold) {
+          new_ang_speed = 0;       
+      } else {
+          new_ang_speed = new_ang_speed/Math.abs(new_ang_speed);       
+      } 
+
+      if (Math.abs(new_lin_speed) < lin_threshold) {
+          new_lin_speed = 0;       
+      }else {
+          new_lin_speed = new_lin_speed/Math.abs(new_lin_speed);       
+      }
+
+      var x = new_ang_speed * ang_factor;
+      var y = new_lin_speed * lin_factor;
+      var ax = 0;
+      var ay = 0;
+            
+      var graphDiv = document.getElementById('myPlot')
+      var dataRetrievedLater = graphDiv.data;
+      var layoutRetrievedLater = graphDiv.layout;
+      
+      layoutRetrievedLater.annotations[0].x = x;
+      layoutRetrievedLater.annotations[0].y = y;
+      layoutRetrievedLater.annotations[0].ax = ax;
+      layoutRetrievedLater.annotations[0].ay = ay;
+
+      Plotly.react(graphDiv, dataRetrievedLater, layoutRetrievedLater);          
+      
+    });
 
     ////////////////////////////////////////////
 
@@ -345,9 +442,104 @@
       var color = m.load;
                   
       document.getElementById("right_leg_load").innerHTML = Math.round((m.load + Number.EPSILON) * 100) / 100;
-           
+      
+      //TODO: check frame_id == base_link 
+      if ((new_x !=0.0) | (new_y!=0.0)) {
+        var graphDiv = document.getElementById('myPlot')
+        var dataRetrievedLater = graphDiv.data;
+        var layoutRetrievedLater = graphDiv.layout;
+      
+        dataRetrievedLater[1].x = [-new_y];
+        dataRetrievedLater[1].y = [ new_x];
+        dataRetrievedLater[1].marker.color = [color];
+
+        var new_range_x = layoutRetrievedLater.xaxis.range
+        //new_range_x[0] = Math.min(new_range_x[0], dataRetrievedLater[1].x )
+        //new_range_x[1] = Math.max(new_range_x[1], dataRetrievedLater[1].x )
+
+        var new_range_y = layoutRetrievedLater.yaxis.range
+        //new_range_y[0] = Math.min(new_range_y[0], dataRetrievedLater[1].y )
+        //new_range_y[1] = Math.max(new_range_y[1], dataRetrievedLater[1].y )
+
+        //console.log(layoutRetrievedLater);
+        layoutRetrievedLater.xaxis = {
+            autorange: false,
+            range: new_range_x
+            //showgrid: false,
+            //zeroline: false,
+            //showline: false,
+            //autotick: true,
+            //ticks: '',
+            //showticklabels: false
+          };
+        layoutRetrievedLater.yaxis = {
+            autorange: false,
+            range: new_range_y,
+            scaleanchor: "x",
+            scaleratio: 1
+            //showgrid: false,
+            //zeroline: false,
+            //showline: false,
+            //autotick: true,
+            //ticks: '',
+            //showticklabels: false
+          }
+        
+
+        Plotly.react(graphDiv, dataRetrievedLater, layoutRetrievedLater);        
+      }      
     });
 
+    ////////////////////////////////////////////
+
+    laser_listener = new ROSLIB.Topic({
+      ros: ros,
+      name: "/laser_poses",
+      messageType: 'geometry_msgs/msg/PoseArray',
+      queue_length: 0,
+      latch: false
+    });
+
+    laser_listener.subscribe(function (m) {
+      var new_x = []
+      var new_y = []
+
+      for (const pose of m.poses) {
+        new_x.push(-pose.position.y)
+        new_y.push(pose.position.x)        
+      }
+
+      var graphDiv = document.getElementById('myPlot')
+      var dataRetrievedLater = graphDiv.data;
+      var layoutRetrievedLater = graphDiv.layout;
+    
+      dataRetrievedLater[2].x =  new_x;
+      dataRetrievedLater[2].y =  new_y;
+
+      var new_range_x = layoutRetrievedLater.xaxis.range;
+      new_range_x[0] = Math.min(new_range_x[0],Math.min(...dataRetrievedLater[2].x ));
+      new_range_x[1] = Math.max(new_range_x[1],Math.max(...dataRetrievedLater[2].x ));
+
+      var new_range_y = layoutRetrievedLater.yaxis.range
+      new_range_y[0] = Math.min(new_range_y[0], Math.min(...dataRetrievedLater[2].y ));
+      new_range_y[1] = Math.max(new_range_y[1], Math.max(...dataRetrievedLater[2].y ));
+
+      //console.log(layoutRetrievedLater);
+      layoutRetrievedLater.xaxis = {
+          autorange: false,
+          range: new_range_x,
+        };
+      layoutRetrievedLater.yaxis = {
+          autorange: false,
+          range: new_range_y,
+          scaleratio: 1,
+          scaleanchor: "x"
+        };
+      
+
+      Plotly.react(graphDiv, dataRetrievedLater, layoutRetrievedLater);        
+           
+    });
 
     /////////////////////////////////////////////
 
@@ -363,7 +555,20 @@
       document.getElementById("left_handle_force").innerHTML = Math.round((m.force + Number.EPSILON) * 100) / 100;
       var color = m.force;
 
+      if (color<1){
+        color = 'rgb(200,200,200)'
+      }
+
+      if (true) {
+        var graphDiv = document.getElementById('myPlot')
+        var dataRetrievedLater = graphDiv.data;
+        var layoutRetrievedLater = graphDiv.layout;
     
+        //console.log(m);
+        dataRetrievedLater[4].marker.color[0] = color;
+        
+        Plotly.react(graphDiv, dataRetrievedLater, layoutRetrievedLater);
+      }      
     });
    
     /////////////////////////////////////////////
@@ -380,6 +585,20 @@
       var color = m.force;
       document.getElementById("right_handle_force").innerHTML = Math.round((m.force + Number.EPSILON) * 100) / 100;
 
+      if (color<1){
+        color = 'rgb(200,200,200)'
+      }
+      
+      if (true) {
+        var graphDiv = document.getElementById('myPlot')
+        var dataRetrievedLater = graphDiv.data;
+        var layoutRetrievedLater = graphDiv.layout;
+    
+        //console.log(m);
+        dataRetrievedLater[4].marker.color[1] = color;
+        
+        Plotly.react(graphDiv, dataRetrievedLater, layoutRetrievedLater);
+      }      
     });
 
     ////////////////////////////////////////////
@@ -472,6 +691,138 @@
     };
 
     // e.o. ROS...........................................................................
+
+    // PLOT AREA .........................................................................
+    // base_link coords...
+    var orig_left_x = 0;
+    var orig_left_y = 0.15;
+    var orig_right_x = 0;
+    var orig_right_y = -0.15;
+    var orig_handle_left_x = 0.2;
+    var orig_handle_left_y = 0.25;
+    var orig_handle_right_x = 0.2;
+    var orig_handle_right_y = -0.25;
+
+    // plotly coordinates: 90º turn
+    var left_x  = -orig_left_y;
+    var left_y  =  orig_left_x;
+    var right_x = -orig_right_y;
+    var right_y =  orig_right_x;
+    var handle_left_x  = -orig_handle_left_y;
+    var handle_left_y  =  orig_handle_left_x;
+    var handle_right_x = -orig_handle_right_y;
+    var handle_right_y =  orig_handle_right_x;
+
+    // fields in  data:
+    //     0          1       2         3            4
+    // left_feet right_feet laser walker_advance handles(l,r)
+    var data = [{
+      x: [left_x],
+      y: [left_y],
+      type: 'scatter',
+      mode: 'markers',
+      name: 'left',
+      marker: {
+        color: [0],
+        size: 20,
+        colorscale: 'Bluered',
+        cmin: 0,
+        cmax: 50,
+      },
+      showlegend: false
+      }, {
+      x: [right_x],
+      y: [right_y],
+      type: 'scatter',
+      mode: 'markers',
+      name: 'right',
+      marker: {
+        color: [0],
+        size: 20,
+        symbol: 'square',
+        colorscale: 'Bluered',
+        cmin: 0,
+        cmax: 50,
+        colorbar: {
+          title: 'Load(kg.)',
+          titleside: 'top',
+        }
+      },
+      showlegend: false
+    }, {
+      x: [0],
+      y: [0],
+      type: 'scatter',
+      mode: 'markers',
+      name: 'laser',
+      marker: {
+        color: 'rgb(255, 0, 255)',
+        size: 2,
+        line: {
+          color: 'rgb(255, 0, 255)',
+          width: 2
+        }
+      },
+      showlegend: false
+    },{
+      x: [0],
+      y: [1.5*handle_right_y],
+      type: 'scatter',
+      mode: 'markers',
+      name: 'walker_advance',
+      marker: {
+        color: 'rgb(0, 0, 0)',
+        size: 10,
+        symbol: 'star-triangle-up',
+        line: {
+          color: 'rgb(0, 0, 0)',
+          width: 2
+        }
+      },
+      showlegend: false
+    },{
+      x: [handle_left_x, handle_right_x],
+      y: [handle_left_y, handle_right_y],
+      type: 'scatter',
+      mode: 'markers',
+      name: 'handles',
+      marker: {
+        color: [0, 50],
+        size: 20,
+        symbol: 'diamond-tall',
+        colorscale: 'Bluered',
+        cmin: 0,
+        cmax: 50,
+      },
+      showlegend: false
+    }]
+    const layout = { 
+      displayModeBar: false, // this is the line that hides the bar.
+      annotations: [
+          {
+            text: '',
+            arrowsize: 2,
+            arrowwidth: 1,
+            xref: 'x',
+            yref: 'y',
+            text: '',
+            showarrow: true,
+            arrowhead: 2,
+            arrowcolor: 'rgb(0,255,0)',
+            axref: 'x',
+            ayref: 'y',            
+            x: 0.0,
+            y: 0.3,
+            ax: 0.0,
+            ay: 0.1
+          }
+        ]
+    };
+
+    // Display using Plotly
+    Plotly.newPlot("myPlot", data, layout);
+
+    // e.o .PLOT AREA .....................................................................
 
     document.getElementById('gender_tog').onclick = function () {
       var outputtext = document.getElementById('gender_tag_status');

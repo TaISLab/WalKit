@@ -18,7 +18,7 @@ class ForcePlotter(Node):
         self.right_handle_topic_name= '/right_handle'
         self.markers_topic_name = '/markers'
         self.markers_namespace = 'forces'
-        self.markers_lifetime_s = 1.
+        self.markers_lifetime_s = 0.5
         self.force_scale_factor = 100.0
 
 
@@ -49,10 +49,10 @@ class ForcePlotter(Node):
         self.arrow_base.pose.orientation.z = quat[3]
 
         # ROS stuff
-        self.left_handle_sub = self.create_subscription( ForceStamped, self.left_handle_topic_name, self.listener_callback, 10) 
+        self.left_handle_sub = self.create_subscription( ForceStamped, self.left_handle_topic_name, self.listener_callback, 1) 
         self.left_handle_pub = self.create_publisher(Marker, self.markers_topic_name, 10)
 
-        self.right_handle_sub = self.create_subscription( ForceStamped, self.right_handle_topic_name, self.listener_callback, 10) 
+        self.right_handle_sub = self.create_subscription( ForceStamped, self.right_handle_topic_name, self.listener_callback, 1) 
         self.right_handle_pub = self.create_publisher(Marker, self.markers_topic_name, 10)
         self.get_logger().info("Force plotter started")  
 

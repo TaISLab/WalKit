@@ -9,7 +9,7 @@ def generate_launch_description():
         Node(
             package="laser_filters",
             executable="scan_to_scan_filter_chain",
-            name='laser_filter_chain',
+            name='laser_filter',
             parameters=[
                 PathJoinSubstitution([
                     get_package_share_directory("walker_bringup"),
@@ -17,3 +17,4 @@ def generate_launch_description():
                 ])],
         )
     ])
+

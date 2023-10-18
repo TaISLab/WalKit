@@ -1,4 +1,4 @@
-laser_filter_chain:
+laser_filter:
   ros__parameters:
     filter1:
       name: mask

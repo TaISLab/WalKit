@@ -4,7 +4,7 @@ KMDetectSteps::KMDetectSteps() : Node("detect_steps"){
     //Get ROS parameters
     this->declare_parameter<std::string>("scan_topic",                "/scan");
     this->declare_parameter<std::string>("detected_steps_topic_name", "/detected_step");
-    this->declare_parameter<std::string>("detected_steps_frame",      "/base_link");
+    this->declare_parameter<std::string>("detected_steps_frame",      "base_link");
     this->declare_parameter<bool>("fit_ellipse",                      false);
     this->declare_parameter<bool>("kalman_enabled",                   false);
     this->declare_parameter<double>("kalman_model_d0",                0.001);
@@ -115,17 +115,19 @@ void KMDetectSteps::laserCallback(const sensor_msgs::msg::LaserScan::SharedPtr s
             transform_available = buffer_->canTransform(detected_steps_frame_, scan->header.frame_id, tf_time);              
         } catch(tf2::TransformException &e) {
             RCLCPP_WARN(this->get_logger(), "No tf available");
-            transform_available = false;
-            
+            transform_available = false;            
         }
     } else {
         // Otherwise just use the latest tf available
-        transform_available = buffer_->canTransform(detected_steps_frame_, scan->header.frame_id, tf_time);
+        try {
+            transform_available = buffer_->canTransform(detected_steps_frame_, scan->header.frame_id, tf_time);
+        } catch(tf2::TransformException &e) {
+            RCLCPP_WARN(this->get_logger(), "No tf available");
+            transform_available = false;            
+        }
     }
 
-    if(!transform_available) {
-        RCLCPP_WARN(this->get_logger(), "No TF available: step position will be extrapolated");
-    } else {     
+    if(transform_available) {     
 
         // clear rviz 
         if (is_debug){
@@ -134,27 +136,36 @@ void KMDetectSteps::laserCallback(const sensor_msgs::msg::LaserScan::SharedPtr s
 
         std::list<walker_msgs::msg::StepStamped> points = getCentroids(scan);
         kalman_tracker.add_detections(points);
-    }
+    
 
-    // get steps from Kalman set
-    walker_msgs::msg::StepStamped step_r;
-    walker_msgs::msg::StepStamped step_l;
-    double t = (this->now()).nanoseconds();
+        // get steps from Kalman set
+        walker_msgs::msg::StepStamped step_r;
+        walker_msgs::msg::StepStamped step_l;
+        double t = (this->now()).nanoseconds();
 
-    kalman_tracker.get_steps(&step_r, &step_l, t);
+        kalman_tracker.get_steps(&step_r, &step_l, t);
+        RCLCPP_WARN(this->get_logger(), "MFC: got steps!");
 
-    // publish lets
-    if (kalman_tracker.is_init){
-        right_detected_step_pub_->publish(step_r);
-        left_detected_step_pub_->publish(step_l);
-    }
+        // publish lets
+        if (kalman_tracker.is_init){
+            //if (kalman_tracker.data_size()>3){
+                right_detected_step_pub_->publish(step_r);
+                left_detected_step_pub_->publish(step_l);
+                RCLCPP_WARN(this->get_logger(), "MFC: published steps!");
+            //} else {
+            //    RCLCPP_WARN(this->get_logger(), "We only have %u steps stored!", kalman_tracker.data_size());
+            //}
+        }
 
-    if (is_debug){
-        publish_leg(step_r, 0);
-        publish_leg(step_l, 1);
-        publish_active_area();
-        RCLCPP_DEBUG(this->get_logger(), ".......\n\n"); 
-    }
+        if (is_debug){
+            publish_leg(step_r, 0);
+            publish_leg(step_l, 1);
+            publish_active_area();
+            RCLCPP_DEBUG(this->get_logger(), ".......\n\n"); 
+        }
+    } else {
+        RCLCPP_WARN(this->get_logger(), "No TF available: skipping");
+    } 
 }
 
 std::list<walker_msgs::msg::StepStamped> KMDetectSteps::getCentroids(sensor_msgs::msg::LaserScan::SharedPtr scan){

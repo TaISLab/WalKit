@@ -100,9 +100,12 @@ private:
                 markers_pub_->publish(leg_marker);
                 leg_marker = fill_text_marker(stepSt, id);            
                 markers_pub_->publish(leg_marker);
+                RCLCPP_WARN(this->get_logger(), "step plotted!");
+            } else {
+                RCLCPP_WARN(this->get_logger(), "not enoug confidence!");
             }
     }
-
+    
     visualization_msgs::msg::Marker fill_marker(walker_msgs::msg::StepStamped stepSt, int id) {
         visualization_msgs::msg::Marker m;
         m.header = stepSt.position.header;

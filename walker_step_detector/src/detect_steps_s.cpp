@@ -6,7 +6,7 @@ DetectStepsS::DetectStepsS() : Node("detect_steps"){
         //Get ROS parameters
         this->declare_parameter<std::string>("segments_topic",            "/segments");
         this->declare_parameter<std::string>("detected_steps_topic_name", "/detected_step");
-        this->declare_parameter<std::string>("detected_steps_frame",      "/base_link");
+        this->declare_parameter<std::string>("detected_steps_frame",      "base_link");
         this->declare_parameter<double>("kalman_model_d0",                0.001);
         this->declare_parameter<double>("kalman_model_a0",                0.001);
         this->declare_parameter<double>("kalman_model_f0",                0.001);
@@ -122,6 +122,14 @@ void DetectStepsS::segmentsCallback(const slg_msgs::msg::SegmentArray::SharedPtr
         bool transform_available;
         rclcpp::Time tf_time;
 
+        if (!seg_array->header.frame_id.empty() && seg_array->header.frame_id[0] == '/') {
+            seg_array->header.frame_id = seg_array->header.frame_id.substr(1);
+        }
+
+        if (!detected_steps_frame_.empty() && detected_steps_frame_[0] == '/') {
+            detected_steps_frame_ = detected_steps_frame_.substr(1);
+        }
+
         // Use time from segment header
         if (use_segment_header_stamp_for_tfs_){
             tf_time = seg_array->header.stamp;
@@ -135,7 +143,12 @@ void DetectStepsS::segmentsCallback(const slg_msgs::msg::SegmentArray::SharedPtr
             }
         } else {
             // Otherwise just use the latest tf available
-            transform_available = buffer_->canTransform(detected_steps_frame_, seg_array->header.frame_id, tf_time);
+            try {
+                transform_available = buffer_->canTransform(detected_steps_frame_, seg_array->header.frame_id, tf_time);
+            } catch(tf2::TransformException &e) {
+                RCLCPP_WARN(this->get_logger(), "No tf available");
+                transform_available = false;            
+            }
         }
 
         if(!transform_available) {

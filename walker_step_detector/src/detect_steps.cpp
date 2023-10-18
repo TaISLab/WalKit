@@ -506,7 +506,13 @@ private:
             }
         } else {
             // Otherwise just use the latest tf available
-            transform_available = buffer_->canTransform(fixed_frame_, scan->header.frame_id, tf_time);
+            try {
+                transform_available = buffer_->canTransform(fixed_frame_, scan->header.frame_id, tf_time);
+            } catch(tf2::TransformException &e) {
+                RCLCPP_WARN(this->get_logger(), "No tf available");
+                transform_available = false;            
+            }
+
         }
 
         if(!transform_available) {
@@ -546,12 +552,14 @@ private:
         double t = (this->now()).nanoseconds();
 
         kalman_tracker.get_steps(&step_r, &step_l, t);
+        RCLCPP_WARN(this->get_logger(), "MFC: got steps!");
 
         // publish lets
         if (kalman_tracker.is_init){
             right_detected_step_pub_->publish(step_r);
             left_detected_step_pub_->publish(step_l);
         }
+        RCLCPP_WARN(this->get_logger(), "MFC: published them!");
 
         if (is_debug){
             publish_leg(step_r, 0);

@@ -1,4 +1,4 @@
-nav_filter_chain:
+nav_laser_filter:
   ros__parameters:
     use_sim_time: False
     filter1:

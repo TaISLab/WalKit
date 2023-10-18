@@ -109,5 +109,15 @@
     }
 
 
+    unsigned int LegsTracker::data_size(){
+        unsigned int stored_steps;
+        stored_steps = 0;
+        if (is_init){
+             stored_steps = r_tracker.size() + l_tracker.size();
+             stored_steps = stored_steps >> 2;
+        }
+
+        return stored_steps;
+    }
 
 
