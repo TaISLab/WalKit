@@ -10,7 +10,8 @@ laser_scan_matcher_node:
     use_odometry_yaw: false
     wait_for_datum: false
     publish_odom: /scan_odom         # odometry topic name from laser_scan. Empty if not publishing
-    publish_tf: false                # true if publish tf odom_frame -> base_frame"
+    publish_tf: true                 # true if publish tf odom_frame - base_frame
+    invert_tf: true                  # true if published tf is base_frame -> odom_frame instead of odom_frame -> base_frame
     base_frame: base_footprint       # robot base frame
     odom_frame: scan_odom            # odom frame
     map_frame: map                   # map frame

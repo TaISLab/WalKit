@@ -4,7 +4,7 @@
       enable: false
       frames_queue_size: 16
     angular_velocity_cov: 0.01
-    base_frame_id: link
+    base_frame_id: link # this is a suffix, more than the frame id itself
     camera_name: camera
     clip_distance: -2.0
     color_info_qos: DEFAULT
@@ -29,11 +29,12 @@
       stream_index_filter: -1
     depth_info_qos: DEFAULT
     depth_module:
-      auto_exposure_roi:
-        bottom: 479
-        left: 0
-        right: 847
-        top: 0
+# mfc: setting these parameters in arm branch don't work
+#      auto_exposure_roi:
+#        bottom: 479
+#        left: 0
+#        right: 847
+#        top: 0
       emitter_always_on: false
       emitter_enabled: 0
       emitter_on_off: false
@@ -47,7 +48,7 @@
       inter_cam_sync_mode: 0
       laser_power: 150.0
       output_trigger_enabled: false
-      profile: 848x480x30
+      profile: 640x480x15
       sequence_id: 0
       sequence_name: 0
       sequence_size: 2
@@ -96,7 +97,7 @@
       stream_filter: 2
       stream_format_filter: 0
       stream_index_filter: 0
-    publish_odom_tf: true
+    publish_odom_tf: false
     publish_tf: true
     qos_overrides:
       /parameter_events:
@@ -124,7 +125,7 @@
       gamma: 300
       global_time_enabled: true
       hue: 0
-      power_line_frequency: 3
+      power_line_frequency: 2
       profile: 640x480x30
       saturation: 64
       sharpness: 50
@@ -155,4 +156,3 @@
     usb_port_id: ''
     use_sim_time: false
     wait_for_device_timeout: -1.0
-

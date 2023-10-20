@@ -23,7 +23,8 @@ windows:
     panes:
       - ros2 launch walker_bringup walker_lsm.launch.py
       # ros2 launch viso2_ros d435_demo.launch.py
-      - ros2 launch walker_bringup walker_viso2_stereo.launch.py
+      - ros2 launch viso2_ros stereo_demo.launch.py
+      - ros2 launch walker_bringup walker_efk.launch.py
 
   - name: walker_description
     tags: ['core']
