@@ -14,6 +14,7 @@ def generate_launch_description():
             package='robot_localization',
             executable='ekf_node',
             name='walker_ekf_node',
+            remappings=[("/odometry/filtered", "/ekf_odom") ],
             output='screen',
             parameters=[os.path.join(get_package_share_directory("walker_bringup"), 'config', 'walker_ekf.yaml')],
            ),
