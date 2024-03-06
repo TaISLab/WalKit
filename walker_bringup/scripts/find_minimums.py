@@ -2,14 +2,24 @@ import rclpy
 from rclpy.node import Node
 
 from  sensor_msgs.msg import LaserScan
+from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
+
 
 
 class FindMinimus(Node):
 
     def __init__(self, min_val_, letopic):
         super().__init__('minimus_finder')
-        self.topic_name = letopic
-        self.subscription = self.create_subscription( LaserScan, self.topic_name, self.listener_callback, 10)
+        self.topic_name = letopic        
+        
+        qos_profile = QoSProfile(
+            reliability=QoSReliabilityPolicy.RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT,
+            history=QoSHistoryPolicy.RMW_QOS_POLICY_HISTORY_KEEP_LAST,
+            depth=1
+        )
+
+        self.subscription = self.create_subscription( LaserScan, self.topic_name, self.listener_callback, qos_profile=qos_profile)
+
         self.min_val = min_val_
 
 
@@ -27,7 +37,7 @@ def main(args=None):
     rclpy.init(args=args)
 
 #    minimal_finder = FindMinimus(0.47,'scan_nav')
-    minimal_finder = FindMinimus(0.53,'scan_filtered')
+    minimal_finder = FindMinimus(0.53,'scan')
 
     rclpy.spin(minimal_finder)
 
