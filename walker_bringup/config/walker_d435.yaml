@@ -1,3 +1,4 @@
+# This config file provides the output of the two infrarred cameras
 /camera/camera:
   ros__parameters:
     align_depth:
@@ -155,4 +156,4 @@
     unite_imu_method: 0
     usb_port_id: ''
     use_sim_time: false
-    wait_for_device_timeout: -1.0
+    wait_for_device_timeout: -1.0 

@@ -226,9 +226,9 @@ def generate_launch_description():
 
     # lidar ...........................................................................
     lidar_node= Node(
-            package='rplidar_ros2',
-            executable='rplidar_scan_publisher',
-            name='rplidar_scan_publisher',
+            package='rplidar_ros',
+            executable='rplidar_node',
+            name='rplidar_node',
             parameters=[{'serial_port': _lidar_serial_port, 
                          'serial_baudrate': lidar_serial_baudrate, 
                          'frame_id': lidar_frame_id,

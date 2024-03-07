@@ -1,0 +1,39 @@
+session: walker_ros2
+init_cmd: |
+  # Any config variable goes here.
+  source ~/.walker_cfg.bash
+  # This configures scripts to work and sources workspace
+  source $ROS2_WORKSPACE/src/WalKit/walker_bringup/script/walker_config.bash
+windows:
+  - name: arduino
+    tags: ['core']
+    panes:
+      - ros2 launch walker_arduino left_handle.launch.py
+      - ros2 launch walker_arduino right_handle.launch.py
+  - name: sensors1
+    tags: ['core']
+    panes:
+      - ros2 launch rplidar_ros  rplidar_a1_launch.py inverted:=true
+      - ros2 launch walker_bringup nav_laser_filter.launch.py
+      - ros2 launch walker_bringup laser_filter.launch.py
+  - name: sensors2
+    tags: ['core']
+    panes:
+      - ros2 run witmotion_ros witmotion_ros_node --ros-args --params-file $ROS2_WORKSPACE/src/WalKit/walker_bringup/config/wt901_rtab.yaml 
+      - ros2 run realsense2_camera realsense2_camera_node --ros-args --remap __ns:=/camera  --params-file $ROS2_WORKSPACE/src/WalKit/walker_bringup/config/walker_d435.yaml       
+      # Del infra
+      #- ros2 launch realsense2_camera rs_launch.py  enable_infra1:=true enable_infra2:=true enable_sync:=true
+  - name: walker_description
+    tags: ['core']
+    panes:
+    # walker physical dimensions are in xacro AND  params.yaml files
+      - ros2 launch walker_description walker_state_publisher.launch.py
+      - ros2 run walker_description handle_tf_publisher.py
+  # - name: position
+  #   tags: ['core']
+  #   panes:
+  #     - ros2 launch walker_bringup walker_lsm.launch.py params_file:=walker_lsm_rtab.yaml
+  # - name: rtabmap
+  #   tags: ['core']
+  #   panes:
+  #     - ros2 launch walker_bringup rtabmap_stereo.launch.py

@@ -13,7 +13,7 @@ windows:
   - name: sensors1
     tags: ['core']
     panes:
-      - ros2 launch rplidar_ros2  rplidar_launch.py inverted:=true
+      - ros2 launch rplidar_ros rplidar_a1_launch.py inverted:=true serial_port:=/dev/rplidar
       - ros2 run bwt901cl_pkg imu_bwt901cl      
       - ros2 launch walker_diff_odom walker_diff_odom.launch.py
   - name: sensors2
