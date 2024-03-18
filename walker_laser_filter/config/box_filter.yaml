@@ -1,0 +1,18 @@
+# This first line must be the node name!
+/nav_laser_filter:
+  ros__parameters:
+    use_sim_time: False
+    filter:
+      in_topic: /scan_filtered
+      out_topic: /scan_nav
+      name: box_filter
+      type: laser_filters/LaserScanBoxFilter
+      params:
+        box_frame: laser
+        remove_out: False
+        max_x: 0.03
+        max_y: 0.3
+        max_z: 1.0
+        min_x: -1.2
+        min_y: -0.3
+        min_z: -1.0
