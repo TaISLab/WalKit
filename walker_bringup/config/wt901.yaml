@@ -1,7 +1,7 @@
 witmotion:
   ros__parameters:
-    port: witmotion
-    baud_rate: 115200 # baud
+    port: ttyUSB0 #witmotion
+    baud_rate: 115200 # 57600 # baud
     polling_interval: 1 # ms
     timeout_ms: 150 # ms
     restart_service_name: /restart_imu
@@ -12,29 +12,29 @@ witmotion:
       measurements:
         acceleration:
           enabled: true
-    #       covariance: [0.0364, 0.0, 0.0, 0.0, 0.0048, 0.0, 0.0, 0.0, 0.0796]
+          covariance: [0.0364, 0.0, 0.0, 0.0, 0.0048, 0.0, 0.0, 0.0, 0.0796]
         angular_velocity:
           enabled: true
-    #       covariance: [0.0663, 0.0, 0.0, 0.0, 0.1453, 0.0, 0.0, 0.0, 0.0378]
+          covariance: [0.0663, 0.0, 0.0, 0.0, 0.1453, 0.0, 0.0, 0.0, 0.0378]
         orientation:
           enabled: true
-    #       covariance: [0.0479, 0.0, 0.0, 0.0, 0.0207, 0.0, 0.0, 0.0, 0.0041]
+          covariance: [0.0479, 0.0, 0.0, 0.0, 0.0207, 0.0, 0.0, 0.0, 0.0041]
     temperature_publisher:
       enabled: true
       topic_name: /bwt901cl/temperature
       frame_id: witmotion
       from_message: magnetometer # acceleration, angular_vel, orientation, magnetometer
-    #   variance: 0.01829
-    #   coefficient: 1.0 # Linear calibration parameters: coefficient
-    #   addition: 0.0 # and addendum
+      variance: 0.01829
+      coefficient: 1.0 # Linear calibration parameters: coefficient
+      addition: 0.0 # and addendum
     magnetometer_publisher:
       enabled: true
       topic_name: /bwt901cl/magnetometer
       frame_id: witmotion
-    #   coefficient: 0.00000001 # Linear calibration parameters: coefficient
-    #   addition: 0.0 # and addendum
-    #   covariance:
-    #     [0.000000187123, 0.0, 0.0, 0.0, 0.000000105373, 0.0, 0.0, 0.0, 0.000000165816]
+      coefficient: 0.00000001 # Linear calibration parameters: coefficient
+      addition: 0.0 # and addendum
+      covariance:
+        [0.000000187123, 0.0, 0.0, 0.0, 0.000000105373, 0.0, 0.0, 0.0, 0.000000165816]
     orientation_publisher:
       enabled: false
       topic_name: /bwt901cl/orientation
