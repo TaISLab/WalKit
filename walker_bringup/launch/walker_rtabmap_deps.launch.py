@@ -15,8 +15,8 @@ def generate_launch_description():
     realsense_dir = get_package_share_directory('realsense2_camera')
     realsense_launch_file = join( realsense_dir, 'launch', 'rs_launch.py')
 
-    rplidar_ros2_dir = get_package_share_directory('rplidar_ros2')
-    rplidar_ros2_launch_file = join( rplidar_ros2_dir, 'launch', 'rplidar_launch.py')
+    rplidar_ros_dir = get_package_share_directory('rplidar_ros')
+    rplidar_ros_launch_file = join( rplidar_ros_dir, 'launch', 'rplidar_a1_launch.py')
 
     walker_bringup_dir = get_package_share_directory('walker_bringup')
     nav_laser_filter_launch_file = join( walker_bringup_dir, 'launch', 'nav_laser_filter.launch.py')
@@ -41,11 +41,12 @@ def generate_launch_description():
         ),
 
         # laser
-        # ros2 launch rplidar_ros2  rplidar_launch.py inverted:=true
+        # ros2 launch rplidar_ros rplidar_a1_launch.py inverted:=true serial_port:=/dev/rplidar
         IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(rplidar_ros2_launch_file),
+            PythonLaunchDescriptionSource(rplidar_ros_launch_file),
                                           launch_arguments={
-                                          'inverted': 'True'
+                                          'inverted': 'True',
+                                          'serial_port': '/dev/rplidar'
                                           }.items(),
         ),
 

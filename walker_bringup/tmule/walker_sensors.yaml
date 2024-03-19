@@ -5,33 +5,24 @@ init_cmd: |
   # This configures scripts to work and sources workspace
   source $ROS2_WORKSPACE/src/WalKit/walker_bringup/script/walker_config.bash
 windows:
+  - name: arduino
+    tags: ['core']
+    panes:
+      - ros2 launch walker_arduino left_handle.launch.py
+      - ros2 launch walker_arduino right_handle.launch.py
   - name: sensors1
     tags: ['core']
     panes:
-      - ros2 launch rplidar_ros2  rplidar_launch.py inverted:=true
+      - ros2 launch rplidar_ros rplidar_a1_launch.py inverted:=True serial_port:=/dev/rplidar
       - ros2 launch walker_bringup nav_laser_filter.launch.py
       - ros2 launch walker_bringup laser_filter.launch.py
   - name: sensors2
     tags: ['core']
     panes:
-      - ros2 run witmotion_ros witmotion_ros_node --ros-args --params-file $ROS2_WORKSPACE/src/WalKit/walker_bringup/config/wt901.yaml
-      # ros2 launch realsense2_camera rs_launch.py device_type:=d435 publish_tf:=true  global_time_enabled:=false  initial_reset:=true
+      - ros2 launch walker_bringup walker_witmotion.launch.py
       - ros2 run realsense2_camera realsense2_camera_node --ros-args --remap __ns:=/camera  --params-file $ROS2_WORKSPACE/src/WalKit/walker_bringup/config/walker_d435.yaml 
-
-  - name: position
-    tags: ['core']
-    panes:
-      - ros2 launch walker_bringup walker_lsm.launch.py
-      # ros2 launch viso2_ros d435_demo.launch.py
-      - ros2 launch viso2_ros stereo_demo.launch.py
-      - ros2 launch walker_bringup walker_efk.launch.py
-
   - name: walker_description
     tags: ['core']
     panes:
-    # walker physical dimensions are in xacro AND  params.yaml files in walker_description package
       - ros2 launch walker_description walker_state_publisher.launch.py
       - ros2 run walker_description handle_tf_publisher.py
-
-
-

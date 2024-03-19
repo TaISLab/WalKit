@@ -1,0 +1,67 @@
+session: walker_ros2
+init_cmd: |
+  # Any config variable goes here.
+  source ~/.walker_cfg.bash
+  # This configures scripts to work and sources workspace
+  source $ROS2_WORKSPACE/src/WalKit/walker_bringup/script/walker_config.bash
+windows:
+  - name: arduino
+    tags: ['core']
+    panes:
+      - ros2 launch walker_arduino left_handle.launch.py
+      - ros2 launch walker_arduino right_handle.launch.py
+      # - ros2 launch walker_arduino left_wheel.launch.py
+      # - ros2 launch walker_arduino right_wheel.launch.py
+  - name: sensors1
+    tags: ['core']
+    panes:
+      - ros2 launch rplidar_ros rplidar_a1_launch.py inverted:=true serial_port:=/dev/rplidar
+      - ros2 launch walker_bringup nav_laser_filter.launch.py
+      - ros2 launch walker_bringup laser_filter.launch.py
+  - name: sensors2
+    tags: ['core']
+    panes:
+      - ros2 launch walker_bringup walker_witmotion.launch.py
+      - ros2 run realsense2_camera realsense2_camera_node --ros-args --remap __ns:=/camera  --params-file $ROS2_WORKSPACE/src/WalKit/walker_bringup/config/walker_d435.yaml 
+  - name: position
+    tags: ['core']
+    panes:
+      - ros2 launch walker_bringup walker_lsm.launch.py
+      - ros2 launch walker_bringup walker_stereo_odom.launch.py
+      - ros2 launch walker_bringup walker_efk.launch.py
+      #- ros2 launch walker_bringup walker_rtabmap.launch.py
+  - name: walker_description
+    tags: ['core']
+    panes:
+    # walker physical dimensions are in xacro AND  params.yaml files
+      - ros2 launch walker_description walker_state_publisher.launch.py
+      - ros2 run walker_description handle_tf_publisher.py
+  # - name: web
+  #   tags: ['core']
+  #   panes:
+  #     - ros2 run walker_bringup record_service.py
+  #     - ros2 launch rosbridge_server rosbridge_websocket_launch.xml
+  #     - cd ~/workspace/walker_ws/src/WalKit/walker_web_gui/gui; python3 -m http.server 8080
+  # - name: gait_analysis
+  #   tags: ['core']
+  #   panes:
+  #     - ros2 launch walker_step_detector step_detector_km.launch.py
+  #     - ros2 launch walker_loads partial_loads.launch.py
+  #     - ros2 launch walker_centroid_support centroid_support.launch.py
+  #     - ros2 launch walker_stability walker_stability.launch.py
+  # - name: visualization
+  #   tags: ['core']
+  #   panes:
+  #     - ros2 launch walker_step_detector plot_steps.launch.py
+  #     - ros2 run walker_plot plot_forces         # should add params and launch file ...
+  #     - ros2 run walker_loads plot_loads.py      # should add params and launch file ...
+  # - name: localisation
+  #   tags: ['localisation']
+  #   panes:
+  #     - ros2 launch walker_bringup walker_amcl.launch.py
+  #     # MAP IS SET AT ~/.walker_cfg.bash !!!
+  #     - ros2 launch walker_bringup walker_map_server.launch.py map:=$MAP_YAML
+  # - name: record
+  #   tags: ['record']
+  #   panes:
+  #     - ros2 launch walker_bringup bag_recorder.launch.py

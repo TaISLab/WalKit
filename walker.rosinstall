@@ -4,9 +4,9 @@
     version: humble
 
 - git:
-    uri: https://github.com/TaISLab/rplidar_ros.git
-    local-name: rplidar_ros2
-    version: humble
+    uri: https://github.com/Slamtec/rplidar_ros.git
+    local-name: rplidar_ros
+    version: ros2
  
 - git:
     uri: https://github.com/ElettraSciComp/witmotion_IMU_ros.git

@@ -31,7 +31,7 @@ WalKit is an open hardware project created to monitor the elderly. It is modular
     - csm: ROS2 port of Andrea Censeis Scan matcher, needed by laser scan matcher package.
     - leap_motion: stereo camera package (DOES NOT WORK WITH arm64)  
     - ros2_laser_scan_matcher: provides odometry from laser readings.
-    - rplidar_ros2: RPLidar A1 package. 
+    - rplidar_ros: RPLidar A1 package. 
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 

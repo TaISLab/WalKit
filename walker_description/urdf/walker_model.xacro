@@ -20,6 +20,10 @@
     <xacro:arg name="witmotion_pos_x_prop" default="0.565"/>
     <xacro:arg name="witmotion_pos_y_prop" default="0.0"/>
     <xacro:arg name="witmotion_pos_z_prop" default="0.305"/>
+    <xacro:arg name="witmotion_pos_roll_prop" default="180.0"/>
+    <xacro:arg name="witmotion_pos_pitch_prop" default="0.0"/>
+    <xacro:arg name="witmotion_pos_yaw_prop" default="0.0"/>
+
     <xacro:arg name="witmotion_size_x_prop" default="0.0513"/>
     <xacro:arg name="witmotion_size_y_prop" default="0.036"/>
     <xacro:arg name="witmotion_size_z_prop" default="0.015"/>
@@ -43,6 +47,10 @@
     <xacro:property name="witmotion_pos_x" value="$(arg witmotion_pos_x_prop)" />
     <xacro:property name="witmotion_pos_y" value="$(arg witmotion_pos_y_prop)" />
     <xacro:property name="witmotion_pos_z" value="$(arg witmotion_pos_z_prop)" />
+    <xacro:property name="witmotion_pos_roll" value="$(arg witmotion_pos_roll_prop)" />
+    <xacro:property name="witmotion_pos_pitch" value="$(arg witmotion_pos_pitch_prop)" />
+    <xacro:property name="witmotion_pos_yaw" value="$(arg witmotion_pos_yaw_prop)" />
+
     <xacro:property name="witmotion_size_x" value="$(arg witmotion_size_x_prop)" />
     <xacro:property name="witmotion_size_y" value="$(arg witmotion_size_y_prop)" />
     <xacro:property name="witmotion_size_z" value="$(arg witmotion_size_z_prop)" />
@@ -189,7 +197,7 @@
     </link>
 
     <joint name="witmotion_joint" type="fixed">
-      <origin xyz="${witmotion_pos_x} ${witmotion_pos_y} ${witmotion_pos_z}" rpy="0 0 0"/>
+      <origin xyz="${witmotion_pos_x} ${witmotion_pos_y} ${witmotion_pos_z}" rpy="${witmotion_pos_roll*M_PI_2/90} ${witmotion_pos_pitch*M_PI_2/90} ${witmotion_pos_yaw*M_PI_2/90}"/>
       <axis xyz="0 0 1"/> 
       <parent link="base_footprint"/>
       <child link="witmotion"/>

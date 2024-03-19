@@ -7,7 +7,7 @@ witmotion:
     restart_service_name: /restart_imu
     imu_publisher:
       topic_name: /bwt901cl/imu
-      frame_id: witmotion
+      frame_id: witmotion # camera_link # MFC REMOVE THIS!!!!!
       use_native_orientation: false
       measurements:
         acceleration:
