@@ -73,7 +73,11 @@
     walker_msgs::msg::StepStamped TrackLeg::last_data(){
         walker_msgs::msg::StepStamped ans;
         if (is_init){
-            ans = step_list.back();
+            if (step_list.size()){
+                ans = step_list.back();
+            } else {
+                ans.position.header.frame_id = "invalid";
+            }
         }
 
         return ans;        
@@ -88,8 +92,11 @@
     }
 
     walker_msgs::msg::StepStamped TrackLeg::predict_step(double ti){
-
         walker_msgs::msg::StepStamped pred_step, measure_step;
+
+        if (is_debug)
+            RCLCPP_DEBUG(node->get_logger(), "Predicting step position");
+
         if (is_init){
             // Control input
             Control u;

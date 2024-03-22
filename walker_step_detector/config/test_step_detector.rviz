@@ -4,21 +4,14 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
-        - /Global Options1
-        - /Status1
-        - /Grid1
-        - /LaserScan FILTERED1
-        - /LaserScan FEET1
-        - /Odometry1
         - /Odometry1/Shape1
-        - /TF1
         - /TF1/Frames1
-        - /Marker1
         - /Marker1/Namespaces1
-        - /Marker2
         - /Marker2/Namespaces1
+        - /MarkerArray1
+        - /MarkerArray1/Namespaces1
       Splitter Ratio: 0.5
-    Tree Height: 759
+    Tree Height: 807
   - Class: rviz_common/Selection
     Name: Selection
   - Class: rviz_common/Tool Properties
@@ -80,6 +73,7 @@ Visualization Manager:
       Topic:
         Depth: 5
         Durability Policy: Volatile
+        Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Best Effort
         Value: /scan
@@ -98,7 +92,7 @@ Visualization Manager:
       Color: 245; 121; 0
       Color Transformer: FlatColor
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 47
@@ -113,12 +107,13 @@ Visualization Manager:
       Topic:
         Depth: 5
         Durability Policy: Volatile
+        Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Best Effort
         Value: /scan_filtered
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -146,6 +141,7 @@ Visualization Manager:
       Topic:
         Depth: 5
         Durability Policy: Volatile
+        Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Best Effort
         Value: /scan_nav
@@ -179,9 +175,10 @@ Visualization Manager:
       Topic:
         Depth: 5
         Durability Policy: Volatile
+        Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Best Effort
-        Value: /scan_filtered2
+        Value: /scan_feet
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
@@ -202,7 +199,7 @@ Visualization Manager:
           Scale: 1
           Value: true
         Value: true
-      Enabled: true
+      Enabled: false
       Keep: 1000
       Name: Odometry
       Position Tolerance: 0.10000000149011612
@@ -219,10 +216,11 @@ Visualization Manager:
       Topic:
         Depth: 5
         Durability Policy: Volatile
+        Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /odom
-      Value: true
+      Value: false
     - Class: rviz_default_plugins/TF
       Enabled: true
       Frame Timeout: 15
@@ -234,19 +232,15 @@ Visualization Manager:
           Value: false
         laser:
           Value: true
-        leap_camera_left:
-          Value: false
-        leap_camera_right:
-          Value: false
         left_handle_id:
-          Value: true
-        left_wheel_id:
           Value: true
         odom:
           Value: false
         right_handle_id:
           Value: true
-        right_wheel_id:
+        wheel_left:
+          Value: true
+        wheel_right:
           Value: true
         witmotion:
           Value: false
@@ -256,26 +250,23 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
+        base_footprint:
+          base_link:
+            {}
+          laser:
+            {}
+          left_handle_id:
+            {}
+          right_handle_id:
+            {}
+          wheel_left:
+            {}
+          wheel_right:
+            {}
+          witmotion:
+            {}
         odom:
-          base_footprint:
-            base_link:
-              {}
-            laser:
-              {}
-            leap_camera_left:
-              {}
-            leap_camera_right:
-              {}
-            left_handle_id:
-              {}
-            left_wheel_id:
-              {}
-            right_handle_id:
-              {}
-            right_wheel_id:
-              {}
-            witmotion:
-              {}
+          {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -290,7 +281,7 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: Intensity
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: true
       Max Color: 255; 255; 255
       Max Intensity: 100
@@ -305,25 +296,26 @@ Visualization Manager:
       Topic:
         Depth: 5
         Durability Policy: Volatile
+        Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /sensor/bwt901cl/Temperature
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Class: rviz_default_plugins/Marker
-      Enabled: true
+      Enabled: false
       Name: Marker
       Namespaces:
-        LEGS: true
-        LEGS_TEXT: false
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
+        Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /visualization_marker
-      Value: true
+      Value: false
     - Alpha: 0.699999988079071
       Class: rviz_default_plugins/Map
       Color Scheme: map
@@ -333,6 +325,7 @@ Visualization Manager:
       Topic:
         Depth: 5
         Durability Policy: Volatile
+        Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /map
@@ -385,6 +378,7 @@ Visualization Manager:
       Topic:
         Depth: 5
         Durability Policy: Volatile
+        Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /points2
@@ -392,17 +386,60 @@ Visualization Manager:
       Use rainbow: true
       Value: false
     - Class: rviz_default_plugins/Marker
-      Enabled: true
+      Enabled: false
       Name: Marker
       Namespaces:
-        forces: true
+        {}
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /markers
+      Value: false
+    - Alpha: 1
+      Class: rviz_default_plugins/PointStamped
+      Color: 224; 27; 36
+      Enabled: true
+      History Length: 1
+      Name: PointStamped
+      Radius: 0.07000000029802322
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /step_point_left
+      Value: true
+    - Alpha: 1
+      Class: rviz_default_plugins/PointStamped
+      Color: 53; 132; 228
+      Enabled: true
+      History Length: 1
+      Name: PointStamped
+      Radius: 0.07000000029802322
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /step_point_right
+      Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: false
+      Name: MarkerArray
+      Namespaces:
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /markers
-      Value: true
+        Value: /segments_viz
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 186; 189; 182
@@ -418,6 +455,9 @@ Visualization Manager:
     - Class: rviz_default_plugins/Measure
       Line color: 128; 128; 0
     - Class: rviz_default_plugins/SetInitialPose
+      Covariance x: 0.25
+      Covariance y: 0.25
+      Covariance yaw: 0.06853891909122467
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -446,35 +486,35 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/ThirdPersonFollower
-      Distance: 2.1966514587402344
+      Distance: 1.3329527378082275
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.11222466826438904
-        Y: -0.4383115768432617
-        Z: -0.07499833405017853
+        X: -0.41982951760292053
+        Y: 0.029285430908203125
+        Z: -0.0749986320734024
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.9847966432571411
+      Pitch: 1.5697963237762451
       Target Frame: base_link
       Value: ThirdPersonFollower (rviz_default_plugins)
-      Yaw: 4.147390842437744
+      Yaw: 3.1423873901367188
     Saved: ~
 Window Geometry:
   Displays:
     collapsed: false
-  Height: 995
+  Height: 1043
   Hide Left Dock: false
   Hide Right Dock: false
   Image:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd00000004000000000000016100000389fc0200000009fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d00000389000000c900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a0049006d00610067006500000002fc000000ca0000002800ffffff000000010000010f00000389fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073010000003d00000389000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000780000000f5fc0100000002fb0000000a0049006d0061006700650000000000000007800000000000000000fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000004420000003efc0100000002fb0000000800540069006d00650100000000000004420000000000000000fb0000000800540069006d00650100000000000004500000000000000000000005040000038900000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd000000040000000000000161000003b9fc0200000009fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d000003b9000000c900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a0049006d00610067006500000002fc000000ca0000002800ffffff000000010000010f000003b9fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073010000003d000003b9000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000780000000f5fc0100000002fb0000000a0049006d0061006700650000000000000007800000000000000000fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000004420000003efc0100000002fb0000000800540069006d00650100000000000004420000000000000000fb0000000800540069006d0065010000000000000450000000000000000000000504000003b900000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Tool Properties:
@@ -483,4 +523,4 @@ Window Geometry:
     collapsed: false
   Width: 1920
   X: 0
-  Y: 24
+  Y: 0

@@ -31,6 +31,10 @@
 
         unsigned int n_points;
 
+        if (is_debug){
+            RCLCPP_DEBUG (node->get_logger(), "Adding (%ld) detections", detect_steps.size());
+        }
+
         if (is_init){
             n_points = detect_steps.size();
             
@@ -89,19 +93,21 @@
     void LegsTracker::get_steps(walker_msgs::msg::StepStamped* step_r, walker_msgs::msg::StepStamped* step_l, double t){
         
         if (status_){
-            *step_r = r_tracker.predict_step(t);
-            *step_l = l_tracker.predict_step(t);
-
             if (is_debug){
                 RCLCPP_DEBUG (node->get_logger(), "Prediction requested at time (%3.3f)",t*1e-9);
             }
 
+            *step_r = r_tracker.predict_step(t);
+            *step_l = l_tracker.predict_step(t);
+
         } else {
+            if (is_debug){
+                RCLCPP_DEBUG (node->get_logger(), "Last data requested !");
+            }
+
             *step_r = r_tracker.last_data();
             *step_l = l_tracker.last_data();        
-            if (is_debug){
-                RCLCPP_DEBUG (node->get_logger(), "DATA requested !");
-            }
+
 
         }
 

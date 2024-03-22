@@ -177,8 +177,8 @@ namespace laser_processor
             */
             int size(){ return clusters_.size(); };
 
-            void removeFar(std::string  dist_frame_id, float max_dist , std_msgs::msg::Header scan_header, std::shared_ptr<tf2_ros::Buffer> tf_buff);
-            std::list<walker_msgs::msg::StepStamped> getCentroids(std::string  fixed_frame_id, std_msgs::msg::Header scan_header, std::shared_ptr<tf2_ros::Buffer> tf_buff);
+            void removeFar(float max_dist);
+            std::list<walker_msgs::msg::StepStamped> getCentroids(std_msgs::msg::Header scan_header);
     };
 }
 

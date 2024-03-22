@@ -4,48 +4,29 @@ KMDetectSteps::KMDetectSteps() : Node("detect_steps"){
     //Get ROS parameters
     this->declare_parameter<std::string>("scan_topic",                "/scan");
     this->declare_parameter<std::string>("detected_steps_topic_name", "/detected_step");
-    this->declare_parameter<std::string>("detected_steps_frame",      "base_link");
-    this->declare_parameter<bool>("fit_ellipse",                      false);
-    this->declare_parameter<bool>("kalman_enabled",                   false);
     this->declare_parameter<double>("kalman_model_d0",                0.001);
     this->declare_parameter<double>("kalman_model_a0",                0.001);
     this->declare_parameter<double>("kalman_model_f0",                0.001);
     this->declare_parameter<double>("kalman_model_p0",                0.001);
-    this->declare_parameter<bool>("plot_leg_kalman",                  false);
-    this->declare_parameter<bool>("plot_leg_clusters",                false);
-    this->declare_parameter<bool>("use_scan_header_stamp_for_tfs",    false);
-    this->declare_parameter<std::vector<double>>("fixed_frame_active_area_x", 
-                std::vector<double>({-0.75, 0.4}));
-    this->declare_parameter<std::vector<double>>("fixed_frame_active_area_y", 
-                std::vector<double>({-0.4, 0.4}));
+    this->declare_parameter<bool>("kalman_enabled",                   false);
+    this->declare_parameter<bool>("fit_ellipse",                      false); 
+    this->declare_parameter<bool>("is_debug",                         false);
 
-
-    this->get_parameter("scan_topic",                        scan_topic_);
+    this->get_parameter("scan_topic",                        scan_topic_name_);
     this->get_parameter("detected_steps_topic_name",         detected_steps_topic_name_);
-    this->get_parameter("detected_steps_frame",              detected_steps_frame_);
-    this->get_parameter("fit_ellipse",                      fit_ellipse_);
-    this->get_parameter("kalman_enabled",                   kalman_enabled_);
     this->get_parameter("kalman_model_d0",                  kalman_model_d0_);
     this->get_parameter("kalman_model_a0",                  kalman_model_a0_);
     this->get_parameter("kalman_model_f0",                  kalman_model_f0_);
     this->get_parameter("kalman_model_p0",                  kalman_model_p0_);
-    this->get_parameter("plot_leg_kalman",                   plot_leg_kalman_);
-    this->get_parameter("plot_leg_clusters",                 plot_leg_clusters_);
-    this->get_parameter("use_scan_header_stamp_for_tfs",     use_scan_header_stamp_for_tfs_);
-    this->get_parameter("fixed_frame_active_area_x", act_a_x_);
-    this->get_parameter("fixed_frame_active_area_y", act_a_y_);
-
-    // WARNING: tf2 frame_ids cannot start with a '/'
-    if (detected_steps_frame_.rfind("/", 0) == 0) { // pos=0 limits the search to the prefix
-        detected_steps_frame_.erase(0, 1);
-    }
+    this->get_parameter("kalman_enabled",                   kalman_enabled_);
+    this->get_parameter("fit_ellipse",                      fit_ellipse_);
+    this->get_parameter("is_debug",                         is_debug);
 
     // Load kalman tracker
     kalman_tracker.init(this, kalman_model_d0_, kalman_model_a0_, kalman_model_f0_, kalman_model_p0_ );
     kalman_tracker.set_status(kalman_enabled_);
 
     // Verbose init
-    is_debug = (plot_leg_clusters_|| plot_leg_kalman_);
     if (is_debug){
         kalman_tracker.enable_log();
 
@@ -55,41 +36,30 @@ KMDetectSteps::KMDetectSteps() : Node("detect_steps"){
             rcutils_reset_error();
         }
 
-        RCLCPP_INFO(this->get_logger(), "kalman model initial d: [%.2f]", kalman_model_d0_);
-        RCLCPP_INFO(this->get_logger(), "kalman model initial a: [%.2f]", kalman_model_a0_);
-        RCLCPP_INFO(this->get_logger(), "kalman model initial f: [%.2f]", kalman_model_f0_);
-        RCLCPP_INFO(this->get_logger(), "kalman model initial p: [%.2f]", kalman_model_p0_);
-        //Print the ROS parameters
-        RCLCPP_INFO(this->get_logger(), "scan_topic: [%s]", scan_topic_.c_str());
+        //Printing ROS parameters
+        RCLCPP_INFO(this->get_logger(), "scan_topic: [%s]", scan_topic_name_.c_str());
         RCLCPP_INFO(this->get_logger(), "detected_steps_topic_name: [%s]", detected_steps_topic_name_.c_str());
-        RCLCPP_INFO(this->get_logger(), "detected_steps_frame: [%s]", detected_steps_frame_.c_str());
-        RCLCPP_INFO(this->get_logger(), "active area:  [%.2f, %.2f] , [%.2f, %.2f] ", 
-                            act_a_x_[0], act_a_x_[1], act_a_y_[0], act_a_y_[1]);        
+        RCLCPP_INFO(this->get_logger(), "kalman model: ");
+        RCLCPP_INFO(this->get_logger(), "       - active: [%s]: ", (kalman_enabled_) ? ("YES") : ("NO"));
+        RCLCPP_INFO(this->get_logger(), "       - d: %.2f", kalman_model_d0_);
+        RCLCPP_INFO(this->get_logger(), "       - a: %.2f", kalman_model_a0_);
+        RCLCPP_INFO(this->get_logger(), "       - f: %.2f", kalman_model_f0_);
+        RCLCPP_INFO(this->get_logger(), "       - p: %.2f", kalman_model_p0_);
+        RCLCPP_INFO(this->get_logger(), "fit points to ellipses: [%s]: ", (fit_ellipse_) ? ("YES") : ("NO"));
+
     } else {
-        RCLCPP_INFO(this->get_logger(), "Step detector loading. Set plot vars to true for debug.");
+        RCLCPP_INFO(this->get_logger(), "Step detector loading. Set is_debug to true for debug.");
     }
 
-    //ROS STUF
+    //ROS STUFF
     auto default_qos = rclcpp::QoS(rclcpp::SystemDefaultsQoS());
 
     // publishers
     left_detected_step_pub_ = this->create_publisher<walker_msgs::msg::StepStamped>(detected_steps_topic_name_ + "_left", 20);
     right_detected_step_pub_ = this->create_publisher<walker_msgs::msg::StepStamped>(detected_steps_topic_name_ + "_right", 20);
-    if (is_debug){
-        markers_array_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("clusters", 20);
-        filter_laser_pub_ = this->create_publisher<sensor_msgs::msg::LaserScan>("active_laser", 20);
-    }
-
-    // transform buffer
-    buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
-    tfl_ = std::make_shared<tf2_ros::TransformListener>(*buffer_);
-    auto timer_interface = std::make_shared<tf2_ros::CreateTimerROS>(
-                                                        this->get_node_base_interface(),
-                                                        this->get_node_timers_interface());
-    buffer_->setCreateTimerInterface(timer_interface);
 
     //subscribers last
-    this->scan_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(scan_topic_, default_qos, std::bind(&KMDetectSteps::laserCallback, this, std::placeholders::_1));
+    this->scan_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(scan_topic_name_, default_qos, std::bind(&KMDetectSteps::laserCallback, this, std::placeholders::_1));
 
 }
 
@@ -97,133 +67,68 @@ void KMDetectSteps::laserCallback(const sensor_msgs::msg::LaserScan::SharedPtr s
     walker_msgs::msg::StepStamped left_detected_step;
     walker_msgs::msg::StepStamped right_detected_step;
 
-    // some debug info about the received scans
-    if (is_debug){
-        //RCLCPP_DEBUG(this->get_logger(), "%d clusters with distances bigger than %3.3f", processor.size(), cluster_dist_euclid_); 
-    }
+    RCLCPP_WARN(this->get_logger(), "Laser data received at: [%3.3f]", scan->header.stamp.sec + (scan->header.stamp.nanosec*1e-9));    
 
+    std::list<walker_msgs::msg::StepStamped> points = getCentroids(scan);
+    kalman_tracker.add_detections(points);
 
-    // Find out which timestamp should be used for tfs
-    bool transform_available;
-    rclcpp::Time tf_time;
+    // get steps from Kalman set
+    RCLCPP_DEBUG(this->get_logger(), "Getting filtered positions from kalman");
+    walker_msgs::msg::StepStamped step_r;
+    walker_msgs::msg::StepStamped step_l;
+    double t = (this->now()).nanoseconds();
+    kalman_tracker.get_steps(&step_r, &step_l, t);
 
-    // Use time from scan header
-    if (use_scan_header_stamp_for_tfs_){
-        tf_time = scan->header.stamp;
-        try {
-            buffer_->lookupTransform(detected_steps_frame_, scan->header.frame_id, tf_time, rclcpp::Duration::from_seconds(1.0));
-            transform_available = buffer_->canTransform(detected_steps_frame_, scan->header.frame_id, tf_time);              
-        } catch(tf2::TransformException &e) {
-            RCLCPP_WARN(this->get_logger(), "No tf available");
-            transform_available = false;            
+    // publish lets
+    if (kalman_tracker.is_init){
+        if (step_r.position.header.frame_id.compare("invalid") != 0){
+            right_detected_step_pub_->publish(step_r);
+            RCLCPP_WARN(this->get_logger(), "Right feet at: [%3.3f, %3.3f, %3.3f] [%s]", step_r.position.point.x, step_r.position.point.y, step_r.position.point.z, step_r.position.header.frame_id.c_str());    
         }
-    } else {
-        // Otherwise just use the latest tf available
-        try {
-            transform_available = buffer_->canTransform(detected_steps_frame_, scan->header.frame_id, tf_time);
-        } catch(tf2::TransformException &e) {
-            RCLCPP_WARN(this->get_logger(), "No tf available");
-            transform_available = false;            
+        if (step_l.position.header.frame_id.compare("invalid") != 0){    
+            left_detected_step_pub_->publish(step_l);
+            RCLCPP_WARN(this->get_logger(), "Left feet at: [%3.3f, %3.3f, %3.3f] [%s]", step_l.position.point.x, step_l.position.point.y, step_l.position.point.z, step_l.position.header.frame_id.c_str());    
         }
     }
-
-    if(transform_available) {     
-
-        // clear rviz 
-        if (is_debug){
-            delete_markers();
-        }
-
-        std::list<walker_msgs::msg::StepStamped> points = getCentroids(scan);
-        kalman_tracker.add_detections(points);
-    
-
-        // get steps from Kalman set
-        walker_msgs::msg::StepStamped step_r;
-        walker_msgs::msg::StepStamped step_l;
-        double t = (this->now()).nanoseconds();
-
-        kalman_tracker.get_steps(&step_r, &step_l, t);
-        RCLCPP_WARN(this->get_logger(), "MFC: got steps!");
-
-        // publish lets
-        if (kalman_tracker.is_init){
-            //if (kalman_tracker.data_size()>3){
-                right_detected_step_pub_->publish(step_r);
-                left_detected_step_pub_->publish(step_l);
-                RCLCPP_WARN(this->get_logger(), "MFC: published steps!");
-            //} else {
-            //    RCLCPP_WARN(this->get_logger(), "We only have %u steps stored!", kalman_tracker.data_size());
-            //}
-        }
-
-        if (is_debug){
-            publish_leg(step_r, 0);
-            publish_leg(step_l, 1);
-            publish_active_area();
-            RCLCPP_DEBUG(this->get_logger(), ".......\n\n"); 
-        }
-    } else {
-        RCLCPP_WARN(this->get_logger(), "No TF available: skipping");
-    } 
+    RCLCPP_WARN(this->get_logger(), "\n\n"); 
 }
 
 std::list<walker_msgs::msg::StepStamped> KMDetectSteps::getCentroids(sensor_msgs::msg::LaserScan::SharedPtr scan){
-    sensor_msgs::msg::LaserScan scan_filtered;
-
-
-    scan_filtered.header = scan->header;
-    scan_filtered.angle_min = scan->angle_min;
-    scan_filtered.angle_max = scan->angle_max;
-    scan_filtered.angle_increment = scan->angle_increment;
-    scan_filtered.time_increment = scan->time_increment;
-    scan_filtered.scan_time = scan->scan_time;
-    scan_filtered.range_min = scan->range_min; 
-    scan_filtered.range_max = scan->range_max;
-
     // find centroids using kmeans
     std::list<walker_msgs::msg::StepStamped> centroids;
     
     //Set area of interest
-    double range;
+    double range,x,y;
+    double min_x,max_x,min_y,max_y;
     bool is_valid;
-    geometry_msgs::msg::PointStamped laser_point;
-    geometry_msgs::msg::PointStamped position_new;
     std::vector<double> laser_x;
     std::vector<double> laser_y;
 
-    // get laser data in cartesians
+    // get laser data in cartesians and find min/max ranges
+    min_x = scan->range_max;
+    max_x = scan->range_min;
+    min_y = scan->range_max;
+    max_y = scan->range_min;
+
     for (unsigned long int i = 0; i < scan->ranges.size(); i++){
         range = scan->ranges[i];
         is_valid  = (range > scan->range_min && range < scan->range_max);
     
         if (is_valid){
-            laser_point.header = scan->header;
-            laser_point.point.x = cos( scan->angle_min + i * scan->angle_increment ) * range;
-            laser_point.point.y = sin( scan->angle_min + i * scan->angle_increment ) * range;
-            
-            // transform    
-            try {
-                buffer_->transform(laser_point, position_new, detected_steps_frame_);
-                is_valid  = ( position_new.point.x >= act_a_x_[0] ) && ( position_new.point.x <= act_a_x_[1] );
-                is_valid &= ( position_new.point.y >= act_a_y_[0] ) && ( position_new.point.y <= act_a_y_[1] );                    
-            } catch (tf2::TransformException &e){
-                is_valid = false;
-                RCLCPP_ERROR (this->get_logger(), "Cant transform laser point [%s]", e.what());
-            }
-        }
+            x = cos( scan->angle_min + i * scan->angle_increment ) * range;
+            y = sin( scan->angle_min + i * scan->angle_increment ) * range;
 
-        if (is_valid){ 
-            laser_x.push_back(position_new.point.x);
-            laser_y.push_back(position_new.point.y);
-            scan_filtered.ranges.push_back(scan->ranges[i]);
-        } else {
-            scan_filtered.ranges.push_back(scan->range_max + 1);            
-        }
-        
-    }
-    if (is_debug){
-     filter_laser_pub_->publish(scan_filtered);
+            laser_x.push_back(x);
+            laser_y.push_back(y);
+            if (x>max_x)
+                max_x = x;
+            if (y>max_y)
+                max_y = y;
+            if (x<min_x)
+                min_x = x;
+            if (y<min_y)
+                min_y = y;
+        }   
     }
 
     if (laser_x.size()>1){
@@ -234,21 +139,21 @@ std::list<walker_msgs::msg::StepStamped> KMDetectSteps::getCentroids(sensor_msgs
         double dr,dl;
         double lcx, lcy, rcx, rcy;
         bool has_moved = true;
-            std::vector<unsigned int> r_points;
-            std::vector<double> r_dists;
-            std::vector<unsigned int> l_points;
-            std::vector<double> l_dists;
+        std::vector<unsigned int> r_points;
+        std::vector<double> r_dists;
+        std::vector<unsigned int> l_points;
+        std::vector<double> l_dists;
 
         // COW any point further than this from centroid, won't be used
         // COW three km iterations
-        max_d = 0.5;
+        max_d = 0.25;
         max_attempts = 3;
 
-        // Init: cluster centroids in the middle of left/right active areas
-        rcx = lcx = (act_a_x_[0] + act_a_x_[1]) / 2.0;
+        // Init: cluster centroids in the middle of the scan
+        rcx = lcx = (min_x + max_x) / 2.0;
         
-        rcy = (act_a_y_[0]*0.75) + (act_a_y_[1]*0.25);
-        lcy = (act_a_y_[0]*0.25) + (act_a_y_[1]*0.75);
+        rcy = (min_y*0.75) + (max_y*0.25);
+        lcy = (min_y*0.25) + (max_y*0.75);
         attempts = 0;
 
         //RCLCPP_INFO(this->get_logger(), "(%d): \n\tright centroid:\t[%.2f, %.2f] \n\tleft centroid\t[%.2f, %.2f] ", 
@@ -322,16 +227,14 @@ std::list<walker_msgs::msg::StepStamped> KMDetectSteps::getCentroids(sensor_msgs
         }
 
         walker_msgs::msg::StepStamped r_step;
-        r_step.position.header = laser_point.header; // sime time
-        r_step.position.header.frame_id = detected_steps_frame_; // different frame_id
+        r_step.position.header = scan->header;
         r_step.position.point.x = rcx;
         r_step.position.point.y = rcy;
         r_step.confidence = 1;  // COW ! TODO!
         centroids.push_back(r_step);
 
         walker_msgs::msg::StepStamped l_step;
-        l_step.position.header = laser_point.header; // sime time
-        l_step.position.header.frame_id = detected_steps_frame_; // different frame_id
+        l_step.position.header = scan->header;
         l_step.position.point.x = lcx;
         l_step.position.point.y = lcy;
         l_step.confidence = 1;  // COW ! TODO!
@@ -344,6 +247,14 @@ std::list<walker_msgs::msg::StepStamped> KMDetectSteps::getCentroids(sensor_msgs
 
 double KMDetectSteps::distance(double ax, double ay, double bx, double by){
     return std::sqrt(std::pow(ax - bx, 2) + std::pow(ay - by, 2) );
+}
+
+double KMDetectSteps::distance_x(double ax, double ay, double bx, double by){
+    return std::abs(ax - bx);
+}
+
+double KMDetectSteps::distance_y(double ax, double ay, double bx, double by){
+    return std::abs(ay - by);
 }
 
 std::tuple<double, double> KMDetectSteps::find_centroid(std::vector<double>& x, 

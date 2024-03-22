@@ -52,12 +52,12 @@ BoxFilter::BoxFilter(rclcpp::NodeOptions options=rclcpp::NodeOptions()) : Node("
 
 bool BoxFilter::isValid(double x, double y) {
     bool ans;
-
-    ans = (x < max_x_) && (x > min_x_) &&
-          (y < max_y_) && (y > min_y_);
-
     if (remove_out_){
-        ans = !ans;
+        ans = (x < max_x_) && (x > min_x_) &&
+              (y < max_y_) && (y > min_y_);
+    } else {
+        ans = (x > max_x_) && (x < min_x_) &&
+              (y > max_y_) && (y < min_y_);
     }
 
     return ans;
@@ -78,7 +78,7 @@ void BoxFilter::scanCallback(const sensor_msgs::msg::LaserScan::SharedPtr scan) 
             px = cos( scan->angle_min + i * scan->angle_increment ) * range;
             py = sin( scan->angle_min + i * scan->angle_increment ) * range;
             if (!isValid(px,py)){
-                scan_out.ranges[i] = scan_out.range_max;
+                scan_out.ranges[i] = std::numeric_limits<float>::quiet_NaN();;
             }
         }        
     }

@@ -1,13 +1,13 @@
 # This first line must be the node name!
-/nav_laser_filter:
+/step_laser_filter:
   ros__parameters:
     use_sim_time: False
     filter:
       in_topic: /scan_filtered
-      out_topic: /scan_nav
-      name: box_filter
+      out_topic: /scan_feet
+      name: inverted_box_filter
       type: laser_filters/LaserScanBoxFilter
-      remove_out: False
+      remove_out: True
       params:
         box_frame: laser
         max_x: 0.03

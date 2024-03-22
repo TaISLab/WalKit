@@ -60,7 +60,7 @@ private:
     double marker_display_lifetime_;
     
     // configuration parameters
-    std::string scan_topic_;
+    std::string scan_topic_name_;
     std::string detected_steps_topic_name_;
     std::string detected_steps_frame_;
     bool kalman_enabled_;
@@ -105,6 +105,8 @@ private:
     void publish_leg(walker_msgs::msg::StepStamped step, int sid);
     void publish_active_area();
     double distance(double ax, double ay, double bx, double by);
+    double distance_x(double ax, double ay, double bx, double by);
+    double distance_y(double ax, double ay, double bx, double by);
 };
 
 #endif //KM_DETECTSTEPS_HH

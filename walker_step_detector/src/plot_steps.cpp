@@ -50,11 +50,15 @@ public:
         this->declare_parameter<std::string>("steps_topic_name", "/detected_step");
         this->declare_parameter<double>("marker_display_lifetime", 0.01);
         this->declare_parameter<double>("speed_dead_zone", 0.05);
+        this->declare_parameter<double>("marker_size", 0.05);
+        this->declare_parameter<double>("min_confidence", 0.0);
 
         // default values
         this->get_parameter("steps_topic_name", steps_topic_name_);
         this->get_parameter("marker_display_lifetime", marker_display_lifetime_);  // seconds
         this->get_parameter("speed_dead_zone", speed_dead_zone_);
+        this->get_parameter("marker_size", marker_size_);
+        this->get_parameter("min_confidence", min_confidence_);
         
         
         //Print  parameters
@@ -62,11 +66,16 @@ public:
         RCLCPP_INFO(this->get_logger(), "steps_topic_name: %s", steps_topic_name_.c_str());
         RCLCPP_INFO(this->get_logger(), "marker_display_lifetime: %.2f", marker_display_lifetime_);
         RCLCPP_INFO(this->get_logger(), "speed_dead_zone: %.2f", speed_dead_zone_);
+        RCLCPP_INFO(this->get_logger(), "marker_size: %.2f", marker_size_);
+        RCLCPP_INFO(this->get_logger(), "min_confidence: %.2f", min_confidence_);
 
         // pub/sub
         auto default_qos = rclcpp::QoS(rclcpp::SystemDefaultsQoS());
 
         this->markers_pub_ = this->create_publisher<visualization_msgs::msg::Marker>("visualization_marker", 20);
+
+        this->right_step_pub_ = this->create_publisher<geometry_msgs::msg::PointStamped>("step_point_right", 20);
+        this->left_step_pub_  = this->create_publisher<geometry_msgs::msg::PointStamped>("step_point_left", 20);
 
         this->right_step_topic_sub_ = this->create_subscription<walker_msgs::msg::StepStamped>(steps_topic_name_ + "_right", default_qos, std::bind(&PlotSteps::rightStepsCallback, this, std::placeholders::_1));
         this->left_step_topic_sub_  = this->create_subscription<walker_msgs::msg::StepStamped>(steps_topic_name_ + "_left",  default_qos, std::bind(&PlotSteps::leftStepsCallback,  this, std::placeholders::_1));
@@ -77,7 +86,11 @@ private:
     std::string steps_topic_name_;
     double marker_display_lifetime_;
     double speed_dead_zone_;
+    double marker_size_;
+    double min_confidence_;
     rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr markers_pub_;
+    rclcpp::Publisher<geometry_msgs::msg::PointStamped>::SharedPtr right_step_pub_;
+    rclcpp::Publisher<geometry_msgs::msg::PointStamped>::SharedPtr left_step_pub_;
     
     rclcpp::Subscription<walker_msgs::msg::StepStamped>::SharedPtr right_step_topic_sub_;
     rclcpp::Subscription<walker_msgs::msg::StepStamped>::SharedPtr left_step_topic_sub_;
@@ -95,14 +108,21 @@ private:
 
     void stepsCallback(int id, walker_msgs::msg::StepStamped stepSt){
 
-            if (stepSt.confidence>0){                
+            if (stepSt.confidence>=min_confidence_){                
                 leg_marker = fill_marker(stepSt, id);            
                 markers_pub_->publish(leg_marker);
                 leg_marker = fill_text_marker(stepSt, id);            
                 markers_pub_->publish(leg_marker);
-                RCLCPP_WARN(this->get_logger(), "step plotted!");
+
+                if (id==0)
+                    this->left_step_pub_->publish(stepSt.position);
+                else
+                    this->right_step_pub_->publish(stepSt.position);
+
+                RCLCPP_WARN(this->get_logger(), "step plotted at: [%3.3f, %3.3f, %3.3f] [%s]", stepSt.position.point.x, stepSt.position.point.y, stepSt.position.point.z, stepSt.position.header.frame_id.c_str());    
+
             } else {
-                RCLCPP_WARN(this->get_logger(), "not enoug confidence!");
+                RCLCPP_WARN(this->get_logger(), "confidence [%3.3f] under min value [%3.3f]!",stepSt.confidence, min_confidence_);
             }
     }
     
@@ -116,10 +136,10 @@ private:
         else
             m.type = m.CUBE; // right
         m.pose.position = stepSt.position.point;
-        m.pose.position.z = 0.2;
-        m.scale.x = 0.13;
-        m.scale.y = 0.13;
-        m.scale.z = 0.13;
+        m.pose.position.z = 0.0;
+        m.scale.x = marker_size_;
+        m.scale.y = marker_size_;
+        m.scale.z = marker_size_;
         m.color.a = stepSt.confidence;
         m.color.r = 0;
         m.color.g = 0;

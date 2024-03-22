@@ -264,20 +264,16 @@ namespace laser_processor
         clusters_.insert(clusters_.begin(), tmp_clusters.begin(), tmp_clusters.end());
     }
 
-    void ScanProcessor::removeFar(std::string  dist_frame_id, float max_dist , std_msgs::msg::Header scan_header, std::shared_ptr<tf2_ros::Buffer> tf_buff){
-        geometry_msgs::msg::PointStamped position;
-        geometry_msgs::msg::PointStamped position_new;
+    void ScanProcessor::removeFar(float max_dist){
+        geometry_msgs::msg::Point point;
         float rel_dist = 4092.0;
         std::list<SampleSet*>::iterator c_iter = clusters_.begin();
         while (c_iter != clusters_.end()){
-            position.header = scan_header;
-            position.point = (*c_iter)->getPosition();
+            point = (*c_iter)->getPosition();
 
-            // transform
             rel_dist = 4092.0;
             try {
-                tf_buff->transform(position, position_new, dist_frame_id);
-                rel_dist = pow(position_new.point.x*position_new.point.x + position_new.point.y*position_new.point.y, 1./2.);
+                rel_dist = pow(point.x*point.x + point.y*point.y, 1./2.);
             } catch (tf2::TransformException &e){
                 //RCLCPP_ERROR (this->get_logger(), "%s", e.what());
             }
@@ -291,26 +287,16 @@ namespace laser_processor
         }
     }
 
-    std::list<walker_msgs::msg::StepStamped> ScanProcessor::getCentroids(std::string  fixed_frame_id, std_msgs::msg::Header scan_header, std::shared_ptr<tf2_ros::Buffer> tf_buff){
+    std::list<walker_msgs::msg::StepStamped> ScanProcessor::getCentroids(std_msgs::msg::Header scan_header){
         std::list<walker_msgs::msg::StepStamped> centroids;
 
         ClusterFeatures cf_;
         
         std::list<SampleSet*>::iterator c_iter = clusters_.begin();
         while (c_iter != clusters_.end()){
-            geometry_msgs::msg::PointStamped position;
-            position.header = scan_header;
-            position.point = (*c_iter)->getPosition();
-
-            // position in requested frame
-            try {
-                tf_buff->transform(position, position, fixed_frame_id);
-            } catch (tf2::TransformException &e){
-                //RCLCPP_ERROR (this->get_logger(), "%s", e.what());
-            }
-
             walker_msgs::msg::StepStamped new_step;
-            new_step.position = position;
+            new_step.position.header = scan_header;
+            new_step.position.point = (*c_iter)->getPosition();
 
             // Add features: TODO REVISIT THESE FILEs....
             std::vector<float> f = cf_.calcClusterFeatures(*c_iter, scan_);

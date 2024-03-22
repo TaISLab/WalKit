@@ -55,24 +55,14 @@ private:
     
     // configuration parameters
     std::string segments_topic_;
-    std::string detected_steps_topic_name_;
-    std::string detected_steps_frame_;
+    std::string detected_steps_topic_name_; 
     double kalman_model_d0_, kalman_model_a0_, kalman_model_f0_, kalman_model_p0_;
-    bool plot_leg_kalman_;
-    bool plot_leg_clusters_;
-    bool use_segment_header_stamp_for_tfs_;
-    std::vector<double> act_a_x_;
-    std::vector<double> act_a_y_;
+    bool kalman_enabled_  ;
 
     // Tracker assigns segments to legs and keeps track of them
     LegsTracker kalman_tracker;
 
-    //ROS objects
-    rclcpp::TimerBase::SharedPtr timer_;
-
-    // tf2 objects
-    std::shared_ptr<tf2_ros::Buffer> buffer_;
-    std::shared_ptr<tf2_ros::TransformListener> tfl_;
+    //ROS objects 
 
     //publishers and subscribers
     rclcpp::Publisher<walker_msgs::msg::StepStamped>::SharedPtr left_detected_step_pub_;
@@ -81,7 +71,7 @@ private:
     rclcpp::Subscription<slg_msgs::msg::SegmentArray>::SharedPtr segments_sub_;
 
     //..........................................................................
-    std::list<walker_msgs::msg::StepStamped> getCentroids(std::string  fixed_frame_id, slg_msgs::msg::SegmentArray::SharedPtr segments_msg, std::shared_ptr<tf2_ros::Buffer> tf_buff);
+    std::list<walker_msgs::msg::StepStamped> getCentroids(slg_msgs::msg::SegmentArray::SharedPtr segments_msg);
     void segmentsCallback(const slg_msgs::msg::SegmentArray::SharedPtr segments_array);
 
     visualization_msgs::msg::Marker get_marker(const walker_msgs::msg::StepStamped* step, int id );
