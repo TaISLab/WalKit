@@ -1,0 +1,22 @@
+/**:
+    ros__parameters:
+      video_device: "/dev/video0"                                                   # <----------------- EDIT THIS TO MACH YOUR SYSTEM
+      framerate: 20.0                                                               # <----------------- Taken from usb_cam_node_exe command
+      io_method: "mmap"
+      frame_id: "camera"                                                            # <----------------- careful with multiple cam systems
+      pixel_format: "yuyv"                                                          # see usb_cam package, supported_formats for list of supported formats
+      image_width: 640                                                              # <----------------- Taken from usb_cam_node_exe command
+      image_height: 480                                                             # <----------------- Taken from usb_cam_node_exe command
+      camera_info_url: "package://walker_usb_cameras/config/jgg_camera_info.yaml"   # <----------------- Calibration file. See next section
+      camera_name: "jgg_camera"                                                     # <----------------- This name must match whatever you put in the info_url file
+      brightness: -1
+      contrast: -1
+      saturation: -1
+      sharpness: -1
+      gain: -1
+      auto_white_balance: true
+      white_balance: 4000
+      autoexposure: true
+      exposure: 100
+      autofocus: false
+      focus: -1

@@ -1,0 +1,26 @@
+image_width: 640
+image_height: 480
+camera_name: jgg_camera
+camera_matrix:
+  rows: 3
+  cols: 3
+  data: [911.44454,   0.     , 325.6431 ,
+           0.     , 917.93207, 259.52232,
+           0.     ,   0.     ,   1.     ]
+distortion_model: plumb_bob
+distortion_coefficients:
+  rows: 1
+  cols: 5
+  data: [0.090970, 0.018082, 0.007816, -0.010028, 0.000000]
+rectification_matrix:
+  rows: 3
+  cols: 3
+  data: [1., 0., 0.,
+         0., 1., 0.,
+         0., 0., 1.]
+projection_matrix:
+  rows: 3
+  cols: 4
+  data: [928.28339,   0.     , 321.37892,   0.     ,
+           0.     , 937.58923, 260.95197,   0.     ,
+           0.     ,   0.     ,   1.     ,   0.     ]
