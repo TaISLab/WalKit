@@ -8,7 +8,7 @@ from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 class LaserFilterGenerator(Node):
 
     def __init__(self, min_val_, filter_prob, build_time, letopic):
-        super().__init__('minimus_finder')
+        super().__init__('laser_filter_gen')
         self.min_val = min_val_
         self.filter_prob = filter_prob
         self.build_time = build_time
@@ -74,7 +74,7 @@ class LaserFilterGenerator(Node):
 def main(args=None):
     rclpy.init(args=args)
 
-    generator = LaserFilterGenerator(0.53, 0.20, 20, 'scan')
+    generator = LaserFilterGenerator(0.5, 0.10, 30, 'scan')
 
     rclpy.spin(generator)
 

@@ -48,35 +48,45 @@ public:
         
         // declare parameters
         this->declare_parameter<std::string>("steps_topic_name", "/detected_step");
+        this->declare_parameter<std::string>("markers_topic_name", "/steps_markers");
+        this->declare_parameter<std::string>("markers_namespace", "steps");
         this->declare_parameter<double>("marker_display_lifetime", 0.01);
         this->declare_parameter<double>("speed_dead_zone", 0.05);
         this->declare_parameter<double>("marker_size", 0.05);
         this->declare_parameter<double>("min_confidence", 0.0);
+        this->declare_parameter<bool>("pub_position", false);
 
         // default values
         this->get_parameter("steps_topic_name", steps_topic_name_);
+        this->get_parameter("markers_topic_name", markers_topic_name_);
+        this->get_parameter("markers_namespace", markers_namespace_);
         this->get_parameter("marker_display_lifetime", marker_display_lifetime_);  // seconds
         this->get_parameter("speed_dead_zone", speed_dead_zone_);
         this->get_parameter("marker_size", marker_size_);
         this->get_parameter("min_confidence", min_confidence_);
+        this->get_parameter("pub_position", pub_position_);
         
         
         //Print  parameters
         RCLCPP_INFO(this->get_logger(), "Node parameters: ");
         RCLCPP_INFO(this->get_logger(), "steps_topic_name: %s", steps_topic_name_.c_str());
+        RCLCPP_INFO(this->get_logger(), "markers_topic_name: %s", markers_topic_name_.c_str());
+        RCLCPP_INFO(this->get_logger(), "markers_namespace: %s", markers_namespace_.c_str());        
         RCLCPP_INFO(this->get_logger(), "marker_display_lifetime: %.2f", marker_display_lifetime_);
         RCLCPP_INFO(this->get_logger(), "speed_dead_zone: %.2f", speed_dead_zone_);
         RCLCPP_INFO(this->get_logger(), "marker_size: %.2f", marker_size_);
         RCLCPP_INFO(this->get_logger(), "min_confidence: %.2f", min_confidence_);
+        RCLCPP_INFO(this->get_logger(), "pub_position: %s", pub_position_ ? "True" : "False");
 
         // pub/sub
         auto default_qos = rclcpp::QoS(rclcpp::SystemDefaultsQoS());
 
-        this->markers_pub_ = this->create_publisher<visualization_msgs::msg::Marker>("visualization_marker", 20);
+        this->markers_pub_ = this->create_publisher<visualization_msgs::msg::Marker>(markers_topic_name_, 20);
 
-        this->right_step_pub_ = this->create_publisher<geometry_msgs::msg::PointStamped>("step_point_right", 20);
-        this->left_step_pub_  = this->create_publisher<geometry_msgs::msg::PointStamped>("step_point_left", 20);
-
+        if (pub_position_){
+            this->right_step_pub_ = this->create_publisher<geometry_msgs::msg::PointStamped>("step_point_right", 20);
+            this->left_step_pub_  = this->create_publisher<geometry_msgs::msg::PointStamped>("step_point_left", 20);
+        }
         this->right_step_topic_sub_ = this->create_subscription<walker_msgs::msg::StepStamped>(steps_topic_name_ + "_right", default_qos, std::bind(&PlotSteps::rightStepsCallback, this, std::placeholders::_1));
         this->left_step_topic_sub_  = this->create_subscription<walker_msgs::msg::StepStamped>(steps_topic_name_ + "_left",  default_qos, std::bind(&PlotSteps::leftStepsCallback,  this, std::placeholders::_1));
     }
@@ -84,6 +94,9 @@ public:
 private:
 
     std::string steps_topic_name_;
+    std::string markers_topic_name_;
+    std::string markers_namespace_;
+    bool pub_position_;
     double marker_display_lifetime_;
     double speed_dead_zone_;
     double marker_size_;
@@ -114,12 +127,14 @@ private:
                 leg_marker = fill_text_marker(stepSt, id);            
                 markers_pub_->publish(leg_marker);
 
-                if (id==0)
-                    this->left_step_pub_->publish(stepSt.position);
-                else
-                    this->right_step_pub_->publish(stepSt.position);
-
-                RCLCPP_WARN(this->get_logger(), "step plotted at: [%3.3f, %3.3f, %3.3f] [%s]", stepSt.position.point.x, stepSt.position.point.y, stepSt.position.point.z, stepSt.position.header.frame_id.c_str());    
+                if (pub_position_){
+                    if (id==0)
+                        this->left_step_pub_->publish(stepSt.position);
+                    else
+                        this->right_step_pub_->publish(stepSt.position);
+                    //RCLCPP_WARN(this->get_logger(), "step plotted at: [%3.3f, %3.3f, %3.3f] [%s]", stepSt.position.point.x, stepSt.position.point.y, stepSt.position.point.z, stepSt.position.header.frame_id.c_str());    
+                }
+                
 
             } else {
                 RCLCPP_WARN(this->get_logger(), "confidence [%3.3f] under min value [%3.3f]!",stepSt.confidence, min_confidence_);
@@ -129,7 +144,7 @@ private:
     visualization_msgs::msg::Marker fill_marker(walker_msgs::msg::StepStamped stepSt, int id) {
         visualization_msgs::msg::Marker m;
         m.header = stepSt.position.header;
-        m.ns = "LEGS";
+        m.ns = markers_namespace_;
         m.id = id;
         if (id==0)
             m.type = m.SPHERE; // left
@@ -159,7 +174,7 @@ private:
     visualization_msgs::msg::Marker fill_text_marker(walker_msgs::msg::StepStamped stepSt, int id) {
         visualization_msgs::msg::Marker m;
         m.header = stepSt.position.header;
-        m.ns = "LEGS_TEXT";
+        m.ns = markers_namespace_ + "_TEXT";
         m.id = id;
         m.type = m.TEXT_VIEW_FACING;
         if (id==0)

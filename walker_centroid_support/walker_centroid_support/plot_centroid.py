@@ -45,7 +45,7 @@ class LoadPlotter(Node):
         self.markers_lifetime_s = self.get_parameter('markers_lifetime_s').value
         self.speed_scale_factor = self.get_parameter('speed_scale_factor').value
         self.load_scale_factor =  self.get_parameter('load_scale_factor').value
-        self.weight_u = 100
+        self.weight_u = 100.0
 
         # Here is the Marker to be published in RViz
         self.colormap = plt.get_cmap('jet')
@@ -99,7 +99,7 @@ class LoadPlotter(Node):
     def user_desc_lc(self, msg):
         user_fields = msg.data.split(':')
         if len(user_fields)>2:
-            self.weight_u = user_fields[2]
+            self.weight_u = float(user_fields[2])
 
     def l_loads_lc(self, msg):
         self.loads_lc(msg,0)

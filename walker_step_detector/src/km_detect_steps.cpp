@@ -67,7 +67,7 @@ void KMDetectSteps::laserCallback(const sensor_msgs::msg::LaserScan::SharedPtr s
     walker_msgs::msg::StepStamped left_detected_step;
     walker_msgs::msg::StepStamped right_detected_step;
 
-    RCLCPP_WARN(this->get_logger(), "Laser data received at: [%3.3f]", scan->header.stamp.sec + (scan->header.stamp.nanosec*1e-9));    
+    //RCLCPP_WARN(this->get_logger(), "Laser data received at: [%3.3f]", scan->header.stamp.sec + (scan->header.stamp.nanosec*1e-9));    
 
     std::list<walker_msgs::msg::StepStamped> points = getCentroids(scan);
     kalman_tracker.add_detections(points);
@@ -83,14 +83,14 @@ void KMDetectSteps::laserCallback(const sensor_msgs::msg::LaserScan::SharedPtr s
     if (kalman_tracker.is_init){
         if (step_r.position.header.frame_id.compare("invalid") != 0){
             right_detected_step_pub_->publish(step_r);
-            RCLCPP_WARN(this->get_logger(), "Right feet at: [%3.3f, %3.3f, %3.3f] [%s]", step_r.position.point.x, step_r.position.point.y, step_r.position.point.z, step_r.position.header.frame_id.c_str());    
+            //RCLCPP_WARN(this->get_logger(), "Right feet at: [%3.3f, %3.3f, %3.3f] [%s]", step_r.position.point.x, step_r.position.point.y, step_r.position.point.z, step_r.position.header.frame_id.c_str());    
         }
         if (step_l.position.header.frame_id.compare("invalid") != 0){    
             left_detected_step_pub_->publish(step_l);
-            RCLCPP_WARN(this->get_logger(), "Left feet at: [%3.3f, %3.3f, %3.3f] [%s]", step_l.position.point.x, step_l.position.point.y, step_l.position.point.z, step_l.position.header.frame_id.c_str());    
+            //RCLCPP_WARN(this->get_logger(), "Left feet at: [%3.3f, %3.3f, %3.3f] [%s]", step_l.position.point.x, step_l.position.point.y, step_l.position.point.z, step_l.position.header.frame_id.c_str());    
         }
     }
-    RCLCPP_WARN(this->get_logger(), "\n\n"); 
+    //RCLCPP_WARN(this->get_logger(), "\n\n"); 
 }
 
 std::list<walker_msgs::msg::StepStamped> KMDetectSteps::getCentroids(sensor_msgs::msg::LaserScan::SharedPtr scan){

@@ -18,7 +18,7 @@ class ForcePlotter(Node):
         self.right_handle_topic_name= '/right_handle'
         self.markers_topic_name = '/markers'
         self.markers_namespace = 'forces'
-        self.markers_lifetime_s = 0.5
+        self.markers_lifetime_s = 100.1
         self.force_scale_factor = 100.0
 
 

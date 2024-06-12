@@ -8,13 +8,10 @@ class ImageTimestampSubscriber(Node):
         super().__init__('image_timestamp_subscriber')
         self.subscription = self.create_subscription(
             Image,
-            #'/camera/right/image_raw',
             '/camera/image_raw',
             self.image_callback,
             10
-        )
-        self.subscription  # prevent unused variable warning
-        
+        )       
 
     def image_callback(self, msg):
         if hasattr(self,'last_time'):
