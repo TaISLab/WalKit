@@ -1,5 +1,6 @@
 import yaml
 import os
+import sys
 import numpy as np
 from scipy import interpolate
 
@@ -7,6 +8,9 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSDurabilityPolicy, QoSHistoryPolicy, QoSReliabilityPolicy
 from rclpy.qos import QoSProfile
+
+from rclpy.clock import ROSClock
+from rclpy.executors import ExternalShutdownException
 
 from tf2_ros.buffer import Buffer
 from ament_index_python.packages import get_package_share_directory
@@ -78,8 +82,9 @@ class CentroidSupport(Node):
 
         self.new_data_available = False
         self.first_data_ready = False
-        
-        # ROS stuff
+        self.ros_clock = ROSClock()
+        self.throttle_time_secs = 1
+        # ROS publishers
         self.centroid_pub = self.create_publisher(PointStamped, self.centroid_topic_name, 10)
 
         self.left_handle_sub = self.create_subscription(ForceStamped, self.left_handle_topic_name, self.handle_callback, 10) 
@@ -153,7 +158,8 @@ class CentroidSupport(Node):
 
             if (not self.first_data_ready ):
                 self.first_data_ready = (self.left_handle_msg is not None)  and (self.right_handle_msg is not None) and (self.left_step_msg is not None) and (self.right_step_msg is not None) and (self.right_handle_pose is not None) and (self.left_handle_pose is not None)   
-
+                if self.first_data_ready:
+                    self.get_logger().info("All data received. Starting centroid analysis")
             if ( self.first_data_ready ):
                     right_step_position = np.array([self.right_step_msg.position.point.x, self.right_step_msg.position.point.y, 0])
                     left_step_position = np.array([self.left_step_msg.position.point.x, self.left_step_msg.position.point.y, 0])
@@ -175,19 +181,19 @@ class CentroidSupport(Node):
 
             else:
 #                pass
-                self.get_logger().error("Not all data received yet ...")
+                self.get_logger().warning("Not all data received yet ...",throttle_duration_sec=self.throttle_time_secs, throttle_time_source_type=self.ros_clock)
                 if (self.left_handle_msg is None):
-                   self.get_logger().error("\tleft_handle" )
+                   self.get_logger().warning("\tleft_handle" ,throttle_duration_sec=self.throttle_time_secs, throttle_time_source_type=self.ros_clock)
                 if (self.right_handle_msg is None):
-                   self.get_logger().error("\tright_handle" )
+                   self.get_logger().warning("\tright_handle" ,throttle_duration_sec=self.throttle_time_secs, throttle_time_source_type=self.ros_clock)
                 if (self.left_step_msg is None):
-                   self.get_logger().error("\tleft_step" )
+                   self.get_logger().warning("\tleft_step" ,throttle_duration_sec=self.throttle_time_secs, throttle_time_source_type=self.ros_clock)
                 if (self.right_step_msg is None):
-                   self.get_logger().error("\tright_step" )
+                   self.get_logger().warning("\tright_step" ,throttle_duration_sec=self.throttle_time_secs, throttle_time_source_type=self.ros_clock)
                 if (self.right_handle_pose is None):
-                   self.get_logger().error("\tright_handle_pose" )
+                   self.get_logger().warning("\tright_handle_pose" ,throttle_duration_sec=self.throttle_time_secs, throttle_time_source_type=self.ros_clock)
                 if (self.left_handle_pose is None):
-                   self.get_logger().error("\tleft_handle_pose" )
+                   self.get_logger().warning("\tleft_handle_pose" ,throttle_duration_sec=self.throttle_time_secs, throttle_time_source_type=self.ros_clock)
 
     # We take 0,0,0 in handles frame and cast it to steps frame.
     def get_handle_pose(self, step_msg, handle_msg):
@@ -211,19 +217,20 @@ def main(args=None):
     rclpy.init(args=args)
 
     myNode = CentroidSupport()
-
+    # We dont use node logger due to context errors during exceptions
+    root_logger = rclpy.logging._root_logger
     try:
         rclpy.spin(myNode)
-    except KeyboardInterrupt:
-        print('User-requested stop')
-    except BaseException:
-        print('Exception in execution:', file=sys.stderr)
-        raise
+    except (KeyboardInterrupt, ExternalShutdownException):
+        root_logger.log("User-requested stop", rclpy.logging.LoggingSeverity.WARN)
+    except Exception as ex:
+            root_logger.log(f"Exception received: {str(ex)}", rclpy.logging.LoggingSeverity.ERROR)
     finally:
         # Destroy the node explicitly
         # (optional - Done automatically when node is garbage collected)
         myNode.destroy_node()
-        rclpy.shutdown()      
+        # shutdown would kill all other nodes!!
+        #rclpy.shutdown()      
 
 
 if __name__ == '__main__':
