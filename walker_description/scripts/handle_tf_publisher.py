@@ -19,7 +19,7 @@ class HandleTfPublisher(Node):
                  ('frame_id', 'base_footprint' ),
                  ('child_frame_id_suffix', '_handle_id' ),
                  ('handle_height_topic_name', '/handle_height'),
-                 ('handle_height', -1),
+                 ('handle_height', 4),
                  ('period', 0.5),
             ]
         )

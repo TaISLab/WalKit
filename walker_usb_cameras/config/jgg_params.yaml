@@ -3,8 +3,8 @@
       video_device: "/dev/video0"                                                   # <----------------- EDIT THIS TO MACH YOUR SYSTEM
       framerate: 20.0                                                               # <----------------- Taken from usb_cam_node_exe command
       io_method: "mmap"
-      frame_id: "camera"                                                            # <----------------- careful with multiple cam systems
-      pixel_format: "yuyv"                                                          # see usb_cam package, supported_formats for list of supported formats
+      frame_id: "camera_link"                                                            # <----------------- careful with multiple cam systems
+      pixel_format: "yuyv2rgb"                                                     # see usb_cam package, supported_formats for list of supported formats
       image_width: 640                                                              # <----------------- Taken from usb_cam_node_exe command
       image_height: 480                                                             # <----------------- Taken from usb_cam_node_exe command
       camera_info_url: "package://walker_usb_cameras/config/jgg_camera_info.yaml"   # <----------------- Calibration file. See next section

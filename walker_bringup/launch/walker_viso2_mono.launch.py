@@ -18,13 +18,13 @@ def generate_launch_description():
 
     mono_odometer_node = Node(
                         package='viso2_ros', 
-                        executable='stereo_odometer', 
+                        executable='mono_odometer', 
                         output='screen', 
-                        remappings=[("/image", "camera/right/image_raw"), 
-                                    ("camera_info", "camera/right/camera_info" )],
+                        remappings=[("/image", "camera/image_raw"), 
+                                    ("camera_info", "camera/camera_info" )],
                         parameters=[{
                             "odom_frame_id": "odom",
-                            "base_link_frame_id": "est_camera/right",
+                            "base_link_frame_id": "camera",
                             "camera_height": 1.00, 
                             "camera_pitch": 0.00}]
                     )
