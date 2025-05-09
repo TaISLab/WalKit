@@ -203,11 +203,11 @@ class PartialLoads(Node):
 
                     #self.get_logger().warn("Weight distribution on legs L(" + str(self.left_leg_load) + ") - R(" + str(self.right_leg_load) + ")")
             else:                
-                pass
-                #self.get_logger().error("Not all data received yet ...")
+                #pass
+                self.get_logger().error("Not all data received yet ...")
         else:
-            pass
-                #self.get_logger().error("Not all data received yet ...")
+            #pass
+            self.get_logger().error("Not all data received yet ...")
 
 def main(args=None):
     rclpy.init(args=args)
