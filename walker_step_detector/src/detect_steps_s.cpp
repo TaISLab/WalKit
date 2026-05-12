@@ -94,7 +94,7 @@ std::list<walker_msgs::msg::StepStamped> DetectStepsS::getCentroids(slg_msgs::ms
     std::list<walker_msgs::msg::StepStamped> centroids;
 
     for (const auto &segment_msg : segments_msg->segments){
-        slg::Segment2D current_segment = segment_msg;
+        slg::Segment2D current_segment (segment_msg);
         geometry_msgs::msg::PointStamped position;
 
         position.header = segments_msg->header;

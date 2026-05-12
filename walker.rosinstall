@@ -1,7 +1,7 @@
 - git:
     uri: https://github.com/TaISLab/WalKit.git
     local-name: WalKit
-    version: humble
+    version: jazzy
 
 - git:
     uri: https://github.com/Slamtec/rplidar_ros.git
@@ -12,6 +12,11 @@
     uri: https://github.com/ElettraSciComp/witmotion_IMU_ros.git
     local-name: witmotion_ros
     version: ros2
+
+- git:
+    uri: https://github.com/ElettraSciComp/witmotion_IMU_QT.git
+    local-name: witmotion_ros/witmotion-uart-qt
+    version: main
 
 - git:
     uri: https://github.com/TaISLab/ros2_laser_scan_matcher.git
@@ -26,27 +31,32 @@
 - git:
     uri: https://github.com/ajtudela/slg_msgs.git 
     local-name: ajt_segment/slg_msgs
-    version: humble
+    version: jazzy
 
 - git:
-    uri: https://github.com/MFernandezCarmona/laser_segmentation.git
+    uri: https://github.com/ajtudela/laser_segmentation.git
     local-name: ajt_segment/laser_segmentation
-    version: humble
+    version: jazzy
 
+- git:
+    uri: https://github.com/MOCAP4ROS2-Project/mocap_interfaces.git
+    local-name: mocap/mocap_interfaces
+    version: rolling 
+    
 - git:
     uri: https://github.com/MOCAP4ROS2-Project/mocap_msgs.git
     local-name: mocap/mocap_msgs
-    version: master
+    version: jazzy
 
 - git:
     uri: https://github.com/MOCAP4ROS2-Project/mocap.git 
     local-name: mocap/mocap
-    version: main
+    version: rep-mocap-jazzy
 
 - git:
     uri: https://github.com/MOCAP4ROS2-Project/mocap4ros2_vicon.git     
     local-name: mocap/mocap4ros2_vicon
-    version: clean
+    version: rolling
 
 #  Takes ages to download. We need rethinking the simulation system
 #- git:
@@ -59,7 +69,7 @@
 #- git:
 #    uri: https://github.com/TaISLab/leap_motion.git
 #    local-name: leap_motion
-#    version: humble
+#    version: jazzy
 #
 #  This fork is not needed anymore. We use step detector instead  
 #
@@ -68,14 +78,14 @@
 #    local-name: ros2_leg_detector
 #    version: foxy    
 #
-#  In humble laser_filters work flawlessly. 
+#  In jazzy laser_filters work flawlessly. 
 #
 #- git:
 #    uri: https://github.com/TaISLab/laser_filters.git
 #    local-name: laser_filters
 #    version: ros2    
 #
-#  In humble rosbag2 work flawlessly. 
+#  In jazzy rosbag2 work flawlessly. 
 #
 #- git:
 #    uri: https://github.com/ros2/rosbag2.git
@@ -86,4 +96,4 @@
 #- git:
 #    uri: https://github.com/TaISLab/bwt901cl_pkg.git
 #    local-name: bwt901cl_pkg
-#    version: humble
+#    version: jazzy
