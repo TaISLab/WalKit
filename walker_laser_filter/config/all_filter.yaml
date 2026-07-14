@@ -1,0 +1,24 @@
+all_filter_node:
+  ros__parameters:
+    scan_topic: "scan"
+    scan_filtered_topic: "scan_filtered"
+    scan_nav_topic: "scan_nav"
+    
+    # [min_x, max_x, min_y, max_y]
+    region_nav: [-1.5, 0.1, -0.4, 0.4]
+    
+    # 4 Regiones juntas (16 valores)
+    # Región 1: x_min, x_max, y_min, y_max
+    # Región 2: x_min, x_max, y_min, y_max
+    # Región 3: x_min, x_max, y_min, y_max
+    # Región 4: x_min, x_max, y_min, y_max
+    regions_filtered: [
+      #Front left
+      -0.4 , 0.07,  0.16,  0.36, 
+      #Front right
+      -0.4,  0.07, -0.28, -0.12, 
+      #Rear left
+      -0.55, -0.3,   0.16,  0.36, 
+      #Rear right
+      -0.55, -0.3,  -0.28, -0.12
+    ]

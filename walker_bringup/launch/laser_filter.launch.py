@@ -9,12 +9,14 @@ def generate_launch_description():
         Node(
             package="laser_filters",
             executable="scan_to_scan_filter_chain",
-            name='laser_filter',
+            #name='walker_filter',
             parameters=[
                 PathJoinSubstitution([
                     get_package_share_directory("walker_bringup"),
-                    "config", "laser_filter.yaml",
+                    "config", "laser_filter_new.yaml",
                 ])],
+            #output='screen', 
+            #arguments=['--ros-args', '--log-level', 'info'],
         )
     ])
 

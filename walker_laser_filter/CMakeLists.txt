@@ -30,6 +30,23 @@ ament_export_dependencies(
 # Include Cpp "include" directory
 include_directories(include)
 
+# all filter  ..................
+add_executable (all_filter
+                src/all_filter.cpp
+                )
+
+target_link_libraries(all_filter ${catkin_LIBRARIES})
+
+ament_target_dependencies(all_filter
+  rclcpp 
+  sensor_msgs 
+) 
+
+install (TARGETS
+all_filter
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 # box filter  ..................
 add_executable (box_filter
                 src/box_filter.cpp
