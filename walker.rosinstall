@@ -58,6 +58,16 @@
     local-name: mocap/mocap4ros2_vicon
     version: rolling
 
+- git:
+    uri: https://github.com/tbazina/emg_grip_interfaces.git (push)
+    local-name: shimmer/emg_grip_interfaces
+    version: main
+
+- git:
+    uri: https://github.com/tbazina/shimmer_ros2.git (fetch)
+    local-name: shimmer/shimmer_ros2
+    version: main
+    
 #  Takes ages to download. We need rethinking the simulation system
 #- git:
 #    uri: https://github.com/TaISLab/aws-robomaker-hospital-world.git
