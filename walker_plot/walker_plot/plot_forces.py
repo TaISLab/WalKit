@@ -49,41 +49,46 @@ class ForcePlotter(Node):
         self.arrow_base.pose.orientation.z = quat[3]
 
         # ROS stuff
-        self.left_handle_sub = self.create_subscription( ForceStamped, self.left_handle_topic_name, self.listener_callback, 1) 
+        self.left_handle_sub = self.create_subscription( ForceStamped, self.left_handle_topic_name, self.l_listener_callback, 1)
         self.left_handle_pub = self.create_publisher(Marker, self.markers_topic_name, 10)
 
-        self.right_handle_sub = self.create_subscription( ForceStamped, self.right_handle_topic_name, self.listener_callback, 1) 
+        self.right_handle_sub = self.create_subscription( ForceStamped, self.right_handle_topic_name, self.r_listener_callback, 1)
         self.right_handle_pub = self.create_publisher(Marker, self.markers_topic_name, 10)
-        self.get_logger().info("Force plotter started")  
+        self.get_logger().info("Force plotter started")
 
-    def listener_callback(self, msg):
+    def l_listener_callback(self, msg):
+        self.listener_callback(msg, 0)
+
+    def r_listener_callback(self, msg):
+        self.listener_callback(msg, 1)
+
+    def listener_callback(self, msg, side_id):
         hand_marker = self.arrow_base
         len_value = float(msg.force)/ float(10.0*self.force_scale_factor)
         len_value = max( min(len_value,1.0), 0.001 )
 
         col_value = float(msg.force)/ float(3.0*self.force_scale_factor)
-        col_value = max( min(col_value,1.0), 0.001 )        
+        col_value = max( min(col_value,1.0), 0.001 )
         color = self.colormap(col_value)
 
-        #print("raw:[" + str(msg.force) + "], \t" + 
-        #      "len:[" + str(len_value) + "], \t" + 
+        #print("raw:[" + str(msg.force) + "], \t" +
+        #      "len:[" + str(len_value) + "], \t" +
         #      "col:[" + str(col_value) + "]" )
 
-        hand_marker.header.frame_id = msg.header.frame_id        
+        hand_marker.header.frame_id = msg.header.frame_id
         hand_marker.scale.x = len_value
         hand_marker.color.r, hand_marker.color.g, hand_marker.color.b, dummy = color
 
-
-        if ('right' in msg.header.frame_id ):
+        if side_id == 1:
             self.arrow_base.id = 0
             self.right_handle_pub.publish(hand_marker)
-        elif ('left' in msg.header.frame_id):
+        elif side_id == 0:
             self.arrow_base.id = 1
             self.left_handle_pub.publish(hand_marker)
         else:
-            self.get_logger().error("Don't know where to publish [" + msg.header.frame_id + "]")    
-                
-    
+            self.get_logger().error("Don't know where to publish [" + str(side_id) + "]")
+
+
 
 def main(args=None):
     rclpy.init(args=args)

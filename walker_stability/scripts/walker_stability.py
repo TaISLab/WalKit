@@ -14,9 +14,8 @@ from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
 from ament_index_python.packages import get_package_share_directory
 
-from std_msgs.msg import String
 from geometry_msgs.msg import PointStamped, PoseStamped
-from walker_msgs.msg import StabilityStamped
+from walker_msgs.msg import StabilityStamped, UserDesc
 
 class WalkerStability(Node):
 
@@ -46,7 +45,6 @@ class WalkerStability(Node):
 
         # stored data
         self.has_user_data = False
-        self.user_desc = ''
         self.user_age = 0
         self.user_height = 0
         self.user_weight = 0
@@ -75,7 +73,7 @@ class WalkerStability(Node):
         latched_profile.reliability = QoSReliabilityPolicy.RELIABLE
         latched_profile.durability = QoSDurabilityPolicy.TRANSIENT_LOCAL
 
-        self.user_desc_sub = self.create_subscription(String, self.user_desc_topic_name, self.user_desc_callback, latched_profile) 
+        self.user_desc_sub = self.create_subscription(UserDesc, self.user_desc_topic_name, self.user_desc_callback, latched_profile)
         
         self.get_logger().info("user stability node started")  
 
@@ -129,32 +127,17 @@ class WalkerStability(Node):
 
 
     def user_desc_callback(self, msg):
-        user_fields = msg.data.split(':')
-        if (msg.data != self.user_desc):   
-            if (len(user_fields)<6):
-                self.get_logger().warn("User descr is too short! [" + str(len(user_fields)) + "]")
-                return 
-            
-            self.get_logger().info("Valid user data data received.")
-            self.has_user_data = True
+        self.get_logger().info("Valid user data data received.")
+        self.has_user_data = True
 
-            if (len(user_fields)==6) or (len(user_fields)==7):
-                self.user_desc = msg.data
-                self.user_age = int(user_fields[0])
-                self.user_height = int(user_fields[1])
-                self.user_weight = int(user_fields[2])
-                self.user_id = user_fields[3]
-                self.user_gender = user_fields[4] # Femenino or Masculino
+        self.user_age = msg.age
+        self.user_height = msg.height
+        self.user_weight = msg.weight
+        self.user_id = msg.user_id
+        self.user_gender = msg.gender  # Femenino or Masculino
+        self.user_tinetti = msg.tinetti_score / 28.0
+        self.user_description = msg.description
 
-            if (len(user_fields)==7):
-                self.user_tinetti = int(user_fields[5])/28.0
-                self.user_description = user_fields[6]
-                
-            if (len(user_fields)==6):
-                self.get_logger().warn("No tinetti in user descr. Assuming 24 points")
-                self.user_tinetti = 24.0/28.0
-                self.user_description = user_fields[5]
-            
 
     def centroid_callback(self, msg):
 

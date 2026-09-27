@@ -21,10 +21,12 @@ setup(
     maintainer_email='manolofc@gmail.com',
     description='Calculates centroid support according to J.Ballesteros method in IROS 2018',
     license='Creative Commons',
-    tests_require=['pytest'],
+    extras_require={
+        'test': ['pytest'],
+    },
     entry_points={
         'console_scripts': [
-            'centroid_support = walker_centroid_support.centroid_support:main','plot_centroid = walker_centroid_support.plot_centroid:main',
+            'centroid_support = walker_centroid_support.centroid_support:main',
         ],
     },
 )
