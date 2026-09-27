@@ -10,62 +10,90 @@ namespace Step
 {
 
 /**
- * @brief System state vector-type (two sines with unknown amp, phase and delay and common freq,  basically)
+ * @brief System state vector-type (two sines at a common frequency, each
+ *        tracked in Cartesian in-phase/quadrature form instead of
+ *        amplitude+phase)
  *
  * System is characterized by these two:
- *            dv_k = v0_k + v1_k * sin(w_k*t_k + phi_k)       = v0_k + v1_k * sin(vp_k)
- *            df_k = f0_k + f1_k * sin(w_k*t_k + phi_k + d_k) = f0_k + f1_k * sin(vp_k + d_k)
- * 
- *                     measurements = dv_k (or) df_k = h(k) 
- *                           state  = x_k  = [v0_k v1_k f0_k f1_k w_k d_k  vp_k]
+ *            dv_k = v0_k + va_k*sin(theta_k) + vb_k*cos(theta_k)
+ *            df_k = f0_k + fa_k*sin(theta_k) + fb_k*cos(theta_k)
+ *
+ * (va,vb) / (fa,fb) are the Cartesian in-phase/quadrature components of
+ * each oscillation; amplitude and phase, if ever needed, are derived from
+ * them (amplitude = sqrt(a^2+b^2), phase = atan2(b,a)) rather than
+ * estimated directly. A previous version of this model carried amplitude
+ * (v1/f1) and phase (vp) as states with dv = v0 + v1*sin(vp): that is a
+ * *polar* parameterization of the same sinusoid, and polar coordinates
+ * have a singularity at the origin -- here, whenever sin(vp) is small the
+ * measurement becomes insensitive to v1 (its Jacobian is exactly sin(vp)),
+ * so the filter can "explain" a small measurement with an arbitrarily
+ * large v1 paired with a near-zero sin(vp) instead of the correct small
+ * v1. That produced amplitude estimates that settled on stable but
+ * physically nonsensical values (two orders of magnitude above a
+ * plausible gait speed) on real data. The Cartesian form removes that singularity: the
+ * measurement Jacobian for (va,vb) is (sin(theta), cos(theta)), and
+ * sin^2+cos^2=1 always, so at least one of the two is never small.
+ *
+ * A single shared frequency w and absolute phase theta still drive both
+ * oscillations (theta_k+1 = theta_k + w_k*u_k, same as the old vp); the
+ * old delay state `d` between the force and speed oscillations is gone,
+ * since it is now implicit in how (fa,fb) relate to (va,vb) at the same
+ * theta -- no separate parameter is needed to represent it.
+ *
+ *                     measurements = dv_k (or) df_k = h(k)
+ *                           state  = x_k  = [v0_k va_k vb_k f0_k fa_k fb_k w_k theta_k]
  *                         control  = u_k  = t_k+1 - t_k
- * 
- *           x_k   = f(x_k-1,u_k-1) = [v0_k v1_k f0_k f1_k w_k d_k  vp_k            ] 
- *           x_k+1 =   f(x_k,u_k)   = [v0_k v1_k f0_k f1_k w_k d_k (vp_k + w_k*u_k) ]
+ *
+ *           x_k   = f(x_k-1,u_k-1) = [v0_k va_k vb_k f0_k fa_k fb_k w_k theta_k                ]
+ *           x_k+1 =   f(x_k,u_k)   = [v0_k va_k vb_k f0_k fa_k fb_k w_k (theta_k + w_k*u_k)    ]
  *
  * @param T Numeric scalar type
  */
 template<typename T>
-class State : public Kalman::Vector<T, 7>
+class State : public Kalman::Vector<T, 8>
 {
 public:
-    KALMAN_VECTOR(State, T, 7)
-    
+    KALMAN_VECTOR(State, T, 8)
+
     //! v0_k speed diff constant
     static constexpr size_t V0 = 0;
-    //! v1_k speed diff amplitude
-    static constexpr size_t V1 = 1;
+    //! va_k speed diff, in-phase component
+    static constexpr size_t VA = 1;
+    //! vb_k speed diff, quadrature component
+    static constexpr size_t VB = 2;
     //! f0_k force diff constant
-    static constexpr size_t F0 = 2;
-    //! f1_k force diff amplitude
-    static constexpr size_t F1 = 3;
+    static constexpr size_t F0 = 3;
+    //! fa_k force diff, in-phase component
+    static constexpr size_t FA = 4;
+    //! fb_k force diff, quadrature component
+    static constexpr size_t FB = 5;
     //! w_k angular frequency
-    static constexpr size_t W = 4;
-    //! d_k force-speed delay
-    static constexpr size_t D = 5;
-    //! vp_k speed diff absolute phase
-    static constexpr size_t VP = 6;
+    static constexpr size_t W = 6;
+    //! theta_k absolute phase
+    static constexpr size_t THETA = 7;
 
 
     T v0()       const { return (*this)[ V0 ]; }
-    T v1()       const { return (*this)[ V1 ]; }
+    T va()       const { return (*this)[ VA ]; }
+    T vb()       const { return (*this)[ VB ]; }
     T f0()       const { return (*this)[ F0 ]; }
-    T f1()       const { return (*this)[ F1 ]; }
+    T fa()       const { return (*this)[ FA ]; }
+    T fb()       const { return (*this)[ FB ]; }
     T w()        const { return (*this)[ W  ]; }
-    T d()        const { return (*this)[ D  ]; }
-    T vp()       const { return (*this)[ VP ]; }    
+    T theta()    const { return (*this)[ THETA ]; }
     T& v0()            { return (*this)[ V0 ]; }
-    T& v1()            { return (*this)[ V1 ]; }
+    T& va()             { return (*this)[ VA ]; }
+    T& vb()             { return (*this)[ VB ]; }
     T& f0()            { return (*this)[ F0 ]; }
-    T& f1()            { return (*this)[ F1 ]; }
+    T& fa()             { return (*this)[ FA ]; }
+    T& fb()             { return (*this)[ FB ]; }
     T& w()             { return (*this)[ W  ]; }
-    T& d()             { return (*this)[ D  ]; }
-    T& vp()            { return (*this)[ VP ]; }
+    T& theta()          { return (*this)[ THETA ]; }
 
 };
 
 /**
- * @brief System control-input vector-type 
+ * @brief System control-input vector-type
  *
  * This is the system control-input defined by time increment.
  *
@@ -76,11 +104,11 @@ class Control : public Kalman::Vector<T, 1>
 {
 public:
     KALMAN_VECTOR(Control, T, 1)
-    
+
     //! time increment
     static constexpr size_t DT = 0;
-    
-    T  dt()  const { return (*this)[ DT ]; }    
+
+    T  dt()  const { return (*this)[ DT ]; }
     T& dt() { return (*this)[ DT ]; }
 };
 
@@ -101,19 +129,19 @@ class SystemModel : public Kalman::LinearizedSystemModel<State<T>, Control<T>, C
 public:
     //! State type shortcut definition
 	typedef KalmanExamples::Step::State<T> S;
-    
+
     //! Control type shortcut definition
     typedef KalmanExamples::Step::Control<T> C;
-    
+
     /**
      * @brief Definition of (non-linear) state transition function
      *
      * This function defines how the system state is propagated through time,
-     * i.e. it defines in which state \f$\hat{x}_{k+1}\f$ is system is expected to 
+     * i.e. it defines in which state \f$\hat{x}_{k+1}\f$ is system is expected to
      * be in time-step \f$k+1\f$ given the current state \f$x_k\f$ in step \f$k\f$ and
      * the system control input \f$u\f$.
      *
-     * @param [in] x Current system state 
+     * @param [in] x Current system state
      * @param [in] u Control input
      * @returns The (predicted) system state given control input and states
      */
@@ -121,16 +149,16 @@ public:
     {
         //! Predicted state vector after transition
         S x_new_;
-                
+
         // most of state vars do not change ...
         x_new_ = x;
 
         // Only absolute phase changes in new state and non-lineally
-        auto angle = x.vp() + ( x.w() * u.dt() );
+        auto angle = x.theta() + ( x.w() * u.dt() );
         angle = fmod(angle, dosPi);
         if ( angle < 0)
             angle += dosPi;
-        x_new_.vp() = angle;
+        x_new_.theta() = angle;
 
         // Return transitioned state vector
         return x_new_;
@@ -138,7 +166,7 @@ public:
 
     // just to save obtaining it several times ...
     static constexpr T dosPi = 2.0 * M_PI;
-    
+
 
 protected:
     /**
@@ -159,77 +187,25 @@ protected:
     void updateJacobians( const S& x, const C& u )
     {
         this->F.setZero();
-        // f(v0, v1, f0, f1, w, d, vp, u) =   [       v0,        v1         f0         f1         w         d, (vp + w*u)]
-        // f(v0, v1, f0, f1, w, d, vp, u) =   [     f_v0,      f_v1,      f_f0,      f_f1,      f_w,      f_d,      f_vp]
-        // F(v0, v1, f0, f1, w, d, vp, u) = [ [df_v0/dv0, df_v0/dv1, df_v0/df0, df_v0/df1, df_v0/dw, df_v0/dd, df_v0/dvp ],
-        //                                    [df_v1/dv0, df_v1/dv1, df_v1/df0, df_v1/df1, df_v1/dw, df_v1/dd, df_v1/dvp ],
-        //                                    [df_f0/dv0, df_f0/dv1, df_f0/df0, df_f0/df1, df_f0/dw, df_f0/dd, df_f0/dvp ],
-        //                                    [df_f1/dv0, df_f1/dv1, df_f1/df0, df_f1/df1, df_f1/dw, df_f1/dd, df_f1/dvp ],
-        //                                    [df_w /dv0, df_w /dv1, df_w /df0, df_w /df1, df_w /dw, df_w /dd, df_w /dvp ],
-        //                                    [df_d /dv0, df_d /dv1, df_d /df0, df_d /df1, df_d /dw, df_d /dd, df_d /dvp ],
-        //                                    [df_vp/dv0, df_vp/dv1, df_vp/df0, df_vp/df1, df_vp/dw, df_vp/dd, df_vp/dvp ] ]
+        // f(v0, va, vb, f0, fa, fb, w, theta, u) = [ v0, va, vb, f0, fa, fb, w, (theta + w*u) ]
+        // Every state carries over unchanged except theta, which gains a
+        // dependency on w (through u.dt()); everything else is the identity.
 
-        this->F( S::V0, S::V0 ) = 1;
-        //this->F( S::V0, S::V1 ) = 0;
-        //this->F( S::V0, S::F0 ) = 0;
-        //this->F( S::V0, S::F1 ) = 0;
-        //this->F( S::V0, S::W  ) = 0;
-        //this->F( S::V0, S::D  ) = 0;
-        //this->F( S::V0, S::VP ) = 0;
-
-        //this->F( S::V1, S::V0 ) = 0;
-        this->F( S::V1, S::V1 ) = 1;
-        //this->F( S::V1, S::F0 ) = 0;
-        //this->F( S::V1, S::F1 ) = 0;
-        //this->F( S::V1, S::W  ) = 0;
-        //this->F( S::V1, S::D  ) = 0;
-        //this->F( S::V1, S::VP ) = 0;
-
-        //this->F( S::F0, S::V0 ) = 0;
-        //this->F( S::F0, S::V1 ) = 0;
-        this->F( S::F0, S::F0 ) = 1;
-        //this->F( S::F0, S::F1 ) = 0;
-        //this->F( S::F0, S::W  ) = 0;
-        //this->F( S::F0, S::D  ) = 0;
-        //this->F( S::F0, S::VP ) = 0;
-
-        //this->F( S::F1, S::V0 ) = 0;
-        //this->F( S::F1, S::V1 ) = 0;
-        //this->F( S::F1, S::F0 ) = 0;
-        this->F( S::F1, S::F1 ) = 1;
-        //this->F( S::F1, S::W  ) = 0;
-        //this->F( S::F1, S::D  ) = 0;
-        //this->F( S::F1, S::VP ) = 0;
-
-        //this->F( S::W, S::V0 ) = 0;
-        //this->F( S::W, S::V1 ) = 0;
-        //this->F( S::W, S::F0 ) = 0;
-        //this->F( S::W, S::F1 ) = 0;
-        this->F( S::W, S::W  ) = 1;
-        //this->F( S::W, S::D  ) = 0;
-        //this->F( S::W, S::VP ) = 0;
-
-        //this->F( S::D, S::V0 ) = 0;
-        //this->F( S::D, S::V1 ) = 0;
-        //this->F( S::D, S::F0 ) = 0;
-        //this->F( S::D, S::F1 ) = 0;
-        //this->F( S::D, S::W  ) = 0;
-        this->F( S::D, S::D  ) = 1;
-        //this->F( S::D, S::VP ) = 0;
-
-        //this->F( S::VP, S::V0 ) = 0;
-        //this->F( S::VP, S::V1 ) = 0;
-        //this->F( S::VP, S::F0 ) = 0;
-        //this->F( S::VP, S::F1 ) = 0;
-        this->F( S::VP, S::W  ) = u.dt();
-        //this->F( S::VP, S::D  ) = 0;
-        this->F( S::VP, S::VP ) = 1;
+        this->F( S::V0,    S::V0    ) = 1;
+        this->F( S::VA,    S::VA    ) = 1;
+        this->F( S::VB,    S::VB    ) = 1;
+        this->F( S::F0,    S::F0    ) = 1;
+        this->F( S::FA,    S::FA    ) = 1;
+        this->F( S::FB,    S::FB    ) = 1;
+        this->F( S::W,     S::W     ) = 1;
+        this->F( S::THETA, S::W     ) = u.dt();
+        this->F( S::THETA, S::THETA ) = 1;
 
         // W = df/dw (Jacobian of state transition w.r.t. the noise)
 
         this->W.setIdentity();
         // TODO: more sophisticated noise modelling
-        //       i.e. The noise affects the the direction in which we move as 
+        //       i.e. The noise affects the the direction in which we move as
         //       well as the velocity (i.e. the distance we move)
     }
 

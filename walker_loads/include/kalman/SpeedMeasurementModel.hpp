@@ -19,9 +19,9 @@ class SpeedMeasurement : public Kalman::Vector<T, 1>
 {
 public:
     KALMAN_VECTOR(SpeedMeasurement, T, 1)
-    
+
     //! current measured speed difference
-    static constexpr size_t DV = 0;     
+    static constexpr size_t DV = 0;
     T  dv() const { return (*this)[ DV ]; }
     T& dv()       { return (*this)[ DV ]; }
 };
@@ -41,15 +41,15 @@ class SpeedMeasurementModel : public Kalman::LinearizedMeasurementModel<State<T>
 public:
     //! State type shortcut definition
     typedef  KalmanExamples::Step::State<T> S;
-    
+
     //! Measurement type shortcut definition
     typedef  KalmanExamples::Step::SpeedMeasurement<T> SM;
-    
-    
+
+
     /**
      * @brief Definition of (possibly non-linear) measurement function
-     * 
-     * h(x) = df = f0 + f1 * sin(w*t + phi + d) = f0 + f1 * sin(vp + d)
+     *
+     * h(x) = dv = v0 + va*sin(theta) + vb*cos(theta)
      * This function maps the system state to the measurement that is expected
      * to be received from the sensor assuming the system is currently in the
      * estimated state.
@@ -59,16 +59,14 @@ public:
      */
     SM h(const S& x) const
     {
-        SM measurement;        
-        measurement.dv() = x.v0() + x.v1() * std::sin(x.vp());
-      
+        SM measurement;
+        measurement.dv() = x.v0() + x.va() * std::sin(x.theta()) + x.vb() * std::cos(x.theta());
+
         return measurement;
     }
 
 protected:
-    
-    static constexpr T dosPi = 2.0 * M_PI;
-    
+
     /**
      * @brief Update jacobian matrices for the system state transition function using current state
      *
@@ -81,24 +79,28 @@ protected:
      *       When using a fully non-linear filter such as the UnscentedKalmanFilter
      *       or its square-root form then this is not needed.
      *
-     * @param x The current system state around which to linearize 
+     * @param x The current system state around which to linearize
      */
     void updateJacobians( const S& x )
     {
-        // h(x) = dv = v0 + v1 * sin(vp)
-        //   s  = [v0 v1 f0 f1 w d  vp] 
-        // H = d/ds * h(s) = [dh/dv0, dh/dv1, dh/df0, dh/df1, dh/dw, dh/dd, dh/dvp] (Jacobian of measurement function w.r.t. the state)
+        // h(x) = dv = v0 + va*sin(theta) + vb*cos(theta)
+        //   s  = [v0 va vb f0 fa fb w theta]
+        // H = d/ds * h(s) (Jacobian of measurement function w.r.t. the state).
+        // Unlike the old amplitude/phase form, (dh/dva, dh/dvb) = (sin(theta),
+        // cos(theta)) can never both be ~0 at once (sin^2+cos^2=1), so there
+        // is no coordinate singularity here.
         this->H.setZero();
-        
-        this->H( SM::DV, S::V0 ) = 1;
-        this->H( SM::DV, S::V1 ) = std::sin(x.vp());
-        this->H( SM::DV, S::F0 ) = 0;
-        this->H( SM::DV, S::F1 ) = 0;
-        this->H( SM::DV, S::W  ) = 0; // x.v1() * std::cos(x.vp());  //      should be 0 ...
-        this->H( SM::DV, S::D  ) = 0;
-        this->H( SM::DV, S::VP ) = x.v1() * std::cos(x.vp());
 
-    }    
+        this->H( SM::DV, S::V0 )    = 1;
+        this->H( SM::DV, S::VA )    = std::sin(x.theta());
+        this->H( SM::DV, S::VB )    = std::cos(x.theta());
+        this->H( SM::DV, S::F0 )    = 0;
+        this->H( SM::DV, S::FA )    = 0;
+        this->H( SM::DV, S::FB )    = 0;
+        this->H( SM::DV, S::W  )    = 0;
+        this->H( SM::DV, S::THETA ) = x.va() * std::cos(x.theta()) - x.vb() * std::sin(x.theta());
+
+    }
 
 };
 

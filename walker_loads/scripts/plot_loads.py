@@ -8,8 +8,8 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSHistoryPolicy, QoSReliabilityPolicy
 
-from walker_msgs.msg import ForceStamped, StepStamped
-from std_msgs.msg import Float64MultiArray, String
+from walker_msgs.msg import ForceStamped, StepStamped, UserDesc
+from std_msgs.msg import Float64MultiArray
 from visualization_msgs.msg import Marker
 
 class LoadPlotter(Node):
@@ -88,7 +88,7 @@ class LoadPlotter(Node):
         latched_profile.history = QoSHistoryPolicy.KEEP_LAST
         latched_profile.reliability = QoSReliabilityPolicy.RELIABLE
         latched_profile.durability = QoSDurabilityPolicy.TRANSIENT_LOCAL
-        self.user_desc_sub = self.create_subscription(String, self.user_desc_topic_name, self.user_desc_lc, latched_profile)
+        self.user_desc_sub = self.create_subscription(UserDesc, self.user_desc_topic_name, self.user_desc_lc, latched_profile)
 
         self.marker_pub_ = self.create_publisher(Marker, self.markers_topic_name, 10)
 
@@ -96,9 +96,7 @@ class LoadPlotter(Node):
         self.get_logger().info("load plotter started")  
 
     def user_desc_lc(self, msg):
-        user_fields = msg.data.split(':')
-        if len(user_fields)>2:
-            self.weight_u = float(user_fields[2])
+        self.weight_u = float(msg.weight)
 
     def l_loads_lc(self, msg):
         self.loads_lc(msg,0)

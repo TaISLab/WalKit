@@ -11,9 +11,9 @@ from ament_index_python.packages import get_package_share_directory
 
 from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
-from std_msgs.msg import Float64MultiArray, String
+from std_msgs.msg import Float64MultiArray
 from geometry_msgs.msg import PointStamped
-from walker_msgs.msg import ForceStamped, StepStamped 
+from walker_msgs.msg import ForceStamped, StepStamped, UserDesc
 
 class PartialLoads(Node):
 
@@ -89,10 +89,10 @@ class PartialLoads(Node):
         self.left_hand_load_pub  = self.create_publisher(StepStamped, self.left_hand_loads_topic_name,  10)
         self.right_hand_load_pub = self.create_publisher(StepStamped, self.right_hand_loads_topic_name, 10)
 
-        self.left_handle_sub = self.create_subscription(ForceStamped, self.left_handle_topic_name, self.handle_lc, 10) 
-        self.right_handle_sub = self.create_subscription(ForceStamped, self.right_handle_topic_name, self.handle_lc, 10) 
+        self.left_handle_sub = self.create_subscription(ForceStamped, self.left_handle_topic_name, self.l_handle_lc, 10)
+        self.right_handle_sub = self.create_subscription(ForceStamped, self.right_handle_topic_name, self.r_handle_lc, 10)
 
-        self.left_steps_sub = self.create_subscription(StepStamped, self.left_steps_topic_name,  self.l_steps_lc, 10) 
+        self.left_steps_sub = self.create_subscription(StepStamped, self.left_steps_topic_name,  self.l_steps_lc, 10)
         self.right_steps_sub = self.create_subscription(StepStamped, self.right_steps_topic_name, self.r_steps_lc, 10)
 
 
@@ -102,20 +102,17 @@ class PartialLoads(Node):
         latched_profile.reliability = QoSReliabilityPolicy.RELIABLE
         latched_profile.durability = QoSDurabilityPolicy.TRANSIENT_LOCAL
 
-        self.user_desc_sub = self.create_subscription(String, self.user_desc_topic_name, self.user_desc_lc, latched_profile) 
-        
+        self.user_desc_sub = self.create_subscription(UserDesc, self.user_desc_topic_name, self.user_desc_lc, latched_profile)
+
         self.tmr = self.create_timer(self.period, self.timer_callback)
 
 
-        self.get_logger().info("load detector started")  
+        self.get_logger().info("load detector started")
 
     def user_desc_lc(self, msg):
-        user_fields = msg.data.split(':')
-        if len(user_fields)>2:
-            new_weight = int(user_fields[2])
-            if (new_weight != self.weight):
-                self.weight = new_weight
-                self.new_data_available = True
+        if (msg.weight != self.weight):
+            self.weight = msg.weight
+            self.new_data_available = True
 
     def l_steps_lc(self, msg):
         self.steps_lc(msg,0)
@@ -123,18 +120,24 @@ class PartialLoads(Node):
     def r_steps_lc(self, msg):
         self.steps_lc(msg,1)
 
-    def handle_lc(self, msg):
-        if ('right' in msg.header.frame_id ):
-            self.right_handle_msg = msg          
+    def l_handle_lc(self, msg):
+        self.handle_lc(msg, 0)
+
+    def r_handle_lc(self, msg):
+        self.handle_lc(msg, 1)
+
+    def handle_lc(self, msg, leg_id):
+        if leg_id == 1:
+            self.right_handle_msg = msg
             self.right_handle_weight = self.fr(msg.force)
             self.new_data_available = True
-        elif ('left' in msg.header.frame_id):
+        elif leg_id == 0:
             self.left_handle_msg = msg
-            self.left_handle_weight  = self.fl(msg.force) 
+            self.left_handle_weight  = self.fl(msg.force)
             self.new_data_available = True
         else:
-            self.get_logger().error("Don't know about which handle are you talking [" + msg.header.frame_id + "]")    
-            return                
+            self.get_logger().error("Don't know about which handle are you talking [" + str(leg_id) + "]")
+            return
 
     def steps_lc(self, msg, id):
         if  (id==1):

@@ -13,10 +13,9 @@ from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
 
 from nav_msgs.msg import Odometry
-from std_msgs.msg import String
 from ament_index_python.packages import get_package_share_directory
 
-from walker_msgs.msg import ForceStamped 
+from walker_msgs.msg import ForceStamped, UserDesc
 
 
 '''
@@ -97,8 +96,8 @@ class GaitMonitorHand(Node):
         self.buffer = Buffer()
         self.listener = TransformListener(self.buffer, self)
 
-        self.left_handle_sub = self.create_subscription(ForceStamped, self.left_handle_topic_name, self.handle_lc, 10) 
-        self.right_handle_sub = self.create_subscription(ForceStamped, self.right_handle_topic_name, self.handle_lc, 10) 
+        self.left_handle_sub = self.create_subscription(ForceStamped, self.left_handle_topic_name, self.l_handle_lc, 10)
+        self.right_handle_sub = self.create_subscription(ForceStamped, self.right_handle_topic_name, self.r_handle_lc, 10)
         self.sub = self.create_subscription(Odometry, self.odom_topic_name, self.odom_callback, 10)
 
         # mimics a ROS1 'latched' topic
@@ -107,18 +106,22 @@ class GaitMonitorHand(Node):
         latched_profile.reliability = QoSReliabilityPolicy.RELIABLE
         latched_profile.durability = QoSDurabilityPolicy.TRANSIENT_LOCAL
 
-        self.user_desc_sub = self.create_subscription(String, self.user_desc_topic_name, self.user_desc_lc, latched_profile) 
+        self.user_desc_sub = self.create_subscription(UserDesc, self.user_desc_topic_name, self.user_desc_lc, latched_profile)
         self.tmr = self.create_timer(self.period, self.timer_callback)
 
-        self.get_logger().info("Force based Gait monitor started")  
+        self.get_logger().info("Force based Gait monitor started")
 
     def user_desc_lc(self, msg):
-        user_fields = msg.data.split(':')
-        if len(user_fields)>2:
-            self.weight = user_fields[2]
+        self.weight = msg.weight
 
-    def handle_lc(self, msg):
-        if ('right' in msg.header.frame_id ):
+    def l_handle_lc(self, msg):
+        self.handle_lc(msg, 0)
+
+    def r_handle_lc(self, msg):
+        self.handle_lc(msg, 1)
+
+    def handle_lc(self, msg, leg_id):
+        if leg_id == 1:
             self.right_handle_weights.append(self.fr(msg.force))
             self.handle_weight_times.append(msg.header.stamp.sec + msg.header.stamp.nanosec*1e-9)
             self.handle_weight_dists.append(self.travelled)
@@ -126,19 +129,17 @@ class GaitMonitorHand(Node):
             if (len(self.left_handle_weights)>0):
                 self.left_handle_weights.append(self.left_handle_weights[-1])
 
-        elif ('left' in msg.header.frame_id):
-            self.left_handle_weights.append(self.fl(msg.force)) 
+        elif leg_id == 0:
+            self.left_handle_weights.append(self.fl(msg.force))
             self.handle_weight_times.append(msg.header.stamp.sec + msg.header.stamp.nanosec*1e-9)
-            self.handle_weight_dists.append(self.travelled)            
+            self.handle_weight_dists.append(self.travelled)
             # later we will combine both forces, so better to have same number of points in time/space
             if (len(self.right_handle_weights)>0):
                 self.right_handle_weights.append(self.right_handle_weights[-1])
 
-
         else:
-            self.get_logger().error("Don't know about which handle are you talking [" + msg.header.frame_id + "]")    
-            return                
-        self.leg_load = self.weight - self.left_handle_weight - self.right_handle_weight
+            self.get_logger().error("Don't know about which handle are you talking [" + str(leg_id) + "]")
+            return
 
     def odom_callback(self, msg):
         self.prev_position = self.cur_position

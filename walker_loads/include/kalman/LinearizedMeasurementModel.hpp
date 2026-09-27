@@ -51,7 +51,23 @@ namespace Kalman {
         
         //! Measurement vector type
         using typename Base::Measurement;
-        
+
+        /**
+         * @brief Compute and return the measurement Jacobian H at state x
+         *
+         * Exposes updateJacobians()'s result without going through a full
+         * ExtendedKalmanFilter::update(): needed by a masked/partial update
+         * that must apply a modified Kalman gain (e.g. forcing one state's
+         * gain to zero because this measurement has no real sensitivity to
+         * it) instead of the library's own all-states update. See
+         * DiffTracker::partialUpdate() in walker_loads for the caller.
+         */
+        const Jacobian<Measurement, State>& computeJacobian(const State& x)
+        {
+            updateJacobians(x);
+            return H;
+        }
+
     protected:
         //! Measurement model jacobian
         Jacobian<Measurement, State> H;

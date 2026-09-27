@@ -105,20 +105,6 @@ class GaitMonitorSp(Node):
             d = np.sqrt(np.power(self.cur_position.x - self.prev_position.x, 2.0 ) + np.power(self.cur_position.y - self.prev_position.y, 2.0 ) )            
             self.travelled += d
 
-    def getTravelledDist(self):
-        test_time = 14.48
-        av_speed = 8.0 / test_time
-
-        elapsed_time = (self.get_clock().now() - self.start_time).nanoseconds/1e9
-        self.get_logger().info("Elapsed time [" + str(elapsed_time) + "]") 
-        
-        travelled =  av_speed*elapsed_time
-        if travelled>8:
-            travelled = 8.0
-
-        return travelled
-        #return self.travelled
-
     def get_difference(self, position_rel, prev_position_rel):
         p = position_rel
         pp =prev_position_rel
@@ -198,8 +184,7 @@ class GaitMonitorSp(Node):
                 end_stamp = self.right_loads[-1].position.header.stamp
             Tr = rclpy.time.Time.from_msg(end_stamp) - rclpy.time.Time.from_msg(start_stamp)
                
-            #d = self.travelled 
-            d = self.getTravelledDist()
+            d = self.travelled
             CAD = 1e9 * 60.0 * NoS/Tr.nanoseconds
             WV = 1e9 * d/Tr.nanoseconds
 

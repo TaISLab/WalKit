@@ -19,9 +19,14 @@ double SplineFunction::interp(double x) const {
 
   x_scaled = scaled_value(x);
 
-  // interpolation may produce values bigger and lower than our limits ...
-  if ( (x_scaled<0) || (x_scaled>1) ){
-      y = y_min + ( x_scaled * ( y_max - y_min) );
+  // Readings outside the calibrated range are clamped to the nearest
+  // calibrated extreme instead of extrapolated: the spline has no basis
+  // to guess beyond [x_min, x_max], and unbounded linear extrapolation
+  // there can produce negative or wildly oversized force values.
+  if (x_scaled<0){
+      y = y_min;
+  } else if (x_scaled>1){
+      y = y_max;
   } else {
       y = spline_(x_scaled)(0);
   }

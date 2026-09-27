@@ -14,6 +14,9 @@
   <depend>rclpy</depend>
   <depend>walker_msgs</depend>
 
+  <exec_depend>walker_description</exec_depend>
+  <exec_depend>walker_step_detector</exec_depend>
+
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
 
