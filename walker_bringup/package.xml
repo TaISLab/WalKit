@@ -21,6 +21,20 @@
   <exec_depend>walker_diff_odom</exec_depend>
   <exec_depend>laser_filters</exec_depend>
   <exec_depend>rosbridge_server</exec_depend>
+
+  <!-- Laser-inertial odometry (walker_laser_imu_odom.launch.py), replacing
+       walker_diff_odom now that the wheel encoders are broken: CSM/PL-ICP
+       laser scan matching (ros2_laser_scan_matcher, needs nav2_common for
+       walker_lsm.launch.py's RewrittenYaml) + WitMotion IMU driver +
+       complementary filter, fused by robot_localization's EKF. None of
+       these were declared here before even though walker_lsm.launch.py,
+       walker_witmotion.launch.py and walker_efk.launch.py already used them,
+       so `rosdep install` would silently skip them. -->
+  <exec_depend>ros2_laser_scan_matcher</exec_depend>
+  <exec_depend>nav2_common</exec_depend>
+  <exec_depend>witmotion_ros</exec_depend>
+  <exec_depend>imu_complementary_filter</exec_depend>
+  <exec_depend>robot_localization</exec_depend>
   
   <export>
     <build_type>ament_cmake</build_type>

@@ -1,25 +1,56 @@
 laser_scan_matcher_node:
   ros__parameters:
-    frequency: 30.0
-    delay: 3.0
-    magnetic_declination_radians: 0.0429351  # For lat/long 55.944831, -3.186998
-    yaw_offset: 1.570796327  # IMU reads 0 facing magnetic north, not east
-    zero_altitude: false
-    broadcast_utm_transform: true
-    publish_filtered_gps: false
-    use_odometry_yaw: false
-    wait_for_datum: false
+    # NOTE: this file used to also carry a block of robot_localization
+    # navsat_transform_node parameters (frequency, delay,
+    # magnetic_declination_radians, yaw_offset, zero_altitude,
+    # broadcast_utm_transform, publish_filtered_gps, use_odometry_yaw,
+    # wait_for_datum) left over from some earlier copy-paste. laser_scan_matcher
+    # (ros2_laser_scan_matcher/src/laser_scan_matcher.cpp) never declares or
+    # reads any of them -- there's no GPS on this robot -- so they were dead,
+    # confusing config. Removed; see pose/twist covariance below for the
+    # params that actually matter for this node's contribution to the EKF.
     publish_odom: /scan_odom         # odometry topic name from laser_scan. Empty if not publishing
     publish_tf: false                 # true if publish tf odom_frame - base_frame
     invert_tf: false                  # true if published tf is base_frame -> odom_frame instead of odom_frame -> base_frame
     base_frame: base_footprint       # robot base frame
-    odom_frame: scan_odom            # odom frame
+    # This MUST be a frame that either equals the EKF's world_frame ("odom",
+    # see walker_ekf.yaml) or is connected to it via TF. It used to be the
+    # made-up name "scan_odom", which is never published anywhere in the TF
+    # tree -- robot_localization's preparePose() requires a TF path from a
+    # pose measurement's frame_id to its own world_frame before it will fuse
+    # ANY of that measurement's position or orientation (ros_filter.cpp:
+    # lookupTransformSafe() only self-transforms via an identity fallback
+    # when target_frame == source_frame; "scan_odom" != "odom" and nothing
+    # ever bridges them, so that lookup always failed and preparePose()
+    # returned false -- see its `if (can_transform) {...} else { retVal =
+    # false; }` branch). The pose fusion (x, y, yaw) was therefore silently
+    # dropped on every single message; only this message's twist (vx, vy),
+    # which uses child_frame_id="base_footprint" and needs no transform,
+    # ever reached the filter. That looked deceptively OK on a straight-line
+    # walk (yaw frozen at its initial value, so unrotated body-frame
+    # velocity still summed into a roughly-correct path) but produced total
+    # heading garbage (validated: >100 deg yaw RMSE against mocap) as soon
+    # as the walker actually turned. Using "odom" here makes source_frame ==
+    # target_frame, so the identity fallback always succeeds immediately,
+    # with no dependency on TF broadcast order at startup.
+    odom_frame: odom                 # odom frame
     map_frame: map                   # map frame
     laser_scan_frame: laser          # laser frame
     laser_scan_topic: /scan_nav      # Which topic to subscribe for the laser_scan
     kf_dist_linear: 0.10             #  When to generate keyframe scan
     kf_dist_angular: 0.087           # (~5.0º) When to generate keyframe scan
-  
+
+    # Fixed diagonal covariance published on /scan_odom (x, y, z, roll, pitch,
+    # yaw / vx, vy, vz, vroll, vpitch, vyaw) -- CSM's do_compute_covariance is
+    # off (expensive per-scan), so this fixed estimate is what
+    # robot_localization (walker_ekf.yaml, odom0) actually weights this
+    # sensor by. Starting point only: re-tune from the ATE numbers produced
+    # by walker_step_detector/scripts/eval_odom_against_mocap.py against the
+    # mocap-labeled bags in bagsFolder_unified before trusting these values
+    # in the field.
+    pose_covariance_diagonal:  [0.0025, 0.0025, 1.0e-6, 1.0e-6, 1.0e-6, 0.0012]
+    twist_covariance_diagonal: [0.01,   0.01,   1.0e-6, 1.0e-6, 1.0e-6, 0.02]
+
     # Laser params
     range_min: -10.0              # Minimum range of the scan_laser_sensor. If -10 it will acquire the value of the laser_scan_topic.
     range_max: -10.0              # Maximum range of the scan_laser_sensor. If -10 it will acquire the value of the laser_scan_topic.
