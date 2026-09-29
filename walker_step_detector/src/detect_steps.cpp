@@ -5,10 +5,13 @@ DetectSteps::DetectSteps() : Node("detect_steps"){
     this->declare_parameter<std::string>("scan_topic",                "/scan");
     this->declare_parameter<std::string>("forest_file",               "./src/leg_detector/config/trained_leg_detector_res_0.33.yaml");
     this->declare_parameter<std::string>("detected_steps_topic_name", "/detected_step");
+    this->declare_parameter<std::string>("candidates_topic_name",     "/leg_candidates_rf");
     this->declare_parameter<double>("kalman_model_d0",                0.001);
     this->declare_parameter<double>("kalman_model_a0",                0.001);
     this->declare_parameter<double>("kalman_model_f0",                0.001);
     this->declare_parameter<double>("kalman_model_p0",                0.001);
+    this->declare_parameter<double>("max_association_dist",           0.5);
+    this->declare_parameter<int>("max_track_loss_frames",             15);
     this->declare_parameter<double>("detection_threshold",            -1.0);
     this->declare_parameter<double>("cluster_dist_euclid",            0.13);
     this->declare_parameter<double>("max_detect_distance",            10.0);
@@ -19,10 +22,13 @@ DetectSteps::DetectSteps() : Node("detect_steps"){
     this->get_parameter("scan_topic",                    scan_topic_name_);
     this->get_parameter("forest_file",                   forest_file);
     this->get_parameter("detected_steps_topic_name",     detected_steps_topic_name_);
+    this->get_parameter("candidates_topic_name",         candidates_topic_name_);
     this->get_parameter("kalman_model_d0",                  kalman_model_d0_);
     this->get_parameter("kalman_model_a0",                  kalman_model_a0_);
     this->get_parameter("kalman_model_f0",                  kalman_model_f0_);
     this->get_parameter("kalman_model_p0",                  kalman_model_p0_);
+    this->get_parameter("max_association_dist",             max_association_dist_);
+    this->get_parameter("max_track_loss_frames",             max_track_loss_frames_);
     this->get_parameter("detection_threshold",           detection_threshold_);
     this->get_parameter("cluster_dist_euclid",           cluster_dist_euclid_);
     this->get_parameter("max_detect_distance",           max_detect_distance_);
@@ -31,7 +37,7 @@ DetectSteps::DetectSteps() : Node("detect_steps"){
     this->get_parameter("publish_clusters",              publish_clusters_);
 
     // Load kalman tracker
-    kalman_tracker.init(this, kalman_model_d0_, kalman_model_a0_, kalman_model_f0_, kalman_model_p0_ );
+    kalman_tracker.init(this, kalman_model_d0_, kalman_model_a0_, kalman_model_f0_, kalman_model_p0_, max_association_dist_, max_track_loss_frames_ );
     kalman_tracker.set_status(true);
 
     // Verbose init
@@ -55,6 +61,8 @@ DetectSteps::DetectSteps() : Node("detect_steps"){
         RCLCPP_INFO(this->get_logger(), "       - a: %.2f", kalman_model_a0_);
         RCLCPP_INFO(this->get_logger(), "       - f: %.2f", kalman_model_f0_);
         RCLCPP_INFO(this->get_logger(), "       - p: %.2f", kalman_model_p0_);
+        RCLCPP_INFO(this->get_logger(), "max_association_dist: %.2f", max_association_dist_);
+        RCLCPP_INFO(this->get_logger(), "max_track_loss_frames: %d", max_track_loss_frames_);
         RCLCPP_INFO(this->get_logger(), "detection_threshold: %.2f", detection_threshold_);
         RCLCPP_INFO(this->get_logger(), "cluster_dist_euclid: %.2f", cluster_dist_euclid_);
         RCLCPP_INFO(this->get_logger(), "max_detect_distance: %.2f", max_detect_distance_);
@@ -73,6 +81,9 @@ DetectSteps::DetectSteps() : Node("detect_steps"){
     // publishers
     left_detected_step_pub_ = this->create_publisher<walker_msgs::msg::StepStamped>(detected_steps_topic_name_ + "_left", 20);
     right_detected_step_pub_ = this->create_publisher<walker_msgs::msg::StepStamped>(detected_steps_topic_name_ + "_right", 20);
+    candidates_pub_ = this->create_publisher<walker_msgs::msg::StepArray>(candidates_topic_name_, 20);
+    left_ref_pub_ = this->create_publisher<walker_msgs::msg::StepStamped>(detected_steps_topic_name_ + "_left_ref", 20);
+    right_ref_pub_ = this->create_publisher<walker_msgs::msg::StepStamped>(detected_steps_topic_name_ + "_right_ref", 20);
 
 
     this->scan_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(scan_topic_name_, default_qos, std::bind(&DetectSteps::laserCallback, this, std::placeholders::_1));
@@ -86,6 +97,16 @@ void DetectSteps::laserCallback(const sensor_msgs::msg::LaserScan::SharedPtr sca
     RCLCPP_WARN(this->get_logger(), "Laser data received at: [%3.3f]", scan->header.stamp.sec + (scan->header.stamp.nanosec*1e-9));    
 
     std::list<walker_msgs::msg::StepStamped> points = getCentroids(scan);
+    candidates_pub_->publish(walker_step_detector::to_step_array(scan->header, points));
+
+    // Referencia interna ANTES de procesar este ciclo (ver comentario en el
+    // .h) -- se publica aqui, no despues de add_detections, para capturar
+    // exactamente lo que la asociacion de este ciclo usara como l_ref/r_ref.
+    walker_msgs::msg::StepStamped left_ref, right_ref;
+    kalman_tracker.get_current_refs(&left_ref, &right_ref);
+    left_ref_pub_->publish(left_ref);
+    right_ref_pub_->publish(right_ref);
+
     RCLCPP_DEBUG(this->get_logger(), "Adding centroid detections to kalman filters");
     kalman_tracker.add_detections(points);
     
@@ -138,8 +159,37 @@ std::list<walker_msgs::msg::StepStamped> DetectSteps::getCentroids(sensor_msgs::
             //publish_clusters(processor.getClusters());
         }
 
-        std::list<walker_msgs::msg::StepStamped> points = processor.getCentroids(scan->header);   
-        return points; 
+        std::list<walker_msgs::msg::StepStamped> points = processor.getCentroids(scan->header);
+
+        // Filtrar por confianza del clasificador: sin esto, detection_threshold_
+        // y max_detected_clusters_ se declaraban, se leian del parametro y se
+        // logueaban al arrancar, pero NUNCA se usaban para descartar nada --
+        // todos los clusters (sean pierna o ruido) llegaban igual al tracker.
+        // Con el umbral por defecto (-1.0) esto no filtra nada (la confianza
+        // del forest vive en [0,1]), asi que no cambia el comportamiento de
+        // quien no fije el parametro explicitamente.
+        points.remove_if([this](const walker_msgs::msg::StepStamped & s){
+            return s.confidence < detection_threshold_;
+        });
+
+        if (is_debug){
+            RCLCPP_DEBUG(this->get_logger(), "Detected %ld clusters with confidence >= %3.3f", points.size(), detection_threshold_);
+        }
+
+        if (max_detected_clusters_ > 0 && (int)points.size() > max_detected_clusters_){
+            // mas candidatos de los permitidos: quedarse con los N mas
+            // confiables, no con los N primeros del barrido angular.
+            points.sort([](const walker_msgs::msg::StepStamped & a, const walker_msgs::msg::StepStamped & b){
+                return a.confidence > b.confidence;
+            });
+            points.resize(max_detected_clusters_);
+
+            if (is_debug){
+                RCLCPP_DEBUG(this->get_logger(), "Capped to the %d most confident clusters", max_detected_clusters_);
+            }
+        }
+
+        return points;
 }
 
 int main(int argc, char **argv){

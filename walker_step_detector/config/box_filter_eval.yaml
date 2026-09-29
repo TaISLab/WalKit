@@ -1,0 +1,24 @@
+# Igual que walker_laser_filter/config/inverted_box_filter.yaml pero
+# leyendo /scan (crudo) en vez de /scan_filtered: los bags de
+# datasets/labeled_bags (soma13kp) no pasan por ningun filtro previo.
+# Usado por test_step_detector.launch.py para recortar el scan a la zona
+# donde pueden aparecer las piernas antes de pasarselo a las tres
+# variantes -- sin esto, km_detect_steps (que no filtra por distancia)
+# hace k-means sobre la sala entera en vez de sobre las piernas.
+/step_laser_filter:
+  ros__parameters:
+    use_sim_time: False
+    filter:
+      in_topic: /scan
+      out_topic: /scan_feet
+      name: inverted_box_filter
+      type: laser_filters/LaserScanBoxFilter
+      remove_out: True
+      params:
+        box_frame: laser
+        max_x: 0.03
+        max_y: 0.3
+        max_z: 1.0
+        min_x: -1.2
+        min_y: -0.3
+        min_z: -1.0

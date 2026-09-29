@@ -1,0 +1,61 @@
+note: >
+  rigid_body[0] (andador, mocap map frame) -> base_footprint. Calibrado por
+  ICP 2D contra los CA/LA/MF/MT de datasets/labeled_bags (ver
+  scripts/calibrate_mocap_to_laser.py). dz no observable con laser 2D, no
+  incluido -- combinar con base_footprint->laser (fijo, del xacro de
+  walker_description) para proyectar puntos de /labeled_markers (frame map)
+  al frame laser.
+dx: -0.375
+dy: -0.0205
+dyaw: 0.026722994318172693
+rmse_m: 0.0679
+n_pairs: 29428
+n_bags: 47
+bags:
+- CA_test01
+- CA_test02
+- CA_test03
+- CA_test04
+- CA_test05
+- CA_test06
+- CA_test07
+- CA_test08
+- CA_test09
+- CA_test10
+- LA_test1
+- LA_test2
+- LA_test3
+- LA_test4
+- LA_test5
+- LA_test6
+- LA_test7
+- MF_test01
+- MF_test02
+- MF_test03
+- MF_test04
+- MF_test05
+- MF_test06
+- MF_test07
+- MF_test08
+- MF_test09
+- MF_test10
+- MF_test11
+- MF_test12
+- MF_test13
+- MF_test14
+- MF_test15
+- MF_test16
+- MF_test17
+- MF_test18
+- MF_test19
+- MF_test20
+- MT_test11
+- MT_test12
+- MT_test13
+- MT_test14
+- MT_test15
+- MT_test16
+- MT_test17
+- MT_test18
+- MT_test19
+- MT_test20

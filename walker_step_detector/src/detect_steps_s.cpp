@@ -4,25 +4,31 @@ DetectStepsS::DetectStepsS() : Node("detect_steps"){
     //Get ROS parameters
     this->declare_parameter<std::string>("segments_topic",            "/segments");
     this->declare_parameter<std::string>("detected_steps_topic_name", "/detected_step");
+    this->declare_parameter<std::string>("candidates_topic_name",     "/leg_candidates_seg");
     this->declare_parameter<double>("kalman_model_d0",                0.001);
     this->declare_parameter<double>("kalman_model_a0",                0.001);
     this->declare_parameter<double>("kalman_model_f0",                0.001);
     this->declare_parameter<double>("kalman_model_p0",                0.001);
+    this->declare_parameter<double>("max_association_dist",           0.5);
+    this->declare_parameter<int>("max_track_loss_frames",             15);
     this->declare_parameter<bool>("kalman_enabled",                   false);
     this->declare_parameter<bool>("is_debug",                         false);
 
 
     this->get_parameter("segments_topic",                    segments_topic_);
-    this->get_parameter("detected_steps_topic_name",         detected_steps_topic_name_); 
-    this->get_parameter("kalman_model_d0_",                  kalman_model_d0_);
-    this->get_parameter("kalman_model_a0_",                  kalman_model_a0_);
-    this->get_parameter("kalman_model_f0_",                  kalman_model_f0_);
-    this->get_parameter("kalman_model_p0_",                  kalman_model_p0_);
+    this->get_parameter("detected_steps_topic_name",         detected_steps_topic_name_);
+    this->get_parameter("candidates_topic_name",             candidates_topic_name_);
+    this->get_parameter("kalman_model_d0",                   kalman_model_d0_);
+    this->get_parameter("kalman_model_a0",                   kalman_model_a0_);
+    this->get_parameter("kalman_model_f0",                   kalman_model_f0_);
+    this->get_parameter("kalman_model_p0",                   kalman_model_p0_);
+    this->get_parameter("max_association_dist",              max_association_dist_);
+    this->get_parameter("max_track_loss_frames",              max_track_loss_frames_);
     this->get_parameter("kalman_enabled",                    kalman_enabled_);
     this->get_parameter("is_debug",                          is_debug);
 
     // Load kalman tracker
-    kalman_tracker.init(this, kalman_model_d0_, kalman_model_a0_, kalman_model_f0_, kalman_model_p0_ );
+    kalman_tracker.init(this, kalman_model_d0_, kalman_model_a0_, kalman_model_f0_, kalman_model_p0_, max_association_dist_, max_track_loss_frames_ );
     kalman_tracker.set_status(kalman_enabled_);
 
     // Verbose init
@@ -44,6 +50,8 @@ DetectStepsS::DetectStepsS() : Node("detect_steps"){
         RCLCPP_INFO(this->get_logger(), "       - a: %.2f", kalman_model_a0_);
         RCLCPP_INFO(this->get_logger(), "       - f: %.2f", kalman_model_f0_);
         RCLCPP_INFO(this->get_logger(), "       - p: %.2f", kalman_model_p0_);
+        RCLCPP_INFO(this->get_logger(), "max_association_dist: %.2f", max_association_dist_);
+        RCLCPP_INFO(this->get_logger(), "max_track_loss_frames: %d", max_track_loss_frames_);
     } else {
         RCLCPP_INFO(this->get_logger(), "Step detector loading. Set is_debug to true for debug.");
     }
@@ -54,6 +62,7 @@ DetectStepsS::DetectStepsS() : Node("detect_steps"){
     // publishers
     left_detected_step_pub_ = this->create_publisher<walker_msgs::msg::StepStamped>(detected_steps_topic_name_ + "_left", 20);
     right_detected_step_pub_ = this->create_publisher<walker_msgs::msg::StepStamped>(detected_steps_topic_name_ + "_right", 20);
+    candidates_pub_ = this->create_publisher<walker_msgs::msg::StepArray>(candidates_topic_name_, 20);
 
     //subscribers last
     this->segments_sub_ = this->create_subscription<slg_msgs::msg::SegmentArray>(segments_topic_, default_qos, std::bind(&DetectStepsS::segmentsCallback, this, std::placeholders::_1));
@@ -67,6 +76,7 @@ void DetectStepsS::segmentsCallback(const slg_msgs::msg::SegmentArray::SharedPtr
     RCLCPP_WARN(this->get_logger(), "Segment data received at: [%3.3f]", seg_array->header.stamp.sec + (seg_array->header.stamp.nanosec*1e-9));    
 
     std::list<walker_msgs::msg::StepStamped> points = getCentroids(seg_array);
+    candidates_pub_->publish(walker_step_detector::to_step_array(seg_array->header, points));
     kalman_tracker.add_detections(points);
 
     // get steps from Kalman set

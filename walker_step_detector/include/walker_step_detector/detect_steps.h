@@ -28,6 +28,8 @@
 
 // Custom Messages related Headers
 #include "walker_msgs/msg/step_stamped.hpp"
+#include "walker_msgs/msg/step_array.hpp"
+#include "walker_step_detector/candidates_publish.h"
 
 #include <fstream>
 #include <memory>
@@ -50,11 +52,14 @@ private:
     std::string scan_topic_name_;
     std::string forest_file;
     std::string detected_steps_topic_name_;
+    std::string candidates_topic_name_;
     double kalman_model_d0_;
     double kalman_model_a0_;
     double kalman_model_f0_;
     double kalman_model_p0_;
 
+    double max_association_dist_;
+    int max_track_loss_frames_;
     double detection_threshold_;
     double cluster_dist_euclid_;
     int min_points_per_cluster_;
@@ -64,6 +69,13 @@ private:
 
     rclcpp::Publisher<walker_msgs::msg::StepStamped>::SharedPtr left_detected_step_pub_;
     rclcpp::Publisher<walker_msgs::msg::StepStamped>::SharedPtr right_detected_step_pub_;
+    rclcpp::Publisher<walker_msgs::msg::StepArray>::SharedPtr candidates_pub_;
+    // Instrumentacion para investigate_swaps.py: referencia interna del
+    // tracker (LegsTracker::get_current_refs) justo ANTES de procesar este
+    // ciclo -- lo que add_detections() usara como l_ref/r_ref. No cambia
+    // nada del comportamiento, solo expone estado ya existente.
+    rclcpp::Publisher<walker_msgs::msg::StepStamped>::SharedPtr left_ref_pub_;
+    rclcpp::Publisher<walker_msgs::msg::StepStamped>::SharedPtr right_ref_pub_;
     rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr markers_array_pub_;
     rclcpp::TimerBase::SharedPtr timer_;

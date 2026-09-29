@@ -4,26 +4,32 @@ KMDetectSteps::KMDetectSteps() : Node("detect_steps"){
     //Get ROS parameters
     this->declare_parameter<std::string>("scan_topic",                "/scan");
     this->declare_parameter<std::string>("detected_steps_topic_name", "/detected_step");
+    this->declare_parameter<std::string>("candidates_topic_name",     "/leg_candidates_km");
     this->declare_parameter<double>("kalman_model_d0",                0.001);
     this->declare_parameter<double>("kalman_model_a0",                0.001);
     this->declare_parameter<double>("kalman_model_f0",                0.001);
     this->declare_parameter<double>("kalman_model_p0",                0.001);
+    this->declare_parameter<double>("max_association_dist",           0.5);
+    this->declare_parameter<int>("max_track_loss_frames",             15);
     this->declare_parameter<bool>("kalman_enabled",                   false);
-    this->declare_parameter<bool>("fit_ellipse",                      false); 
+    this->declare_parameter<bool>("fit_ellipse",                      false);
     this->declare_parameter<bool>("is_debug",                         false);
 
     this->get_parameter("scan_topic",                        scan_topic_name_);
     this->get_parameter("detected_steps_topic_name",         detected_steps_topic_name_);
+    this->get_parameter("candidates_topic_name",             candidates_topic_name_);
     this->get_parameter("kalman_model_d0",                  kalman_model_d0_);
     this->get_parameter("kalman_model_a0",                  kalman_model_a0_);
     this->get_parameter("kalman_model_f0",                  kalman_model_f0_);
     this->get_parameter("kalman_model_p0",                  kalman_model_p0_);
+    this->get_parameter("max_association_dist",             max_association_dist_);
+    this->get_parameter("max_track_loss_frames",             max_track_loss_frames_);
     this->get_parameter("kalman_enabled",                   kalman_enabled_);
     this->get_parameter("fit_ellipse",                      fit_ellipse_);
     this->get_parameter("is_debug",                         is_debug);
 
     // Load kalman tracker
-    kalman_tracker.init(this, kalman_model_d0_, kalman_model_a0_, kalman_model_f0_, kalman_model_p0_ );
+    kalman_tracker.init(this, kalman_model_d0_, kalman_model_a0_, kalman_model_f0_, kalman_model_p0_, max_association_dist_, max_track_loss_frames_ );
     kalman_tracker.set_status(kalman_enabled_);
 
     // Verbose init
@@ -45,6 +51,8 @@ KMDetectSteps::KMDetectSteps() : Node("detect_steps"){
         RCLCPP_INFO(this->get_logger(), "       - a: %.2f", kalman_model_a0_);
         RCLCPP_INFO(this->get_logger(), "       - f: %.2f", kalman_model_f0_);
         RCLCPP_INFO(this->get_logger(), "       - p: %.2f", kalman_model_p0_);
+        RCLCPP_INFO(this->get_logger(), "max_association_dist: %.2f", max_association_dist_);
+        RCLCPP_INFO(this->get_logger(), "max_track_loss_frames: %d", max_track_loss_frames_);
         RCLCPP_INFO(this->get_logger(), "fit points to ellipses: [%s]: ", (fit_ellipse_) ? ("YES") : ("NO"));
 
     } else {
@@ -57,6 +65,7 @@ KMDetectSteps::KMDetectSteps() : Node("detect_steps"){
     // publishers
     left_detected_step_pub_ = this->create_publisher<walker_msgs::msg::StepStamped>(detected_steps_topic_name_ + "_left", 20);
     right_detected_step_pub_ = this->create_publisher<walker_msgs::msg::StepStamped>(detected_steps_topic_name_ + "_right", 20);
+    candidates_pub_ = this->create_publisher<walker_msgs::msg::StepArray>(candidates_topic_name_, 20);
 
     //subscribers last
     this->scan_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(scan_topic_name_, default_qos, std::bind(&KMDetectSteps::laserCallback, this, std::placeholders::_1));
@@ -70,13 +79,30 @@ void KMDetectSteps::laserCallback(const sensor_msgs::msg::LaserScan::SharedPtr s
     RCLCPP_WARN(this->get_logger(), "Laser data received at: [%3.3f]", scan->header.stamp.sec + (scan->header.stamp.nanosec*1e-9));    
 
     std::list<walker_msgs::msg::StepStamped> points = getCentroids(scan);
+    candidates_pub_->publish(walker_step_detector::to_step_array(scan->header, points));
     kalman_tracker.add_detections(points);
 
     // get steps from Kalman set
     RCLCPP_DEBUG(this->get_logger(), "Getting filtered positions from kalman");
     walker_msgs::msg::StepStamped step_r;
     walker_msgs::msg::StepStamped step_l;
-    double t = (this->now()).nanoseconds();
+    // Timestamp del propio escaneo, NO this->now(): predict_step() usa
+    // esto como stamp final de cada StepStamped predicho (ver
+    // TrackLeg::predict_step, "pred_step.position.header.stamp =
+    // rclcpp::Time(ti)") y como "tiempo actual" para el dt del EKF. En
+    // vivo, this->now() y el stamp del escaner son practicamente lo mismo,
+    // asi que esto no cambia nada -- pero en replay de un bag a una tasa
+    // distinta de 1.0 (ros2 bag play --rate) this->now() da tiempo de
+    // reloj de pared, que avanza rate veces mas rapido/lento que el
+    // timestamp real del sensor. Descubierto validando gait_monitor_speed
+    // contra ground truth de mocap (walker_mocap_eval/): con rate=4.0 y
+    // kalman_enabled=true, Tr/SpT/SdT resultantes quedaban truncados a
+    // ~1/rate de su valor real en TODOS los bags probados (comprobado
+    // tambien que NO era un problema de zona de deteccion ni del tracker
+    // en si: a rate=1.0, con el resto identico, Tr paso de ~12% a ~73% de
+    // la duracion real del bag). Usar el stamp del escaner corrige esto en
+    // cualquier rate de replay sin cambiar el comportamiento en vivo.
+    double t = rclcpp::Time(scan->header.stamp).nanoseconds();
     kalman_tracker.get_steps(&step_r, &step_l, t);
 
     // publish lets

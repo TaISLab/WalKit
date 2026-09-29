@@ -49,6 +49,59 @@ only ever accumulates consecutive position deltas, which is frame-
 invariant, so this is a legitimate stand-in for "some correct odometry
 source" without pretending to validate wheel/inertial odometry here too.
 
+Ran this against all 47 labeled_bags (walker_mocap_eval/scripts/
+compare_gait_mocap_vs_walker.py, punto 2 del plan): d/CAD/WV now match the
+mocap reference closely (median d error ~2cm, ~1% MAPE) -- the odom fix
+above is good. But NoS/Tr from the real pipeline were severely undercounted
+across EVERY bag (median ~75 fewer steps than mocap, walker_tr_s typically
+10-30% of the bag's real duration). Checked specifically whether this was
+about "circulos" vs "ida y vuelta" tests (most bags are circular; thought a
+fixed-frame active-area clip might be the cause) and it was NOT: LA_test*
+(straight back-and-forth) showed the same severe undercount.
+`fixed_frame_active_area_x`/`_y`, which this launch file used to pass to
+km_detect_steps, turned out to be dead parameters anyway (km_detect_steps.cpp
+never reads them) and have been removed here.
+
+**Root cause found and fixed** (walker_step_detector/src/km_detect_steps.cpp):
+with `kalman_enabled: true` (needed here -- `kalman_enabled: false` never
+sets `StepStamped.tracked`, so partial_loads never sees usable data at all),
+`KMDetectSteps::laserCallback()` stamped every predicted StepStamped with
+`this->now()` (wall-clock) instead of the scan's own header stamp. Live,
+that's harmless (wall-clock ~= sensor time). Replayed at `--rate 4.0`
+(this launch file's default), wall-clock runs 4x faster than the bag's own
+timeline, so Tr/SpT/SdT -- all computed from these header-stamp
+differences -- came out truncated to roughly 1/rate of their true value:
+confirmed by rerunning at `rate:=1.0` with the bug still in place (Tr went
+from ~12% to ~73% of the true bag duration, nothing else changed) before
+touching the C++. Fixed by stamping with `rclcpp::Time(scan->header.stamp)`
+instead; rebuilt (`colcon build --packages-select walker_step_detector`)
+and reran at rate=4.0: Tr coverage on CA_test01/02/03 went from ~10s to
+~50-60s (of ~85-90s), and CA_test03 (previously zero usable output) now
+produces data. This is a genuine bug independent of gait_monitor_speed,
+this launch file, or the leg tracker's tracking quality -- it only bites
+non-real-time bag replay, which is presumably why it was never noticed
+before this validation effort.
+
+Reran all 47 bags after the fix (rate=4.0): NOT uniform. 13 bags now match
+mocap's NoS closely (MF_test17-20, MT_test11-20 except MT_test13) --
+walker NoS 70-150% of mocap's, Tr covering the full bag, SpT/SdT errors
+under ~2s. The other 30 (every CA_test*, every LA_test*, MF_test01-15) are
+still severely undercounted (walker NoS ~8-23% of mocap's) almost exactly
+as before the fix -- so there is a SECOND, separate issue that the
+timestamp fix does not touch, and it is bag-specific, not a single global
+parameter problem. Checked whether it's a /scan quality difference
+(irregular timestamps, gaps, duplicates) between the two groups: it is
+NOT -- CA_test01 (bad) and MF_test17 (good) have statistically identical
+/scan header-stamp behavior (median gap ~0.12-0.18s, no duplicates, no
+non-monotonic stamps, in both groups; even MF_test16, same session and
+scan quality as MF_test17, still fails with zero output). So whatever
+differs between "good" and "bad" bags happens downstream of /scan, inside
+km_detect_steps' clustering/tracking or partial_loads' load assignment --
+not chased further here. See the task flagged for walker_step_detector
+(was started by the user as a separate session while this investigation
+was already in progress here: check both for
+overlapping findings before doing more work on it).
+
 Usage:
     ros2 launch walker_loads replay_offline.launch.py \\
         bag_path:=/home/mfcarmona/workspace/walker_ws/src/soma13kp/datasets/labeled_bags/MF_test05
@@ -145,8 +198,6 @@ def launch_setup(context, *args, **kwargs):
             {'plot_leg_kalman': False},
             {'plot_leg_clusters': False},
             {'use_scan_header_stamp_for_tfs': False},
-            {'fixed_frame_active_area_x': [-0.75, 0.4]},
-            {'fixed_frame_active_area_y': [-0.4, 0.4]},
         ]))
 
     # The node under study.

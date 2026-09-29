@@ -24,7 +24,39 @@ def generate_launch_description():
                  {'left_handle_topic_name': '/left_handle'},
                  {'right_handle_topic_name': '/right_handle'},
                  {'user_desc_topic_name': '/user_desc'},
-                 {'period': 0.05},
+                 # ms_period (no "period"): partial_loads.cpp declara el parametro
+                 # de su timer de calculo/publicacion como "ms_period" (int,
+                 # milisegundos, default 500 = 2Hz) -- "period" no existe, asi que
+                 # este valor (pensado como 0.05s = 50ms = 20Hz) nunca llegaba a
+                 # aplicarse: el nodo corria siempre al default de 2Hz. Encontrado
+                 # investigando por que gait_monitor_speed sigue infracontando NoS
+                 # incluso tras corregir el timestamp de km_detect_steps (ver
+                 # replay_offline.launch.py): con datos que llegan bien (steps a
+                 # ~6Hz, manetas a ~2.4Hz, sin huecos > data_timeout_s), muestrear
+                 # la decision de "que pierna carga" solo 2 veces por segundo
+                 # sub-muestrea un ciclo de marcha real de ~2-3.4s (SpT/SdT de
+                 # mocap, ver walker_mocap_eval) -- y en replay a --rate 4.0 ese
+                 # timer de reloj de pared (create_wall_timer, no afectado por la
+                 # velocidad del bag) corresponde a 2s de tiempo de bag entre
+                 # muestras, mas de un ciclo de marcha completo. Con esto puesto a
+                 # 50ms (=200ms de tiempo de bag a rate=4.0): spot-check en
+                 # MT_test18 (NoS 21->178, mocap 153) y CA_test01 (NoS ->88,
+                 # mocap 87) -- de infracontar severamente a sobrecontar un
+                 # poco, por el ruido de km_detect_steps (sin filtro de
+                 # confianza, ver km_detect_steps.cpp::getCentroids, que
+                 # siempre fuerza 2 clusters aunque no haya pierna real).
+                 # VALIDADO despues sobre los 47 bags completos
+                 # (walker_mocap_eval/scripts/compare_gait_mocap_vs_walker.py,
+                 # ROS_DOMAIN_ID aislado): NoS MAE 84 pasos/84% MAPE (antes de
+                 # este fix Y del fix de timestamp de km_detect_steps,
+                 # numeros del readme.md) -> MAE=23.5 pasos/25.1% MAPE. Los 3
+                 # bags que antes no producian NINGUN GaitStamped
+                 # (CA_test03, LA_test2, LA_test6) ahora si. d/wv siguen
+                 # bien (MAPE 1.3%/13.2%). SpT/SdT/SpL/SdL siguen con error
+                 # alto (MAPE 30-230%): heredan el ~25% de error de NoS que
+                 # queda (ruido de km_detect_steps, mismo mecanismo de
+                 # arriba) -- no arreglado aqui, ver walker_mocap_eval/readme.md.
+                 {'ms_period': 50},
                  {'speed_delta': 0.05},
                  {'speed_delta_ratio': 0.3},
                  {'speed_delta_max': 1.0},

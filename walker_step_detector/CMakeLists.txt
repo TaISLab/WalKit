@@ -128,6 +128,29 @@ km_detect_steps
   DESTINATION lib/${PROJECT_NAME}
 )
 
+# detect_steps_fused executable: fusiona los candidatos de las tres variantes
+# de arriba (topics /leg_candidates_*) en un unico LegsTracker ................
+add_executable (detect_steps_fused
+    src/detect_steps_fused.cpp
+    src/compare_steps.cpp
+    src/legs_tracker.cpp
+    src/track_leg.cpp
+)
+
+ament_target_dependencies(detect_steps_fused
+  rclcpp
+  walker_msgs
+  std_msgs
+  tf2
+  tf2_geometry_msgs
+  tf2_ros
+)
+
+install (TARGETS
+detect_steps_fused
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 # plot_steps executable
 add_executable (plot_steps
                 src/plot_steps.cpp

@@ -25,6 +25,8 @@
 
 // Custom Messages related Headers
 #include "walker_msgs/msg/step_stamped.hpp"
+#include "walker_msgs/msg/step_array.hpp"
+#include "walker_step_detector/candidates_publish.h"
 
 
 // general cpp stuff
@@ -62,10 +64,13 @@ private:
     // configuration parameters
     std::string scan_topic_name_;
     std::string detected_steps_topic_name_;
+    std::string candidates_topic_name_;
     std::string detected_steps_frame_;
     bool kalman_enabled_;
     bool fit_ellipse_;
     double kalman_model_d0_, kalman_model_a0_, kalman_model_f0_, kalman_model_p0_;
+    double max_association_dist_;
+    int max_track_loss_frames_;
     bool plot_leg_kalman_;
     bool plot_leg_clusters_;
     bool use_scan_header_stamp_for_tfs_;
@@ -85,6 +90,7 @@ private:
     //publishers and subscribers
     rclcpp::Publisher<walker_msgs::msg::StepStamped>::SharedPtr left_detected_step_pub_;
     rclcpp::Publisher<walker_msgs::msg::StepStamped>::SharedPtr right_detected_step_pub_;
+    rclcpp::Publisher<walker_msgs::msg::StepArray>::SharedPtr candidates_pub_;
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr markers_array_pub_;
     rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr filter_laser_pub_ ;
     rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;

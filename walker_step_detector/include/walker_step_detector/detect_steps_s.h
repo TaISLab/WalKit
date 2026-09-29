@@ -27,6 +27,8 @@
 // Custom Messages related Headers
 #include "slg_msgs/msg/segment_array.hpp"
 #include "walker_msgs/msg/step_stamped.hpp"
+#include "walker_msgs/msg/step_array.hpp"
+#include "walker_step_detector/candidates_publish.h"
 #include "slg_msgs/segment2D.hpp"
 
 
@@ -55,8 +57,11 @@ private:
     
     // configuration parameters
     std::string segments_topic_;
-    std::string detected_steps_topic_name_; 
+    std::string detected_steps_topic_name_;
+    std::string candidates_topic_name_;
     double kalman_model_d0_, kalman_model_a0_, kalman_model_f0_, kalman_model_p0_;
+    double max_association_dist_;
+    int max_track_loss_frames_;
     bool kalman_enabled_  ;
 
     // Tracker assigns segments to legs and keeps track of them
@@ -67,6 +72,7 @@ private:
     //publishers and subscribers
     rclcpp::Publisher<walker_msgs::msg::StepStamped>::SharedPtr left_detected_step_pub_;
     rclcpp::Publisher<walker_msgs::msg::StepStamped>::SharedPtr right_detected_step_pub_;
+    rclcpp::Publisher<walker_msgs::msg::StepArray>::SharedPtr candidates_pub_;
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr markers_array_pub_;
     rclcpp::Subscription<slg_msgs::msg::SegmentArray>::SharedPtr segments_sub_;
 
