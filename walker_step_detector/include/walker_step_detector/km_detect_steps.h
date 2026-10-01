@@ -71,6 +71,12 @@ private:
     double kalman_model_d0_, kalman_model_a0_, kalman_model_f0_, kalman_model_p0_;
     double max_association_dist_;
     int max_track_loss_frames_;
+    // Filtro de confianza (ausente hasta ahora, ver getCentroids()):
+    // clusters con menos puntos reales que esto (una vez descartados los
+    // que caen fuera de max_d en find_centroid()) no se publican como
+    // candidata -- mismo nombre y mismo default que detect_steps (RF),
+    // que si lo tenia.
+    int min_points_per_cluster_;
     bool plot_leg_kalman_;
     bool plot_leg_clusters_;
     bool use_scan_header_stamp_for_tfs_;
@@ -99,7 +105,11 @@ private:
     std::list<walker_msgs::msg::StepStamped> getCentroids(sensor_msgs::msg::LaserScan::SharedPtr scan);
     void laserCallback(const sensor_msgs::msg::LaserScan::SharedPtr scan);
 
-    std::tuple<double, double> find_centroid(std::vector<double>& x, std::vector<double>& y, std::vector<unsigned int>& selected_indexs, std::vector<double>& selected_dists, double max_d);
+    // Devuelve tambien used_points (cuantos puntos de selected_indexs
+    // quedaron dentro de max_d y contribuyeron al centroide) -- antes se
+    // calculaba y se descartaba; ahora getCentroids() lo usa para el
+    // filtro de confianza.
+    std::tuple<double, double, unsigned int> find_centroid(std::vector<double>& x, std::vector<double>& y, std::vector<unsigned int>& selected_indexs, std::vector<double>& selected_dists, double max_d);
 
     visualization_msgs::msg::Marker get_marker(const walker_msgs::msg::StepStamped* step, int id );
 

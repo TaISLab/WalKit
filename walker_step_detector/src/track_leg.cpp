@@ -244,9 +244,30 @@
             // how sure are we this is a "leg"
             pred_step.confidence = curr_step.confidence;
             pred_step.position.point.z = curr_step.position.point.z;
-            
+
             // where?
             pred_step.position.header = curr_step.position.header;
+
+            // t (miembro, "last update time") se inicializa a 0 en init()
+            // -- ES un sentinel de "todavia no se ha predicho nunca", NO un
+            // instante real. Si se usa tal cual en la primerisima llamada,
+            // u.dt() = (ti-0)*1e-9 sale como el tiempo desde el epoch Unix
+            // (~1.79e9 s), no como un intervalo real entre frames: ese dt
+            // gigante entra en el jacobiano de SystemModelLeg.hpp
+            // (F(PX,FX) = 2*pi*dt) y dispara una covarianza P descontrolada
+            // desde el primer ciclo -- confirmado en vivo (CA_test09,
+            // km_detect_steps con kalman_enabled=true): la pista "right"
+            // salta a y=407m en la SEGUNDA medida, con una candidata cruda
+            // de entrada perfectamente normal (~1m, comprobado con
+            // kalman_enabled=false en el mismo bag). rf no lo mostraba en
+            // este bag por pura coincidencia de timing (su primera medida
+            // aceptada no caia justo en el ciclo con la P recien inflada),
+            // no porque el bug no le afectase -- es el mismo codigo
+            // compartido. Fix: en la primerisima llamada, tratar dt como 0
+            // en vez de como "tiempo desde el epoch".
+            if (t == 0){
+                t = ti;
+            }
 
             // Predict state for current time-step using the filters
             u.dt() = (ti-t)*1e-9;

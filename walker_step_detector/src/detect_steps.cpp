@@ -114,7 +114,14 @@ void DetectSteps::laserCallback(const sensor_msgs::msg::LaserScan::SharedPtr sca
     RCLCPP_DEBUG(this->get_logger(), "Getting filtered positions from kalman");
     walker_msgs::msg::StepStamped step_r;
     walker_msgs::msg::StepStamped step_l;
-    double t = (this->now()).nanoseconds();
+    // Timestamp del propio escaner, NO this->now() -- mismo bug y mismo
+    // fix que km_detect_steps.cpp::laserCallback (ver ese comentario):
+    // invisible en vivo, pero trunca Tr/SpT/SdT a ~1/rate durante replay
+    // de bag a una tasa distinta de 1.0. No afecta a la precision de
+    // POSICION (por eso el 95.7-95.9% de match_rate medido con
+    // eval_against_mocap.py, que compara solo posicion, no se vio
+    // afectado), solo a cualquier metrica derivada del tiempo entre pasos.
+    double t = rclcpp::Time(scan->header.stamp).nanoseconds();
     kalman_tracker.get_steps(&step_r, &step_l, t);
 
     // publish lets

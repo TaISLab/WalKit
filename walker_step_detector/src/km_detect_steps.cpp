@@ -14,6 +14,7 @@ KMDetectSteps::KMDetectSteps() : Node("detect_steps"){
     this->declare_parameter<bool>("kalman_enabled",                   false);
     this->declare_parameter<bool>("fit_ellipse",                      false);
     this->declare_parameter<bool>("is_debug",                         false);
+    this->declare_parameter<int>("min_points_per_cluster",            3);
 
     this->get_parameter("scan_topic",                        scan_topic_name_);
     this->get_parameter("detected_steps_topic_name",         detected_steps_topic_name_);
@@ -27,6 +28,7 @@ KMDetectSteps::KMDetectSteps() : Node("detect_steps"){
     this->get_parameter("kalman_enabled",                   kalman_enabled_);
     this->get_parameter("fit_ellipse",                      fit_ellipse_);
     this->get_parameter("is_debug",                         is_debug);
+    this->get_parameter("min_points_per_cluster",            min_points_per_cluster_);
 
     // Load kalman tracker
     kalman_tracker.init(this, kalman_model_d0_, kalman_model_a0_, kalman_model_f0_, kalman_model_p0_, max_association_dist_, max_track_loss_frames_ );
@@ -164,6 +166,10 @@ std::list<walker_msgs::msg::StepStamped> KMDetectSteps::getCentroids(sensor_msgs
         double max_d;
         double dr,dl;
         double lcx, lcy, rcx, rcy;
+        // cuantos puntos reales contribuyeron al centroide final de cada
+        // lado (tras el filtro de max_d en find_centroid()) -- se leen
+        // DESPUES del bucle, con el valor de su ULTIMA iteracion.
+        unsigned int used_points_r = 0, used_points_l = 0;
         bool has_moved = true;
         std::vector<unsigned int> r_points;
         std::vector<double> r_dists;
@@ -222,8 +228,9 @@ std::list<walker_msgs::msg::StepStamped> KMDetectSteps::getCentroids(sensor_msgs
             }
 
             // Get new centroid: far points are skipped from centroid
-            auto [rcx_new, rcy_new] = find_centroid(laser_x, laser_y, r_points, r_dists, max_d);
-            auto [lcx_new, lcy_new] = find_centroid(laser_x, laser_y, l_points, l_dists, max_d);
+            auto [rcx_new, rcy_new, upr] = find_centroid(laser_x, laser_y, r_points, r_dists, max_d);
+            auto [lcx_new, lcy_new, upl] = find_centroid(laser_x, laser_y, l_points, l_dists, max_d);
+            used_points_r = upr; used_points_l = upl;
 
             // If changed: repeat, but no more than n times
             has_moved = ( distance(rcx_new, rcy_new, rcx, rcy) > 0.05 ) |
@@ -252,20 +259,45 @@ std::list<walker_msgs::msg::StepStamped> KMDetectSteps::getCentroids(sensor_msgs
             fit_ellipse(lcx, lcy, l_phi, l_width, l_hight, laser_x, laser_y, l_points);
         }
 
-        walker_msgs::msg::StepStamped r_step;
-        r_step.position.header = scan->header;
-        r_step.position.point.x = rcx;
-        r_step.position.point.y = rcy;
-        r_step.confidence = 1;  // COW ! TODO!
-        centroids.push_back(r_step);
+        // Filtro de confianza: antes se publicaban SIEMPRE los dos
+        // centroides (confidence=1 fijo, sin condicion), aunque uno fuera
+        // un cluster degenerado de 1-2 puntos sueltos (ruido, un mueble,
+        // un reflejo) -- el k-means de arriba SIEMPRE fuerza una division
+        // en dos aunque los datos no tengan dos piernas reales, y sin este
+        // filtro esa deteccion espuria se cuela igual que un pie real. A
+        // diferencia de detect_steps (RF), que si descartaba clusters con
+        // pocos puntos (min_points_per_cluster) -- visto en un caso real
+        // (CA_test09): una deteccion espuria puntual de km_detect_steps
+        // contaminaba permanentemente la media de gait_monitor_speed Y de
+        // walker_centroid_support el resto del test (ninguno de los dos
+        // rechaza outliers al promediar). Si no se alcanza el minimo,
+        // simplemente no se publica esa candidata -- LegsTracker ya sabe
+        // manejar 0, 1 o 2 candidatas por frame (ver add_detections()).
+        if (used_points_r >= (unsigned int) min_points_per_cluster_){
+            walker_msgs::msg::StepStamped r_step;
+            r_step.position.header = scan->header;
+            r_step.position.point.x = rcx;
+            r_step.position.point.y = rcy;
+            r_step.confidence = 1;
+            centroids.push_back(r_step);
+        } else if (is_debug){
+            RCLCPP_DEBUG(this->get_logger(),
+                "Cluster derecho descartado: solo %d puntos (< min_points_per_cluster=%d)",
+                used_points_r, min_points_per_cluster_);
+        }
 
-        walker_msgs::msg::StepStamped l_step;
-        l_step.position.header = scan->header;
-        l_step.position.point.x = lcx;
-        l_step.position.point.y = lcy;
-        l_step.confidence = 1;  // COW ! TODO!
-        centroids.push_back(l_step);
-    
+        if (used_points_l >= (unsigned int) min_points_per_cluster_){
+            walker_msgs::msg::StepStamped l_step;
+            l_step.position.header = scan->header;
+            l_step.position.point.x = lcx;
+            l_step.position.point.y = lcy;
+            l_step.confidence = 1;
+            centroids.push_back(l_step);
+        } else if (is_debug){
+            RCLCPP_DEBUG(this->get_logger(),
+                "Cluster izquierdo descartado: solo %d puntos (< min_points_per_cluster=%d)",
+                used_points_l, min_points_per_cluster_);
+        }
     }
 
     return centroids;
@@ -283,7 +315,7 @@ double KMDetectSteps::distance_y(double ax, double ay, double bx, double by){
     return std::abs(ay - by);
 }
 
-std::tuple<double, double> KMDetectSteps::find_centroid(std::vector<double>& x, 
+std::tuple<double, double, unsigned int> KMDetectSteps::find_centroid(std::vector<double>& x,
                                   std::vector<double>& y,
                                   std::vector<unsigned int>& selected_indexs,
                                   std::vector<double>& selected_dists, 
@@ -330,13 +362,19 @@ std::tuple<double, double> KMDetectSteps::find_centroid(std::vector<double>& x,
             keepGoing = false;
         }
     }
-    //RCLCPP_INFO(this->get_logger(), "Used (%d) points ", used_points); 
-    cx = cx/used_points;
-    cy = cy/used_points;
+    //RCLCPP_INFO(this->get_logger(), "Used (%d) points ", used_points);
+    if (used_points > 0){
+        cx = cx/used_points;
+        cy = cy/used_points;
+        cx = cx - (y_max-y_min)/2.0;
+    }
+    // used_points==0 (selected_indexs vacio -- no deberia pasar, getCentroids()
+    // solo llama aqui cuando el propio split ya garantizo r/l no vacios,
+    // ver goodSplit): cx/cy se devuelven a 0 en vez de NaN por division
+    // entre cero, y el filtro de confianza de getCentroids() lo descarta
+    // igualmente por used_points < min_points_per_cluster_.
 
-    cx = cx - (y_max-y_min)/2.0;
-
-    return  {cx, cy};
+    return  {cx, cy, used_points};
 }
 
 void KMDetectSteps::delete_markers(){        

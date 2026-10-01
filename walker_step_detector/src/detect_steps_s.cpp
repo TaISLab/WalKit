@@ -83,7 +83,9 @@ void DetectStepsS::segmentsCallback(const slg_msgs::msg::SegmentArray::SharedPtr
     RCLCPP_DEBUG(this->get_logger(), "Getting filtered positions from kalman");
     walker_msgs::msg::StepStamped step_r;
     walker_msgs::msg::StepStamped step_l;
-    double t = (this->now()).nanoseconds();
+    // Timestamp del propio segmento (laser), NO this->now() -- mismo bug y
+    // mismo fix que km_detect_steps.cpp::laserCallback (ver ese comentario).
+    double t = rclcpp::Time(seg_array->header.stamp).nanoseconds();
     kalman_tracker.get_steps(&step_r, &step_l, t);
 
     // publish lets

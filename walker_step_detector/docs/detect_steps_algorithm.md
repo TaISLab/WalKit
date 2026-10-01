@@ -349,3 +349,65 @@ Comprobado en vivo, no solo leyendo el código:
 **Conclusión**: sí, reengancha. El mecanismo de recuperación es el mismo
 de antes de esta ronda de trabajo (no introduce ni arregla nada ahí); lo
 nuevo es que el reenganche ya no hereda una fase potencialmente obsoleta.
+
+## Filtro de confianza en `km_detect_steps` y bug crítico de inicialización del EKF
+
+Origen: otra sesión ([mocap-walker][validación], ver `walker_mocap_eval/readme.md`)
+encontró que en `CA_test09`, una sola sesión produce valores de longitud de
+zancada del andador real disparatados (`left_sdl`=87m, `right_spl`=39m,
+`right_sdl`=76m) que contaminan permanentemente la media de
+`gait_monitor_speed` (y también `/support_centroid` de
+`walker_centroid_support`) el resto del test, porque ninguno de los dos
+rechaza outliers al promediar sobre toda la sesión. Hipótesis propuesta:
+`km_detect_steps.cpp::getCentroids()` fuerza siempre exactamente 2 clusters
+de k-means sobre `/scan_feet`, sin ningún filtro de confianza (a diferencia
+de `detect_steps`/RF, que sí descarta clusters con pocos puntos) -- una
+detección espuria puntual se coló como si fuera un pie real.
+
+**Filtro de confianza implementado** (el fix propuesto, y sigue siendo
+correcto tenerlo): `find_centroid()` ahora también devuelve `used_points`
+(cuántos puntos reales, tras el filtro de `max_d`, contribuyeron al
+centroide -- antes se calculaba y se descartaba). `getCentroids()` no
+publica un `StepStamped` para un cluster con `used_points <
+min_points_per_cluster` (nuevo parámetro, default 3, mismo nombre/valor que
+ya usaba RF) -- en vez de forzar siempre 2 candidatas, ahora puede devolver
+0, 1 o 2 según la calidad real de los datos, igual que RF; `LegsTracker` ya
+sabía manejar cualquiera de esos casos.
+
+**Pero el filtro de confianza NO era la causa del outlier de `CA_test09`**:
+comprobado directamente reproduciendo `km_detect_steps` solo contra ese bag
+-- con `kalman_enabled=false` (paso a través crudo, sin EKF) la salida está
+acotada a ~1m con o sin el filtro (0 rechazos: los clusters crudos ya eran
+razonables). Con `kalman_enabled=true` (la configuración real que usaba
+`replay_offline.launch.py` antes de cambiar a RF) **la pista derecha salta
+a y=407m en su SEGUNDA medida**, con una entrada perfectamente normal --
+el problema está en el EKF, no en el clustering.
+
+**Causa real encontrada**: `TrackLeg::t` (miembro, "instante de la última
+predicción") se inicializa a `0` en `init()` como valor centinela de
+"todavía no se ha predicho nunca" -- pero `predict_step()` lo usaba tal
+cual para calcular `u.dt() = (ti - t) * 1e-9` en la primerísima llamada,
+dando un `dt` de **~1.79e9 segundos** (el tiempo transcurrido desde el
+epoch Unix), no un intervalo real entre frames. Ese `dt` gigante entra en
+el jacobiano de `SystemModelLeg.hpp` (`F(PX,FX) = 2*pi*dt`) y dispara una
+covarianza del EKF descontrolada desde el primer ciclo -- la siguiente
+actualización con una medida real, con esa covarianza ya disparada, es lo
+que produce el salto a cientos de metros. Afecta por igual a `rf`/`km`/`seg`
+(mismo `TrackLeg` compartido): `rf` y `seg` no lo mostraban en este bag por
+pura suerte de *timing* (su primera medida aceptada no caía justo en el
+ciclo con la covarianza recién disparada, ver el punto 5 sobre `tracked=false`
+en los primeros frames), no porque no les afectase.
+
+**Fix**: en `predict_step()`, si `t==0` (nunca predicho), se fija `t=ti`
+antes de calcular `u.dt()` -- la primerísima predicción usa `dt=0` en vez
+de "tiempo desde el epoch". Confirmado en vivo: `CA_test09` con
+`kalman_enabled=true` pasa de y=407m a un máximo de ~1m, con o sin el
+filtro de confianza. Validado además en 47 bags completos (aislado) --
+`eval_results/result_2026-09-30_km_confidence_and_t0fix_isolated.json` vs
+`result_2026-09-29_warmup_phase_isolated.json`: cambios pequeños y dentro
+del ruido normal de una corrida a otra en match_rate/mean_err/swap_rate de
+las cuatro variantes (ninguna regresión relevante) -- esperable, ya que
+esta métrica agregada nunca fue sensible a este bug (mide posición
+frame a frame contra mocap con gate, no promedios de sesión completa como
+`gait_monitor_speed`/`walker_centroid_support`, que es donde el bug se
+manifestaba). Ver `TrackLeg::predict_step()` en `track_leg.cpp`.
