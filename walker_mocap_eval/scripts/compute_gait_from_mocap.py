@@ -8,15 +8,24 @@ validacion (recalcular con mocap para poder comparar en el punto 2).
 Que hace, por bag:
   1. Lee /labeled_markers (l_ankle, r_ankle) y /rigid_bodies (rigidbodies[0]
      = andador), ver mocap_eval/bag_io.py.
-  2. Detecta eventos de apoyo por pie a partir de la cinematica del tobillo
+  2. Recorta ambos a la ventana entre los dos mensajes /tag del bag (ver
+     bag_io.read_tag_window() -- los mismos marcadores de inicio/fin de
+     test que usa mocap_analysis/scripts/merge_rosbags.py para sincronizar
+     bags): fuera de esa ventana suele haber tiempo de calibracion/
+     colocacion del usuario, no marcha real, y contaminaba las medias
+     (Tr, SpT/SdT...) con ese tramo. Si el bag no tiene 2 mensajes /tag,
+     usa el bag completo (con aviso) -- --ignore-tags fuerza ese
+     comportamiento aunque el bag SI tenga /tag, para comparar contra
+     corridas anteriores a este recorte.
+  3. Detecta eventos de apoyo por pie a partir de la cinematica del tobillo
      (mocap_eval/contact_events.py) -- el mocap no mide carga, asi que esto
      sustituye al flanco load>0 de walker_msgs/StepStamped que usa el nodo
      real.
-  3. Proyecta cada evento (frame "map") al frame del andador ("laser") con
+  4. Proyecta cada evento (frame "map") al frame del andador ("laser") con
      la calibracion ya existente (walker_step_detector/config/
      mocap_to_base_footprint.yaml), para que las distancias sean
      comparables a las que ve el nodo real (que trabaja en ese frame).
-  4. Corre el mismo algoritmo que GaitMonitorSp (mocap_eval/gait_metrics.py)
+  5. Corre el mismo algoritmo que GaitMonitorSp (mocap_eval/gait_metrics.py)
      sobre esos eventos, con la distancia recorrida real (arclength del
      rigid body del andador en el mocap) en vez del valor hardcodeado que
      usa hoy gait_monitor_speed.py::getTravelledDist() -- ver README.md de
@@ -47,13 +56,24 @@ DEFAULT_CALIB = (
 )
 
 
-def compute_bag(bag_dir, calib, speed_threshold, min_gap_s, max_dt_ns):
+def compute_bag(bag_dir, calib, speed_threshold, min_gap_s, max_dt_ns, use_tags=True):
     """Devuelve el dict de gait_metrics.summarize() para un bag, o None si
     falta ground truth o no hay pasos suficientes."""
     data = bag_io.load_bag(bag_dir, topics=("/labeled_markers", "/rigid_bodies"), require_all=True)
     mk_msgs, rb_msgs = data["/labeled_markers"], data["/rigid_bodies"]
     if not mk_msgs or not rb_msgs:
         return None
+
+    if use_tags:
+        tag_window = bag_io.read_tag_window(bag_dir)
+        if tag_window is not None:
+            t0, t1 = tag_window
+            mk_msgs = bag_io.clip_track(mk_msgs, t0, t1)
+            rb_msgs = bag_io.clip_track(rb_msgs, t0, t1)
+        else:
+            print(f"  [!] {bag_dir.name}: sin 2 mensajes /tag, usando el bag completo", file=sys.stderr)
+        if not mk_msgs or not rb_msgs:
+            return None
 
     rb_track = bag_io.rigid_body_track_xy(rb_msgs)
 
@@ -141,6 +161,8 @@ def main():
                      help="separacion minima entre dos eventos de apoyo consecutivos del mismo pie")
     ap.add_argument("--max-dt-ms", type=float, default=50.0,
                      help="tolerancia de emparejado evento<->rigid_bodies")
+    ap.add_argument("--ignore-tags", action="store_true",
+                     help="usar el bag completo en vez de recortar a la ventana entre los 2 mensajes /tag")
     ap.add_argument("--out", default=None, help="JSON de salida con las metricas por bag")
     args = ap.parse_args()
 
@@ -155,7 +177,9 @@ def main():
     results = {}
     for bag_dir in bag_dirs:
         try:
-            results[bag_dir.name] = compute_bag(bag_dir, calib, args.speed_threshold, args.min_gap_s, max_dt_ns)
+            results[bag_dir.name] = compute_bag(
+                bag_dir, calib, args.speed_threshold, args.min_gap_s, max_dt_ns,
+                use_tags=not args.ignore_tags)
         except ValueError as e:
             print(f"[!] {bag_dir}: {e}", file=sys.stderr)
             results[bag_dir.name] = None

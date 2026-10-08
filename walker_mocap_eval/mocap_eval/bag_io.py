@@ -62,6 +62,37 @@ def bag_duration_seconds(bag_dir):
     return d["rosbag2_bagfile_information"]["duration"]["nanoseconds"] / 1e9
 
 
+def bag_start_time_ns(bag_dir):
+    """Instante de inicio de la grabacion (epoch ns, mismo reloj que el
+    resto de topics), de metadata.yaml -- para convertir un timestamp
+    absoluto (p.ej. un /tag) en un offset relativo al inicio del bag, que
+    es lo que espera `ros2 bag play --start-offset`."""
+    meta_path = Path(bag_dir) / "metadata.yaml"
+    with open(meta_path) as f:
+        d = yaml.safe_load(f)
+    return d["rosbag2_bagfile_information"]["starting_time"]["nanoseconds_since_epoch"]
+
+
+def read_tag_window(bag_dir):
+    """Ventana "activa" del test, delimitada por los dos mensajes /tag
+    (pulsacion de inicio y de fin) que usa mocap_analysis/scripts/
+    merge_rosbags.py para sincronizar/recortar bags -- fuera de esa
+    ventana suele haber tiempo de calibracion/colocacion, no marcha real.
+
+    Devuelve (t_start_ns, t_end_ns) en epoch ns (el timestamp del propio
+    bag para el mensaje, igual que da load_bag() -- no el contenido
+    serializado del Time, que es el mismo valor por construccion), o None
+    si el bag no tiene al menos 2 mensajes /tag. Con mas de 2 (no visto en
+    datasets/labeled_bags, pero merge_rosbags.py lo contempla), usa el
+    primero y el ultimo, igual que ese script."""
+    data = load_bag(bag_dir, topics=("/tag",), require_all=False)
+    msgs = data.get("/tag", [])
+    if len(msgs) < 2:
+        return None
+    times = sorted(t for t, _ in msgs)
+    return times[0], times[-1]
+
+
 def _read_topic(reader, type_map, wanted_topics):
     reader.set_filter(rosbag2_py.StorageFilter(topics=list(wanted_topics)))
     out = {t: [] for t in wanted_topics}

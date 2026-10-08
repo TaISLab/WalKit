@@ -40,12 +40,23 @@ def _mean_std(values):
     return statistics.mean(vals), statistics.stdev(vals)
 
 
-def compute_bag(bag_dir, speed_threshold, min_gap_s, max_dt_ns):
+def compute_bag(bag_dir, speed_threshold, min_gap_s, max_dt_ns, use_tags=True):
     data = bag_io.load_bag(
         bag_dir, topics=("/labeled_markers", "/rigid_bodies"), require_all=True)
     mk_msgs, rb_msgs = data["/labeled_markers"], data["/rigid_bodies"]
     if not mk_msgs or not rb_msgs:
         return None
+
+    if use_tags:
+        tag_window = bag_io.read_tag_window(bag_dir)
+        if tag_window is not None:
+            t0, t1 = tag_window
+            mk_msgs = bag_io.clip_track(mk_msgs, t0, t1)
+            rb_msgs = bag_io.clip_track(rb_msgs, t0, t1)
+        else:
+            print(f"  [!] {bag_dir.name}: sin 2 mensajes /tag, usando el bag completo", file=sys.stderr)
+        if not mk_msgs or not rb_msgs:
+            return None
 
     walker_track = bag_io.rigid_body_track_xy_yaw(rb_msgs)
 
@@ -135,6 +146,8 @@ def main():
     ap.add_argument("--speed-threshold", type=float, default=0.25)
     ap.add_argument("--min-gap-s", type=float, default=0.3)
     ap.add_argument("--max-dt-ms", type=float, default=50.0)
+    ap.add_argument("--ignore-tags", action="store_true",
+                     help="usar el bag completo en vez de recortar a la ventana entre los 2 mensajes /tag")
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
 
@@ -146,7 +159,9 @@ def main():
     results = {}
     for bag_dir in bag_dirs:
         try:
-            results[bag_dir.name] = compute_bag(bag_dir, args.speed_threshold, args.min_gap_s, max_dt_ns)
+            results[bag_dir.name] = compute_bag(
+                bag_dir, args.speed_threshold, args.min_gap_s, max_dt_ns,
+                use_tags=not args.ignore_tags)
         except ValueError as e:
             print(f"[!] {bag_dir}: {e}", file=sys.stderr)
             results[bag_dir.name] = None

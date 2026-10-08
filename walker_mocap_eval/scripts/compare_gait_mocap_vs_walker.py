@@ -21,6 +21,15 @@ por eso solo hace falta el ULTIMO mensaje de cada topic grabado -- no
 importa si el grabador externo (`ros2 bag record`) se suscribe unos
 segundos tarde, el nodo ya llevaba toda la cuenta desde su propio arranque.
 
+Por defecto (--ignore-tags para desactivarlo), tanto el lado mocap como el
+replay real se recortan a la ventana entre los 2 mensajes /tag del bag (ver
+bag_io.read_tag_window(), mismos marcadores de inicio/fin de test que usa
+mocap_analysis/scripts/merge_rosbags.py): el replay arranca en el primer
+/tag (`start_offset` de replay_offline.launch.py) y solo se espera lo que
+dura esa ventana, en vez del bag completo -- que suele incluir tiempo de
+calibracion/colocacion antes y despues, diluyendo Tr/SpT/SdT/cadencia con
+un tramo que no es marcha real.
+
 Requiere: workspace compilado (colcon build), bagsFolder_unified/
 test_config.txt (columna user_desc/handle_height por bag, ver
 replay_offline.launch.py) y walker_step_detector/config/
@@ -109,17 +118,49 @@ def stop(proc, timeout=8):
             pass
 
 
-def run_one_bag(bag_dir, test_config_file, out_dir, rate, startup_wait):
+def tag_window_offset_and_duration(bag_dir):
+    """(start_offset_s, duration_s) de la ventana entre los 2 mensajes /tag
+    del bag (ver bag_io.read_tag_window), en unidades que entiende
+    replay_offline.launch.py (start_offset: segundos de bag desde su propio
+    inicio) y esta funcion (duration: segundos de bag, se divide por rate
+    aparte). None si el bag no tiene 2 mensajes /tag -- el llamador debe
+    caer de vuelta al bag completo."""
+    window = bag_io.read_tag_window(bag_dir)
+    if window is None:
+        return None
+    t0, t1 = window
+    bag_start = bag_io.bag_start_time_ns(bag_dir)
+    return (t0 - bag_start) / 1e9, (t1 - t0) / 1e9
+
+
+def run_one_bag(bag_dir, test_config_file, out_dir, rate, startup_wait, use_tags=True):
     """Lanza replay_offline.launch.py + graba /left_gait_stats,
     /right_gait_stats, /global_gait_stats. Devuelve la ruta del bag
-    grabado, o None si algo fallo (p.ej. sin fila en test_config.txt)."""
+    grabado, o None si algo fallo (p.ej. sin fila en test_config.txt).
+
+    Con use_tags=True (por defecto), el replay arranca en el primer /tag
+    del bag (start_offset) y solo se espera lo que dura la ventana entre
+    los dos /tag -- el mismo recorte de compute_gait_from_mocap.py
+    (bag_io.read_tag_window), para que ambos lados de la comparacion vean
+    la misma porcion "activa" del test, no el bag completo (que suele
+    incluir calibracion/colocacion antes y despues)."""
     eval_bag = out_dir / bag_dir.name
     if eval_bag.exists():
         shutil.rmtree(eval_bag)
 
+    start_offset_s = 0.0
+    duration = bag_io.bag_duration_seconds(bag_dir)
+    if use_tags:
+        window = tag_window_offset_and_duration(bag_dir)
+        if window is not None:
+            start_offset_s, duration = window
+        else:
+            print(f"  [!] {bag_dir.name}: sin 2 mensajes /tag, usando el bag completo", file=sys.stderr)
+
     launch = sh(
         "ros2 launch walker_loads replay_offline.launch.py "
-        f"bag_path:={bag_dir} rate:={rate} test_config_file:={test_config_file}"
+        f"bag_path:={bag_dir} rate:={rate} test_config_file:={test_config_file} "
+        f"start_offset:={start_offset_s}"
     )
     record = None
     try:
@@ -131,7 +172,6 @@ def run_one_bag(bag_dir, test_config_file, out_dir, rate, startup_wait):
         record = sh(f"ros2 bag record -s sqlite3 -o {eval_bag} " + " ".join(WALKER_TOPICS))
         time.sleep(1.5)  # que el recorder llegue a suscribirse
 
-        duration = bag_io.bag_duration_seconds(bag_dir)
         wait_s = duration / rate + 3.0
         time.sleep(wait_s)
     finally:
@@ -238,6 +278,8 @@ def main():
     ap.add_argument("--startup-wait", type=float, default=4.0, help="segundos para que arranquen los nodos antes de grabar")
     ap.add_argument("--limit", type=int, default=None, help="probar solo con los N primeros bags")
     ap.add_argument("--keep-bags", action="store_true", help="no borrar los bags grabados de cada corrida al terminar")
+    ap.add_argument("--ignore-tags", action="store_true",
+                     help="usar el bag completo (mocap Y replay real) en vez de recortar a la ventana entre los 2 /tag")
     ap.add_argument("--out", default=None, help="JSON de salida con la comparacion completa")
     args = ap.parse_args()
 
@@ -260,7 +302,9 @@ def main():
         print(f"[{i + 1}/{len(bag_dirs)}] {bag_dir.name}")
 
         try:
-            mocap_stats = compute_mocap_bag(bag_dir, calib, args.speed_threshold, args.min_gap_s, max_dt_ns)
+            mocap_stats = compute_mocap_bag(
+                bag_dir, calib, args.speed_threshold, args.min_gap_s, max_dt_ns,
+                use_tags=not args.ignore_tags)
         except Exception as e:
             print(f"  [!] mocap: {e}", file=sys.stderr)
             mocap_stats = None
@@ -269,7 +313,8 @@ def main():
             per_bag_comparisons[bag_dir.name] = None
             continue
 
-        recorded = run_one_bag(bag_dir, args.test_config_file, out_dir, args.rate, args.startup_wait)
+        recorded = run_one_bag(bag_dir, args.test_config_file, out_dir, args.rate, args.startup_wait,
+                               use_tags=not args.ignore_tags)
         walker_stats = extract_walker_stats(recorded) if recorded else None
         if not args.keep_bags and recorded is not None:
             shutil.rmtree(recorded, ignore_errors=True)
@@ -292,6 +337,7 @@ def main():
             "_meta": {
                 "bags_dir": args.bags_dir, "rate": args.rate, "calib": args.calib,
                 "speed_threshold": args.speed_threshold, "min_gap_s": args.min_gap_s,
+                "use_tags": not args.ignore_tags,
             },
         }
         with open(args.out, "w") as f:
