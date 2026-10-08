@@ -490,6 +490,19 @@ sujetos (prefijo `CA`/`LA`/`MF`/`MT`; 10/7/20/10 bags). Los agregados se
 dan por sujeto, no mezclando los 47 bags, porque difieren en sexo, peso y
 altura.
 
+**Repetibilidad del replay (limitación abierta).** La reproducción del lado
+andador no es determinista: a rate 4, `partial_loads` decide qué pierna
+carga con un temporizador de reloj de pared, y el resultado depende de
+dónde cae cada decisión en el bag (y de la carga de CPU). Dos ejecuciones
+dieron MAPE del SpT izquierdo de 38% (30 sep-1 oct 2026) y 58% (6 oct 2026).
+Todas las cifras del lado andador del informe son de **una sola ejecución,
+la de octubre de 2026**, y las cifras escritas a mano en el texto de
+`generate_latex_report.py` (literatura, limitaciones, conclusiones) hay que
+revisarlas si se repite el replay; las tablas sí se recalculan. No está
+cuantificada la variabilidad entre repeticiones. Lo calculado solo desde
+mocap o sensores grabados (marcha mocap, postura, IMU, simetría) sí es
+reproducible.
+
 ## Ampliacion: parametros nuevos con los sensores actuales del andador
 
 Candidatos de la literatura que usan sensores que el andador YA lleva y

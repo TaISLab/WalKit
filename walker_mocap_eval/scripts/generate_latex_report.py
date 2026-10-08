@@ -70,7 +70,7 @@ def build_gait_error_summary(master):
                      fmt(v["mape_pct"], 1), fmt(v["medape_pct"], 1)])
     return _small_table(
         "Punto 2: error del andador frente a mocap, agregado sobre los 47 bags (solo filas con $t\\le$ fin de "
-        "la ventana \\texttt{/tag}). $^*$: $d$ y $WV$ comparten fuente de posici\\'on con mocap "
+        "la ventana \\texttt{/tag}; ejecuci\\'on del replay de octubre de 2026). $^*$: $d$ y $WV$ comparten fuente de posici\\'on con mocap "
         "(ver \\S\\ref{sec:metodologia_p2}); no validan la odometr\\'ia del andador.",
         "tab:gait_err_summary",
         [("Par\\'ametro", "l"), ("MAE", "r"), ("MedAE", "r"), ("Bias", "r"), ("RMSE", "r"),
@@ -961,16 +961,31 @@ resultados:
   \item \texttt{/odom} del experimento de reproducci\'on procede de mocap
     (\S\ref{sec:metodologia_p2}): $d$ y $WV$ no validan la odometr\'ia real
     del andador.
-  \item La reproducci\'on no es determinista (a rate 4, \texttt{partial\_loads}
-    decide qu\'e pierna carga con un temporizador de reloj de pared), as\'i
-    que repetir el experimento cambia los resultados del lado andador: en
-    una repetici\'on el SpT izquierdo pas\'o de MAPE 38\% a 53--58\%. En
-    \texttt{CA\_test01}, tras t$\approx$44~s el pie derecho deja de
-    registrar apoyos mientras el izquierdo sigue registrando 10 m\'as; cada
-    ``paso'' izquierdo se mide contra un apoyo derecho cada vez m\'as
-    antiguo (1--8~s) y \texttt{gait\_monitor\_speed}, que promedia con
+  \item \textbf{Repetibilidad del replay (limitaci\'on abierta)}: la
+    reproducci\'on del lado andador no es determinista. A rate 4,
+    \texttt{partial\_loads} decide qu\'e pierna carga con un temporizador
+    de reloj de pared, as\'i que el resultado depende del instante de bag
+    en que cae cada decisi\'on (y de la carga de CPU). Repetir el
+    experimento cambia los resultados del lado andador: el MAPE del SpT
+    izquierdo fue 38\% en la primera ejecuci\'on (noche del 30 de septiembre al 1 de octubre de 2026) y 58\% en
+    la del 6 de octubre (misma forma de c\'alculo; 53\% al acotar a la
+    ventana \texttt{/tag}). Todas las cifras del lado andador de este
+    informe (tablas de \S\ref{sec:resultados_p2} y cifras citadas en el
+    texto) corresponden a \textbf{una sola ejecuci\'on, la de octubre de
+    2026}; no se ha cuantificado la variabilidad entre repeticiones (p.ej.
+    N repeticiones por bag y dispersi\'on del error), as\'i que diferencias
+    de unos pocos puntos de MAPE entre dos ejecuciones no deben
+    interpretarse como mejora o empeoramiento del pipeline. Los
+    resultados calculados \'unicamente desde mocap y desde sensores
+    grabados (puntos de marcha de mocap, postura, IMU, simetr\'ia de
+    maneta) s\'i son reproducibles.
+  \item Ejemplo del efecto en \texttt{CA\_test01} (ejecuci\'on de octubre de
+    2026): tras t$\approx$44~s el pie derecho deja de registrar apoyos
+    mientras el izquierdo sigue registrando 10 m\'as; cada ``paso''
+    izquierdo se mide contra un apoyo derecho cada vez m\'as antiguo
+    (1--8~s) y \texttt{gait\_monitor\_speed}, que promedia con
     \texttt{nanmean} sin rechazar valores at\'ipicos, sube el SpT medio de
-    0.7 a 1.9~s. No se ha cuantificado la variabilidad entre repeticiones.
+    0.7 a 1.9~s. En la ejecuci\'on anterior este bag terminaba en 0.58~s.
   \item Los 47 bags NO llevan publicados los frames TF
     \texttt{left\_handle\_id}/\texttt{right\_handle\_id} que
     \texttt{walker\_stability.py} necesita, ni el fix del bug anterior
@@ -991,6 +1006,14 @@ comparaci\'on que sigue usa como referencia estudios de validaci\'on
 publicados de sensores port\'atiles (IMU, acelerometr\'ia de pie) frente a
 mocap, que miden tareas conceptualmente similares (par\'ametros discretos
 de marcha) aunque no sobre poblaci\'on de usuarios de andador.
+
+\textbf{Nota sobre las cifras}: los porcentajes y rangos citados abajo y en
+las conclusiones para el lado andador (MAPE, MedAPE, error planar del
+centroide) est\'an escritos a mano para \textbf{la ejecuci\'on del replay de
+octubre de 2026}; las tablas se calculan de los datos de esa misma
+ejecuci\'on. El replay no es determinista (\S\ref{sec:limitaciones}), por lo
+que otra ejecuci\'on dar\'a cifras algo distintas y habr\'a que revisar este
+texto.
 
 \begin{itemize}
   \item \textbf{Velocidad y distancia} (aqu\'i: MAPE $WV\approx3.9\%$,
@@ -1207,7 +1230,7 @@ def main():
     doc.append(r"\section{Punto 1: par\'ametros de marcha desde mocap (resultados)}")
     doc.append(t_gait1)
     doc.append(t_gait2)
-    doc.append(r"\section{Punto 2: comparaci\'on mocap vs. andador real (resultados)}")
+    doc.append(r"\section{Punto 2: comparaci\'on mocap vs. andador real (resultados)}\label{sec:resultados_p2}")
     doc.append(build_gait_error_summary(master))
     doc.extend(t_gait_cmp)
     doc.append(r"\section{Punto 3: centro de gravedad (De Leva) y comparaci\'on con el andador}")
