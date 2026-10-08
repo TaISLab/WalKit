@@ -3,11 +3,14 @@
 <package format="3">
   <name>walker_web_gui</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>Web GUI (rosbridge + roslibjs) to monitor the Walker and set user data / handle height, plus a console tool to publish the same configuration</description>
   <maintainer email="manolofc@gmail.com">ubuntu</maintainer>
-  <license>TODO: License declaration</license>
+  <license>Creative Commons</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclpy</depend>
+  <depend>walker_msgs</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

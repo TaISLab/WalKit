@@ -1,545 +1,163 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 
 <head>
   <meta charset="utf-8" />
-  <style>
-    h1 {
-      font-size: 60px;
-    }
-
-    h2 {
-      font-size: 20px;
-    }
-
-    p {
-      font-size: 20px;
-    }
-
-    .slidecontainer {
-      width: 90%;
-    }
-
-    .slidecontainer p {
-      font-size: 45px;
-    }
-
-    .slider {
-      -webkit-appearance: none;
-      width: 100%;
-      height: 25px;
-      background: #d3d3d3;
-      outline: none;
-      opacity: 0.7;
-      -webkit-transition: .2s;
-      transition: opacity .2s;
-    }
-
-    .slider:hover {
-      opacity: 1;
-    }
-
-    .slider::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 25px;
-      height: 25px;
-      background: #04AA6D;
-      cursor: pointer;
-    }
-
-    .slider::-moz-range-thumb {
-      width: 25px;
-      height: 25px;
-      background: #04AA6D;
-      cursor: pointer;
-    }
-
-    .record_tag_class {
-      font-size: 2rem;
-      font-family: sans-serif;
-      padding: 2rem 0 2rem 2rem;
-      color: black;
-    }
-
-    .user_id_class {
-      font-size: 3rem;
-    }
-
-    .condition_class {
-      font-size: 3rem;
-    }
-
-    .toggle {
-      margin: 0 0 0 2rem;
-      position: relative;
-      display: inline-block;
-      width: 6rem;
-      height: 3.4rem;
-    }
-
-    .toggle input {
-      display: none;
-    }
-
-    .roundbutton {
-      position: absolute;
-      top: 0;
-      left: 0;
-      bottom: 0;
-      right: 0;
-      width: 100%;
-      background-color: #33455e;
-      display: block;
-      transition: all 0.3s;
-      border-radius: 3.4rem;
-      cursor: pointer;
-    }
-
-    .roundbutton:before {
-      position: absolute;
-      content: "";
-      height: 2.4rem;
-      width: 2.5rem;
-      border-radius: 100%;
-      display: block;
-      left: 0.5rem;
-      bottom: 0.5rem;
-      background-color: white;
-      transition: all 0.3s;
-    }
-
-    input:checked+.roundbutton {
-      background-color: #FF6E48;
-    }
-
-    input:checked+.roundbutton:before {
-      transform: translate(2.6rem, 0);
-    }
-
-    input {
-      font-size: 40px;
-    }
-
-    .column {
-      float: left;
-      width: 50%;
-    }
-
-    /* Clear floats after the columns */
-    .row:after {
-      content: "";
-      display: table;
-      clear: both;
-    }
-  </style>
-
-  <script type="text/javascript" src="cdn.plot.ly/plotly-latest.min.js"></script>
-  <script type="text/javascript" src="static.robotwebtools.org/roslibjs/current/roslib.min.js"></script>
-  <script type="text/javascript" src="requirejs.org/docs/release/2.3.5/minified/require.js"></script>
-  
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WalKit · Panel de control</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="cdn.plot.ly/plotly-latest.min.js"></script>
+  <script src="static.robotwebtools.org/roslibjs/current/roslib.min.js"></script>
 </head>
 
 <body>
-  <h1>Walk-it ROS2 User Interface</h1>
-  <div class="row">
-    <div class="column">
-      <p>Connection status: <span id="status"></span></p>
-      <p>Left handle load (kg): <span id="left_handle_force"></span></p>
-      <p>Right handle load (kg): <span id="right_handle_force"></span></p>
-
-      <p>Left leg load (kg): <span id="left_leg_load"></span></p>
-      <p>Right leg load (kg): <span id="right_leg_load"></span></p>
-
-      <p>Left wheel encoder: <span id="left_wheel_encoder"></span></p>
-      <p>Right wheel encoder: <span id="right_wheel_encoder"></span></p>
-      
-      <p>IMU angle (deg) x (left-right): <span id="imu_angle_x"></span> (ref. -1.47)</p>
-      <p>IMU angle (deg) y (up-down): <span id="imu_angle_y"></span> (ref.  0.25)</p>
-      <p>IMU angle (deg) z: <span id="imu_angle_z"></span></p>
-
-      <p>user_desc var: <span id="user_desc_data"></span></p>
-      <p>handle_height var: <span id="handle_height_data"></span></p>
+  <header class="topbar">
+    <div>
+      <h1>WalKit
+        <span class="topbar-sub">Panel de control</span>
+      </h1>
     </div>
-  </div>
+    <div class="conn" id="conn">
+      <span class="conn-dot" id="connDot"></span>
+      <span class="conn-text" id="connText">Conectando…</span>
+      <button class="btn-ghost" id="connRetryBtn" title="Reconectar ahora">↻</button>
+      <button class="btn-ghost" id="connEditBtn" title="Cambiar dirección de rosbridge">⚙</button>
+    </div>
+  </header>
 
-
-  <!-- ********************** USER CONFIGURATION **********************  -->
-  <br>
-  <hr size="3" noshade>
-
-  <!-- user id -->
-  <div id="user_id_div" class="user_id_class">
-    User id:
-    <input type="text" id="user_id" value="UCAmI" size="15">
-  </div>
-
-  <!-- Gender -->
-  <div id="gender_id" class="gender_tog_class">
-    <label class="toggle">
-      <input id="gender_tog" type="checkbox">
-      <span class="roundbutton"></span>
+  <div class="conn-editor" id="connEditor" hidden>
+    <label>URL de rosbridge
+      <input type="text" id="connUrlInput" placeholder="ws://10.42.0.1:9090">
     </label>
-    Género <span id="gender_tag_status">Masculino</span>
+    <button class="btn-primary" id="connApplyBtn">Conectar</button>
+    <button class="btn-ghost" id="connCancelBtn">Cancelar</button>
   </div>
 
-  <!-- AGE  -->
-  <div class="slidecontainer">
-    <p>Age: <span id="ageValue"></span> years</p>
-    <input type="range" min="1" max="100" value="42" class="slider" id="ageRange">
-  </div>
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="tabMonitor">Monitor</button>
+    <button class="tab-btn" data-tab="tabSession">Sesión</button>
+  </nav>
 
-  <!-- Height  -->
-  <div class="slidecontainer">
-    <p>Height: <span id="heightValue"></span> cm.</p>
-    <input type="range" min="120" max="210" value="175" class="slider" id="heightRange">
-  </div>
+  <main>
+    <!-- ===================================================== MONITOR === -->
+    <div class="tab-panel active" id="tabMonitor">
+      <section class="panel" aria-label="Sensores">
+        <h2>Sensores</h2>
+        <div class="stat-grid">
+          <div class="stat-card">
+            <span class="stat-label">Mano izq. (kg)</span>
+            <span class="stat-value" id="leftHandleForce">—</span>
+            <span class="stat-age" id="leftHandleForceAge"></span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Mano dcha. (kg)</span>
+            <span class="stat-value" id="rightHandleForce">—</span>
+            <span class="stat-age" id="rightHandleForceAge"></span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Pierna izq. (kg)</span>
+            <span class="stat-value" id="leftLegLoad">—</span>
+            <span class="stat-age" id="leftLegLoadAge"></span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Pierna dcha. (kg)</span>
+            <span class="stat-value" id="rightLegLoad">—</span>
+            <span class="stat-age" id="rightLegLoadAge"></span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Encoder izq.</span>
+            <span class="stat-value" id="leftWheel">—</span>
+            <span class="stat-age" id="leftWheelAge"></span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Encoder dcho.</span>
+            <span class="stat-value" id="rightWheel">—</span>
+            <span class="stat-age" id="rightWheelAge"></span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">IMU x (izq-dcha, °)</span>
+            <span class="stat-value" id="imuX">—</span>
+            <span class="stat-age" id="imuXAge"></span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">IMU y (arriba-abajo, °)</span>
+            <span class="stat-value" id="imuY">—</span>
+            <span class="stat-age" id="imuYAge"></span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">IMU z (°)</span>
+            <span class="stat-value" id="imuZ">—</span>
+            <span class="stat-age" id="imuZAge"></span>
+          </div>
+        </div>
+        <p class="current-user" id="userDescData">Sin datos de usuario todavía.</p>
+      </section>
 
-  <!-- Weight  -->
-  <div class="slidecontainer">
-    <p>Weight: <span id="WeightValue"></span> Kg.</p>
-    <input type="range" min="20" max="210" value="92" class="slider" id="WeightRange">
-  </div>
+      <section class="panel" aria-label="Vista superior">
+        <h2>Vista superior</h2>
+        <div id="myPlot" class="plot"></div>
+      </section>
+    </div>
 
-  <!-- Tinetti a.k.a. overall statiblity  -->
-  <div class="slidecontainer">
-    <p>Tinetti: <span id="tinettiValue"></span> [24 means fully stable]</p>
-    <input type="range" min="0" max="28" value="24" class="slider" id="tinettiRange">
-  </div>
+    <!-- ===================================================== SESSION === -->
+    <div class="tab-panel" id="tabSession">
+      <section class="panel" aria-label="Datos de usuario">
+        <h2>Usuario</h2>
 
-  <!-- medical condition -->
-  <div id="condition_div">
-    <p>User medical condition: </p>
-    <textarea id="myTextarea" name="aTextArea" rows="5" cols="100">No previous condition</textarea>
-  </div>
+        <div class="field">
+          <label for="userId">Identificador de usuario</label>
+          <input type="text" id="userId" value="UCAmI">
+        </div>
 
-  <!-- ********************** Control CONFIGURATION **********************  -->
-  <br>
-  <hr size="3" noshade>
+        <div class="toggle-row">
+          <label class="switch">
+            <input type="checkbox" id="genderTog">
+            <span class="switch-track"></span>
+          </label>
+          <span>Género: <strong id="genderStatus">Masculino</strong></span>
+        </div>
 
-  <!-- Handle height  -->
-  <div class="slidecontainer">
-    <p>Handle position: <span id="handleValue"></span> # </p>
-    <input type="range" min="0" max="4" value="2" class="slider" id="handleRange">
-  </div>
+        <div class="field">
+          <label>Edad: <span class="field-value" id="ageValue"></span> años</label>
+          <input type="range" min="1" max="100" value="42" id="ageRange">
+        </div>
 
-  <!-- Start recording  -->
-  <div id="record_tag_id" class="record_tag_class">
-    <label class="toggle">
-      <input id="record_tog" type="checkbox">
-      <span class="roundbutton"></span>
-    </label>
-    Rosbag esta <span id="record_tag_status">Detenido</span>
-  </div>
+        <div class="field">
+          <label>Altura: <span class="field-value" id="heightValue"></span> cm</label>
+          <input type="range" min="120" max="210" value="175" id="heightRange">
+        </div>
 
+        <div class="field">
+          <label>Peso: <span class="field-value" id="weightValue"></span> kg</label>
+          <input type="range" min="20" max="210" value="92" id="weightRange">
+        </div>
+
+        <div class="field">
+          <label>Tinetti: <span class="field-value" id="tinettiValue"></span> [24 = totalmente estable]</label>
+          <input type="range" min="0" max="28" value="24" id="tinettiRange">
+        </div>
+
+        <div class="field">
+          <label for="conditionText">Condición médica del usuario</label>
+          <textarea id="conditionText" rows="4">No previous condition</textarea>
+        </div>
+      </section>
+
+      <section class="panel" aria-label="Control">
+        <h2>Control</h2>
+
+        <div class="field">
+          <label>Posición de asas (objetivo): <span class="field-value" id="handleValue"></span></label>
+          <input type="range" min="0" max="4" value="4" id="handleRange">
+          <button class="btn-apply btn-pending" id="handleApplyBtn">Actualizar configuración</button>
+          <p class="current-user">Posición actual (leída del andador): <span id="handlePos">—</span>
+            <span class="stat-age" id="handlePosAge"></span></p>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script type="module" src="js/app.js"></script>
 </body>
-
-  <!-- WARNING: TRY TO KEEP URL VAR AT LINE 240 !! walker_config.bash WILL CHANGE IT BLINDLY -->
-  <script type="text/javascript" type="text/javascript">
-    // ROS................................................................................
-    var ros = new ROSLIB.Ros({
-    url : 'ws://10.42.0.1:9090'
-    });
-
-    ros.on('connection', function () {
-      document.getElementById("status").innerHTML = "Connected";
-    });
-
-    ros.on('error', function (error) {
-      document.getElementById("status").innerHTML = "Error";
-    });
-
-    ros.on('close', function () {
-      document.getElementById("status").innerHTML = "Closed";
-    });
-
-    /////////////////////////////////////////////
-    var imu_angle_listener = new ROSLIB.Topic({
-      ros: ros,
-      name: '/sensor/bwt901cl/Angle',
-      queue_length: 0,
-      messageType: 'geometry_msgs/msg/Vector3'
-    });
-
-    imu_angle_listener.subscribe(function (m) {
-      document.getElementById("imu_angle_x").innerHTML = Math.round((m.x + Number.EPSILON) * 100) / 100;
-      document.getElementById("imu_angle_y").innerHTML = Math.round((m.y + Number.EPSILON) * 100) / 100;
-      document.getElementById("imu_angle_z").innerHTML = Math.round((m.z + Number.EPSILON) * 100) / 100; 
-    });
-
-    /////////////////////////////////////////////
-    var left_wheel_listener = new ROSLIB.Topic({
-      ros: ros,
-      name: '/left_wheel',
-      queue_length: 0,
-      messageType: 'walker_msgs/msg/EncoderStamped'
-    });
-
-    left_wheel_listener.subscribe(function (m) {
-      document.getElementById("left_wheel_encoder").innerHTML = m.encoder; 
-    });
-
-    /////////////////////////////////////////////
-    var right_wheel_listener = new ROSLIB.Topic({
-      ros: ros,
-      name: '/right_wheel',
-      queue_length: 0,
-      messageType: 'walker_msgs/msg/EncoderStamped'
-    });
-
-    right_wheel_listener.subscribe(function (m) {
-      document.getElementById("right_wheel_encoder").innerHTML = m.encoder;
-    });
-
-    /////////////////////////////////////////////
-    var handle_height_listener = new ROSLIB.Topic({
-      ros: ros,
-      name: "/handle_height",
-      messageType: 'std_msgs/Int32'
-    });
-
-    handle_height_listener.subscribe(function (m) {
-      document.getElementById("handle_height_data").innerHTML = m.data;
-    });
-
-    function handle_publish() {
-      var var_handle = new ROSLIB.Message({
-        data: parseInt(document.getElementById("handleRange").value)
-      });
-      handle_height_listener.publish(var_handle);
-    }
-
-    /////////////////////////////////////////////
-
-    left_load_listener = new ROSLIB.Topic({
-      ros: ros,
-      name: "/left_loads",
-      messageType: 'walker_msgs/msg/StepStamped',
-      queue_length: 0,
-      latch: false
-    });
-
-    left_load_listener.subscribe(function (m) {
-      var new_x = m.position.point.x;
-      var new_y = m.position.point.y;
-      var color = m.load;
-
-      document.getElementById("left_leg_load").innerHTML = Math.round((m.load + Number.EPSILON) * 100) / 100;
-
-    });
-
-
-    ////////////////////////////////////////////
-
-    right_load_listener = new ROSLIB.Topic({
-      ros: ros,
-      name: "/right_loads",
-      messageType: 'walker_msgs/msg/StepStamped',
-      queue_length: 0,
-      latch: false
-    });
-
-    right_load_listener.subscribe(function (m) {
-      var new_x = m.position.point.x
-      var new_y = m.position.point.y
-      var color = m.load;
-                  
-      document.getElementById("right_leg_load").innerHTML = Math.round((m.load + Number.EPSILON) * 100) / 100;
-           
-    });
-
-
-    /////////////////////////////////////////////
-
-    left_hand_load_listener = new ROSLIB.Topic({
-      ros: ros,
-      name: "/left_hand_loads",
-      messageType: 'walker_msgs/msg/ForceStamped',
-      queue_length: 0,
-      latch: false
-    });
-
-    left_hand_load_listener.subscribe(function (m) {
-      document.getElementById("left_handle_force").innerHTML = Math.round((m.force + Number.EPSILON) * 100) / 100;
-      var color = m.force;
-
-    
-    });
-   
-    /////////////////////////////////////////////
-
-    right_hand_load_listener = new ROSLIB.Topic({
-      ros: ros,
-      name: "/right_hand_loads",
-      messageType: 'walker_msgs/msg/ForceStamped',
-      queue_length: 0,
-      latch: false
-    });
-
-    right_hand_load_listener.subscribe(function (m) {
-      var color = m.force;
-      document.getElementById("right_handle_force").innerHTML = Math.round((m.force + Number.EPSILON) * 100) / 100;
-
-    });
-
-    ////////////////////////////////////////////
-    
-    user_listener = new ROSLIB.Topic({
-      ros: ros,
-      name: "/user_desc",
-      messageType: 'std_msgs/String',
-      latch: true
-    });
-
-    user_listener.subscribe(function (m) {
-      document.getElementById("user_desc_data").innerHTML = m.data;
-    });
-
-    user = function () {
-      var user_info = new ROSLIB.Message({
-        data: document.getElementById("ageValue").innerHTML + ':' +
-          document.getElementById("heightValue").innerHTML + ':' +
-          document.getElementById("WeightValue").innerHTML + ':' +
-          document.getElementById("user_id").value + ':' +
-          document.getElementById('gender_tag_status').innerHTML + ':' +
-          document.getElementById("tinettiValue").innerHTML + ':' +
-          document.getElementById("myTextarea").value
-      });
-      user_listener.publish(user_info);
-      handle_publish();
-    }
-
-    // Calling a service
-    // -----------------
-
-    function startRecord() {
-      var cmdlineClient = new ROSLIB.Service({
-        ros: ros,
-        name: '/rosbag_record',
-        serviceType: 'std_srvs/srv/SetBool'
-      });
-
-
-      var request = new ROSLIB.ServiceRequest({
-        data: true
-      });
-
-      cmdlineClient.callService(request, function (result) {
-        var outputtext = document.getElementById('record_tag_status');
-
-        if (result.message) {
-          outputtext.innerHTML = "Grabando!";
-          user();
-        }
-
-        console.log('Result for service call on '
-          + cmdlineClient.name
-          + ': '
-          + result.message);
-      });
-
-      intervalId = setInterval(function () {
-        user()
-      }, 1000);
-
-    };
-
-    function stopRecord() {
-      var cmdlineClient = new ROSLIB.Service({
-        ros: ros,
-        name: '/rosbag_record',
-        serviceType: 'std_srvs/srv/SetBool'
-      });
-
-
-      var request = new ROSLIB.ServiceRequest({
-        data: false
-      });
-
-      cmdlineClient.callService(request, function (result) {
-        var outputtext = document.getElementById('record_tag_status');
-
-        if (result.message) {
-          outputtext.innerHTML = "Detenido!";
-        }
-
-        console.log('Result for service call on '
-          + cmdlineClient.name
-          + ': '
-          + result.message);
-      });
-      clearInterval(intervalId);
-    };
-
-    // e.o. ROS...........................................................................
-
-    document.getElementById('gender_tog').onclick = function () {
-      var outputtext = document.getElementById('gender_tag_status');
-      if (this.checked) {
-        outputtext.innerHTML = "Femenino";
-      } else {
-        outputtext.innerHTML = "Masculino";
-      }
-      user();
-    };
-
-    var slider_a = document.getElementById("ageRange");
-    var output_a = document.getElementById("ageValue");
-    output_a.innerHTML = slider_a.value;
-
-    slider_a.oninput = function () {
-      output_a.innerHTML = this.value;
-      user();
-    }
-
-    var slider_h = document.getElementById("heightRange");
-    var output_h = document.getElementById("heightValue");
-    output_h.innerHTML = slider_h.value;
-
-    slider_h.oninput = function () {
-      output_h.innerHTML = this.value;
-      user();
-    }
-
-    var slider_w = document.getElementById("WeightRange");
-    var output_w = document.getElementById("WeightValue");
-    output_w.innerHTML = slider_w.value;
-
-    slider_w.oninput = function () {
-      output_w.innerHTML = this.value;
-      user();
-    }
-
-
-    var slider_hh = document.getElementById("handleRange");
-    var output_hh = document.getElementById("handleValue");
-    output_hh.innerHTML = slider_hh.value;
-
-    slider_hh.oninput = function () {
-      output_hh.innerHTML = this.value;
-      user();
-    }
-
-    var slider_tin = document.getElementById("tinettiRange");
-    var output_tin = document.getElementById("tinettiValue");
-    output_tin.innerHTML = slider_tin.value;
-
-    slider_tin.oninput = function () {
-      output_tin.innerHTML = this.value;
-      user();
-    }
-
-    var input = document.getElementById('record_tog');
-
-    input.addEventListener('change', function () {
-      if (this.checked) {
-        user();
-        startRecord();
-      } else {
-        stopRecord();
-      }
-    });
-    
-  </script>
 
 </html>
