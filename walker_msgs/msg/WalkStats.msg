@@ -1,4 +1,7 @@
-# Test stats 
+# Test stats
+
+# stamp = when this (cumulative) summary was computed/published
+std_msgs/Header header
 
 # Time required (Tr)
 builtin_interfaces/Duration tr

@@ -223,6 +223,7 @@ class GaitMonitorSp(Node):
             self.get_logger().debug("\t Cadence (CAD): [" + str(CAD) + "]")  
             self.get_logger().debug("\t Average walking velocity (WV): [" + str(WV) + "]")  
 
+            self.global_gait_stats_data.header.stamp = self.get_clock().now().to_msg()
             self.global_gait_stats_data.tr = Tr.to_msg()
             self.global_gait_stats_data.nos = NoS
             self.global_gait_stats_data.d = d

@@ -134,6 +134,7 @@ def launch_setup(context, *args, **kwargs):
     bag_path = LaunchConfiguration('bag_path').perform(context)
     test_config_file = LaunchConfiguration('test_config_file').perform(context)
     rate = LaunchConfiguration('rate').perform(context)
+    start_offset = LaunchConfiguration('start_offset').perform(context)
     bag_name = basename(bag_path.rstrip('/'))
 
     fields = read_test_config_row(test_config_file, bag_name)
@@ -182,28 +183,51 @@ def launch_setup(context, *args, **kwargs):
         name='step_laser_filter',
         parameters=[box_filter_cfg_eval]))
 
-    # Feet position/speed from the laser (same params as step_detector_km.launch.py).
+    # Feet position/speed from the laser: detect_steps (Random Forest), NOT
+    # km_detect_steps -- switched on recommendation from the walker_step_
+    # detector session ("1.[walker_step_detector][mejoras]"), which has it
+    # validated at 95.7-95.9% match_rate over these same 47 bags vs ~81%
+    # for km (their eval_against_mocap.py). No `kalman_enabled` param here:
+    # unlike km/seg, the RF variant's EKF is always on
+    # (kalman_tracker.set_status(true) hardcoded in detect_steps.cpp).
+    # detection_threshold/max_detected_clusters are what actually gate the
+    # RF's confidence filter (defaults are -1.0/-1 = "no filter") -- this is
+    # also expected to fix the CA_test09-style outliers from km's unfiltered
+    # k-means (see walker_mocap_eval/readme.md, punto 2).
     actions.append(Node(
-        package='walker_step_detector', executable='km_detect_steps',
-        name='detect_steps_km',
+        package='walker_step_detector', executable='detect_steps',
+        name='detect_steps_rf',
         parameters=[
             {'scan_topic': '/scan_feet'},
+            {'forest_file': join(
+                get_package_share_directory('walker_step_detector'),
+                'config', 'trained_step_detector_res_0.33.yaml')},
             {'detected_steps_topic_name': '/detected_step'},
-            {'detected_steps_frame': 'base_link'},
-            {'kalman_enabled': True},
             {'kalman_model_d0': 0.001},
             {'kalman_model_a0': 0.001},
             {'kalman_model_f0': 0.001},
             {'kalman_model_p0': 0.001},
-            {'plot_leg_kalman': False},
-            {'plot_leg_clusters': False},
-            {'use_scan_header_stamp_for_tfs': False},
+            {'detection_threshold': 0.01},
+            {'cluster_dist_euclid': 0.13},
+            {'max_detect_distance': 1.25},
+            {'max_detected_clusters': 2},
+            {'min_points_per_cluster': 3},
+            {'publish_clusters': True},
         ]))
 
     # The node under study.
     actions.append(IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             join(walker_loads_dir, 'launch', 'partial_loads.launch.py'))))
+
+    # Weighted centroid of the 4 contact points (2 feet + 2 handles), for
+    # comparing against walker_mocap_eval's mocap-based CoM estimate
+    # (mocap_eval/cog_estimation.py, De Leva segmental model) -- default
+    # topic names already match partial_loads' outputs, no remapping.
+    actions.append(IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            join(get_package_share_directory('walker_centroid_support'),
+                 'launch', 'centroid_support.launch.py'))))
 
     # /odom for gait_monitor_speed, from mocap ground truth -- see the
     # module docstring above and mocap_odom_bridge.py for why not
@@ -216,10 +240,24 @@ def launch_setup(context, *args, **kwargs):
 
     # The node this whole replay is for: consumes partial_loads' /left_loads,
     # /right_loads and walker_diff_odom's /odom above.
+    #
+    # use_sim_time: True -- gait_monitor_speed.py stamps /left_gait_stats,
+    # /right_gait_stats with self.get_clock().now() (see that file), which
+    # without this is the REAL wall clock (today), not bag time -- found
+    # exporting CSVs for walker_mocap_eval's report (their header.stamp was
+    # unusable to align against mocap's real timestamps). With
+    # use_sim_time:=true here AND `ros2 bag play --clock` below (publishing
+    # /clock as a ROS time source from the bag's own advancing timeline),
+    # self.get_clock().now() returns bag time instead -- fixing this at the
+    # source instead of approximating it downstream. Only this node gets
+    # use_sim_time here (scoped fix); the rest of the pipeline still runs on
+    # wall time, which is fine since nothing else in it calls now() for a
+    # published stamp (everything else forwards an upstream header).
     actions.append(Node(
         package='walker_loads', executable='gait_monitor_speed.py',
         name='gait_stats',
         parameters=[
+            {'use_sim_time': True},
             {'period': 0.05},
             {'left_loads_topic_name': '/left_loads'},
             {'right_loads_topic_name': '/right_loads'},
@@ -231,10 +269,21 @@ def launch_setup(context, *args, **kwargs):
         ]))
 
     # Replay only what's needed, added last so the subscribers above are
-    # already up when messages start flowing.
+    # already up when messages start flowing. start_offset (seconds into
+    # the bag, bag-time, unaffected by --rate) defaults to 0 = whole bag;
+    # walker_mocap_eval/scripts/compare_gait_mocap_vs_walker.py passes the
+    # first /tag message's offset to skip the pre-test setup/calibration
+    # portion, matching mocap_analysis/scripts/merge_rosbags.py's own
+    # crop-to-/tag behaviour.
+    # --clock 200: publish /clock (200Hz, comfortably above sensor rates) as
+    # a ROS time source from the bag's own advancing timeline -- what
+    # gait_monitor_speed's use_sim_time above actually consumes. Without a
+    # node subscribing with use_sim_time:=true this would be a no-op; see
+    # the comment on that node.
     actions.append(ExecuteProcess(
         cmd=['ros2', 'bag', 'play', '-s', 'sqlite3', '--disable-keyboard-controls',
-             '--rate', rate, '--qos-profile-overrides-path', tf_static_qos_override,
+             '--rate', rate, '--start-offset', start_offset, '--clock', '200',
+             '--qos-profile-overrides-path', tf_static_qos_override,
              bag_path, '--topics', '/left_handle', '/right_handle', '/scan',
              '/rigid_bodies', '/tf', '/tf_static'],
         output='screen',
@@ -253,5 +302,8 @@ def generate_launch_description():
             description='CSV with handle_height/user_desc per bag (bagsFolder_unified)'),
         DeclareLaunchArgument(
             'rate', default_value='1.0', description='Rosbag playback rate'),
+        DeclareLaunchArgument(
+            'start_offset', default_value='0.0',
+            description='Seconds into the bag (bag-time) to start playback at -- see /tag note above'),
         OpaqueFunction(function=launch_setup),
     ])
