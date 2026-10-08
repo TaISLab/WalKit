@@ -7,6 +7,19 @@
   <maintainer email="manolofc@gmail.com">Manuel Fernandez-Carmona</maintainer>
   <license>Creative Commons</license>
 
+  <depend>rclpy</depend>
+  <depend>geometry_msgs</depend>
+  <depend>tf2_ros_py</depend>
+  <depend>walker_msgs</depend>
+
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <!-- Runtime data sources: /left_loads, /right_loads, /left_hand_loads,
+       /right_hand_loads (walker_loads) and the handle TFs (walker_description). -->
+  <exec_depend>walker_loads</exec_depend>
+  <exec_depend>walker_description</exec_depend>
+
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_pep257</test_depend>
