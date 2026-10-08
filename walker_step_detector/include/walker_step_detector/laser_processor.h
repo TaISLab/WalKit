@@ -43,7 +43,6 @@
 #include <map>
 #include <utility>
 #include <algorithm>
-#include <bullet/LinearMath/btVector3.h>
 
 // OpenCV related Headers
 #include <opencv2/core/core.hpp>

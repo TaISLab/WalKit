@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Compara la salida real de las variantes de walker_step_detector (grabada
-con `ros2 bag record` mientras corre launch/test_step_detector.launch.py)
+con `ros2 bag record` mientras corre launch/test_step_detector_variants.launch.py o launch/test_step_detector.launch.py)
 contra el ground truth de mocap (tobillos de /labeled_markers), usando la
 calibracion de calibrate_mocap_to_laser.py.
 
@@ -47,7 +47,11 @@ from mocap_bag_io import (
     project_map_to_laser, rigid_body_pose_xy_yaw,
 )
 
-VARIANT_RE = re.compile(r"^(/detected_step_.+)_(left|right)$")
+# /detected_step_<variante>_{left,right} (las del launcher de variantes) o,
+# sin nombre de variante, /detected_step_{left,right} (lo que publica
+# step_detector.launch.py en el robot: se evalua como "step_detector").
+VARIANT_RE = re.compile(r"^(/detected_step(?:_.+)?)_(left|right)$")
+UNNAMED_VARIANT = "step_detector"
 
 
 def discover_variants(bag_dir):
@@ -169,7 +173,7 @@ def evaluate_bag(eval_bag, calib, gate, max_dt_ns, quiet=False):
 
     out = {}
     for prefix, sides in sorted(variants.items()):
-        variant_name = prefix.replace("/detected_step_", "")
+        variant_name = prefix[len("/detected_step"):].lstrip("_") or UNNAMED_VARIANT
         for side_name, topic in sides.items():
             if topic is None:
                 continue
@@ -183,7 +187,7 @@ def evaluate_bag(eval_bag, calib, gate, max_dt_ns, quiet=False):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--eval-bag", required=True, help="bag grabado con ros2 bag record durante test_step_detector.launch.py")
+    ap.add_argument("--eval-bag", required=True, help="bag grabado con ros2 bag record durante test_step_detector[_variants].launch.py")
     ap.add_argument("--calib", default=str(Path(__file__).resolve().parent.parent / "config" / "mocap_to_base_footprint.yaml"))
     ap.add_argument("--gate", type=float, default=0.3, help="distancia maxima (m) para considerar una deteccion valida")
     ap.add_argument("--max-dt-ms", type=float, default=50.0, help="tolerancia de emparejado deteccion<->ground truth")

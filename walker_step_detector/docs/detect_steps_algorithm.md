@@ -170,7 +170,7 @@ izquierda/derecha entre dos detecciones consecutivas), en orden:
    saber la fase real de la zancada al arrancar una pista), inyectando un
    error de predicción que antes no existía (con `a0~0` el modelo era casi
    estático, sin oscilación que pudiera desfasarse). Revertido. Ver el
-   comentario en `launch/test_step_detector.launch.py`.
+   comentario en `launch/test_step_detector_variants.launch.py`.
 
 6. **¿Referencia de asociación/gating por última medida real en vez de la
    predicción del EKF?** Primer resultado positivo (aunque modesto):
@@ -264,7 +264,7 @@ izquierda/derecha entre dos detecciones consecutivas), en orden:
    parámetros realistas, en vez de necesitar más ciclos con `a~0`. `km`/`seg`
    quedan prácticamente sin cambios (esperable: kalman_enabled=false en la
    configuración de esta evaluación para esas dos variantes, ver
-   `launch/test_step_detector.launch.py` -- no pasan por `predict_step()`).
+   `launch/test_step_detector_variants.launch.py` -- no pasan por `predict_step()`).
 
 9. **¿Extender #8 estimando también la frecuencia por eje** (búsqueda en
    rejilla 0.2-1.2Hz, paso 0.02Hz, sobre el mismo ajuste 2x2, en vez de
@@ -311,6 +311,51 @@ sin éxito. Cualquier intento futuro de EKF debe medirse con
 `scripts/run_multibag_eval.py` en un `ROS_DOMAIN_ID` propio -- un proceso
 ROS ajeno compartiendo el dominio por defecto contaminó una medida anterior
 y produjo una conclusión falsa ("catastrófico") que tuvo que corregirse.
+
+## Lanzadores y cómo evaluarlos
+
+- **`launch/step_detector.launch.py`** -- el del robot real. Solo lanza
+  `detect_steps` (RF), con los parámetros validados, leyendo `/scan_filtered`
+  y publicando `/detected_step_left` y `/detected_step_right`. No lanza el
+  filtro láser: `/scan_filtered` lo genera `walker_bringup
+  laser_filter.launch.py` en el robot.
+- **`launch/test_step_detector.launch.py`** -- el mismo launcher del robot,
+  sin robot: incluye `walker_bringup/launch/test/unified_bag_replay.launch.py`
+  (reproduce `/scan`, `/tf`, `/tf_static` del bag y lanza el TF del andador),
+  `laser_filter.launch.py` (genera `/scan_filtered` como el robot) y
+  `step_detector.launch.py` sin tocar. `step_detector` solo se suscribe a
+  `/scan_filtered`, así que no hacen falta handles ni configuración de
+  usuario. Argumentos: `bag_path`, `rate`, `topics` (por defecto `/scan /tf
+  /tf_static`), `publish_walker_tf`, `replay_delay` (espera antes de
+  reproducir, por defecto 3 s, para que el detector ya esté suscrito).
+- **`launch/test_step_detector_variants.launch.py`** -- el de antes (se
+  llamaba `test_step_detector.launch.py`): las cuatro variantes juntas
+  (rf/km/seg/fused) sobre el mismo bag. Es el que usaron todas las
+  evaluaciones de `eval_results/` anteriores a 2026-10.
+
+Evaluar contra mocap con el launcher nuevo (hay que reproducir también el
+ground truth, que no está en el `topics` por defecto; elige un
+`--domain-id` que nadie más use):
+
+```bash
+python3 scripts/run_multibag_eval.py --bags-dir $DATASETS/labeled_bags \
+    --out-dir /tmp/eval --rate 4.0 --domain-id <libre> \
+    --launch-file test_step_detector.launch.py \
+    --launch-args "topics:='/scan /tf /tf_static /labeled_markers /rigid_bodies'" \
+    --detected-topics "/detected_step_left /detected_step_right" \
+    --replay-delay 8 --out result.json
+```
+
+El grabador solo recibe el ground truth una vez que el reproductor empieza
+a publicarlo, así que ninguno de los dos flujos evalúa el bag entero.
+Medido en `CA_test01` (89 s de bag, rate 4): el launcher de variantes
+(arranca el bag a la vez que el launch y el grabador se suscribe unos 5 s
+después) se pierde los primeros **14.7 s** (cubre el 83%); el launcher nuevo
+con `--replay-delay 8` se pierde **7.4 s** (cubre el 92%), es decir ~1.9 s
+de reloj de pared hasta que el grabador engancha el ground truth, que a rate
+4 son 7.4 s de bag (a rate 1 serían ~1.9 s). Las cifras históricas de
+`eval_results/` excluyen ese tramo inicial, y por eso no son estrictamente
+comparables con las del launcher nuevo, que cubre algo más.
 
 ## Verificación del reenganche tras perder la pista
 

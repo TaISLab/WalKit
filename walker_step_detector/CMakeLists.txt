@@ -18,9 +18,8 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
-find_package(rosidl_default_generators REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(rclpy REQUIRED)
+find_package(rcutils REQUIRED)
 find_package(walker_msgs REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(sensor_msgs REQUIRED)
@@ -59,10 +58,11 @@ add_executable (detect_steps
                 include/walker_step_detector/cluster_features.h
                 )
 
-target_link_libraries(detect_steps ${catkin_LIBRARIES})
+target_link_libraries(detect_steps Eigen3::Eigen)
 
 ament_target_dependencies(detect_steps 
   rclcpp 
+  rcutils
   walker_msgs 
   OpenCV 
   sensor_msgs 
@@ -89,6 +89,8 @@ add_executable (detect_steps_s
 
 ament_target_dependencies(detect_steps_s
   rclcpp
+  rcutils
+  geometry_msgs
   visualization_msgs
   slg_msgs 
   walker_msgs
@@ -96,7 +98,7 @@ ament_target_dependencies(detect_steps_s
   tf2_geometry_msgs 
   tf2_ros
 )
-target_link_libraries(detect_steps_s)
+target_link_libraries(detect_steps_s Eigen3::Eigen)
 
 install (TARGETS
 detect_steps_s
@@ -114,6 +116,8 @@ add_executable (km_detect_steps
 ament_target_dependencies(km_detect_steps
   OpenCV
   rclcpp
+  rcutils
+  geometry_msgs
   visualization_msgs
   walker_msgs
   tf2 
@@ -139,12 +143,15 @@ add_executable (detect_steps_fused
 
 ament_target_dependencies(detect_steps_fused
   rclcpp
+  rcutils
   walker_msgs
   std_msgs
   tf2
   tf2_geometry_msgs
   tf2_ros
 )
+
+target_link_libraries(detect_steps_fused Eigen3::Eigen)
 
 install (TARGETS
 detect_steps_fused

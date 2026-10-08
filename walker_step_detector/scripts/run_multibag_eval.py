@@ -50,6 +50,17 @@ DETECTED_TOPICS = [
 ]
 GT_TOPICS = ["/labeled_markers", "/rigid_bodies"]
 
+# Por defecto, el launcher de las cuatro variantes (el de todas las
+# evaluaciones historicas de eval_results/). Para evaluar step_detector.
+# launch.py tal como corre en el robot, via unified_bag_replay:
+#   --launch-file test_step_detector.launch.py \
+#   --launch-args "topics:='/scan /tf /tf_static /labeled_markers /rigid_bodies'" \
+#   --detected-topics "/detected_step_left /detected_step_right" --replay-delay 8
+# (el ground truth de mocap hay que reproducirlo tambien para poder grabarlo).
+LAUNCH_FILE = "test_step_detector_variants.launch.py"
+LAUNCH_ARGS = ""
+REPLAY_DELAY = 0.0
+
 
 def sh(cmd):
     """Lanza cmd bajo bash -c con el entorno ROS sourceado, en su propio
@@ -104,8 +115,9 @@ def run_one_bag(bag_dir, out_dir, rate, startup_wait):
     repair_bag_metadata(bag_dir)
 
     launch = sh(
-        "ros2 launch walker_step_detector test_step_detector.launch.py "
-        f"bag_path:={bag_dir} rate:={rate}"
+        f"ros2 launch walker_step_detector {LAUNCH_FILE} "
+        f"bag_path:={bag_dir} rate:={rate} {LAUNCH_ARGS}"
+        + (f" replay_delay:={REPLAY_DELAY}" if REPLAY_DELAY > 0 else "")
     )
     record = None
     try:
@@ -118,7 +130,13 @@ def run_one_bag(bag_dir, out_dir, rate, startup_wait):
         time.sleep(1.5)  # que el recorder llegue a suscribirse antes de que empiece a llegar nada
 
         duration = bag_duration_seconds(bag_dir)
-        wait_s = duration / rate + 3.0
+        # REPLAY_DELAY: el launcher espera ese tiempo antes de reproducir
+        # (test_step_detector.launch.py), asi el grabador ya esta listo.
+        # Reduce la parte perdida del bag pero no la elimina: medido en
+        # CA_test01 a rate 4, de 14.7 s a 7.4 s de 89 s, porque el ground
+        # truth solo existe cuando arranca el reproductor y el grabador
+        # tarda ~1.9 s en engancharse a el.
+        wait_s = duration / rate + 3.0 + REPLAY_DELAY
         time.sleep(wait_s)
     finally:
         stop(record)
@@ -168,6 +186,7 @@ def aggregate_key(bag_summaries, pooled_records):
 
 
 def main():
+    global ROS_DOMAIN_ID_EVAL, LAUNCH_FILE, LAUNCH_ARGS, REPLAY_DELAY, DETECTED_TOPICS
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--bags-dir", required=True)
     ap.add_argument("--out-dir", required=True, help="donde se guardan los bags grabados de cada corrida")
@@ -179,9 +198,32 @@ def main():
     ap.add_argument("--limit", type=int, default=None, help="probar solo con los N primeros bags")
     ap.add_argument("--keep-bags", action="store_true", help="no borrar los bags grabados de cada corrida al terminar")
     ap.add_argument("--out", default=None, help="JSON agregado de salida")
+    ap.add_argument("--only", default=None, help="solo estos bags, por nombre y separados por comas (p.ej. CA_test01,MT_test13)")
+    ap.add_argument("--domain-id", default=ROS_DOMAIN_ID_EVAL,
+                    help="ROS_DOMAIN_ID de esta evaluacion: elige uno que nadie mas use (default %(default)s)")
+    ap.add_argument("--launch-file", default=LAUNCH_FILE,
+                    help="launcher de walker_step_detector a usar (default %(default)s)")
+    ap.add_argument("--launch-args", default=LAUNCH_ARGS,
+                    help="argumentos extra para el launcher, tal cual los veria bash (p.ej. \"topics:='/scan /tf'\")")
+    ap.add_argument("--detected-topics", default=None,
+                    help="topics de salida a grabar, separados por espacios (default: los de las cuatro variantes)")
+    ap.add_argument("--replay-delay", type=float, default=REPLAY_DELAY,
+                    help="segundos que el launcher espera antes de reproducir el bag (replay_delay de "
+                         "test_step_detector.launch.py); 0 = no se pasa")
     args = ap.parse_args()
 
+    ROS_DOMAIN_ID_EVAL = str(args.domain_id)
+    LAUNCH_FILE, LAUNCH_ARGS, REPLAY_DELAY = args.launch_file, args.launch_args, args.replay_delay
+    if args.detected_topics:
+        DETECTED_TOPICS = args.detected_topics.split()
+
     bag_dirs = find_labeled_bags(args.bags_dir)
+    if args.only:
+        wanted = set(args.only.split(","))
+        missing = wanted - {b.name for b in bag_dirs}
+        if missing:
+            sys.exit(f"--only: no existen estos bags: {sorted(missing)}")
+        bag_dirs = [b for b in bag_dirs if b.name in wanted]
     if args.limit:
         bag_dirs = bag_dirs[:args.limit]
     if not bag_dirs:

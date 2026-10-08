@@ -11,22 +11,53 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>ament_cmake_python</buildtool_depend>
 
+  <!-- C++ (detect_steps*, km_detect_steps, plot_steps) -->
   <depend>rclcpp</depend>
+  <depend>rcutils</depend>
   <depend>walker_msgs</depend>
   <depend>sensor_msgs</depend>
-  <depend>geometry_msgs</depend>  
+  <depend>geometry_msgs</depend>
+  <depend>std_msgs</depend>
   <depend>tf2</depend>
   <depend>tf2_geometry_msgs</depend>
   <depend>tf2_ros</depend>
   <depend>visualization_msgs</depend>
   <depend>nav_msgs</depend>
   <depend>message_filters</depend>
+  <depend>slg_msgs</depend>
+  <!-- kalman/ (include/kalman) usa Eigen -->
+  <depend>eigen</depend>
   <depend>python3-scipy</depend>
-  <depend>slg_msgs</depend>  
-  
+
   <!-- This dependency should point to 4.2 -->
   <depend>libopencv-dev</depend>
   <depend>vision_opencv</depend>
+
+  <!-- launch/*.py -->
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <!-- test_step_detector.launch.py: unified_bag_replay.launch.py y
+       laser_filter.launch.py (walker_bringup); unified_bag_replay lanza el
+       TF del andador (walker_description) -->
+  <exec_depend>walker_bringup</exec_depend>
+  <exec_depend>walker_description</exec_depend>
+  <!-- test_step_detector_variants.launch.py / step_detector_s.launch.py -->
+  <exec_depend>walker_laser_filter</exec_depend>
+  <exec_depend>laser_segmentation</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+  <!-- ros2 bag play / record en los launchers de test y en scripts/run_multibag_eval.py -->
+  <exec_depend>ros2bag</exec_depend>
+  <exec_depend>rosbag2_storage_default_plugins</exec_depend>
+
+  <!-- scripts/*.py (evaluacion contra mocap; no se instalan, se ejecutan desde el repo) -->
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>rosbag2_py</exec_depend>
+  <exec_depend>rosidl_runtime_py</exec_depend>
+  <exec_depend>mocap4r2_msgs</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
 

@@ -14,49 +14,35 @@ def generate_launch_description():
 
     ld = LaunchDescription()
 
-    # filter laser data to get only legs area
-    laser_filter2_node = Node(
-        package="laser_filters",
-        executable="scan_to_scan_filter_chain",
-        name="step_laser_filter",
-        parameters=[
-            PathJoinSubstitution([
-                get_package_share_directory("walker_step_detector"),
-                "config", "laser_box_filter.yaml",
-            ])],
-        remappings=[ ("scan", "scan_filtered"),
-                     ("scan_filtered", "scan_filtered2")]
-    )
-
-    # Launching detect_steps node
+    # Parametros validados contra mocap sobre 47 bags (docs/
+    # detect_steps_algorithm.md, eval_results/). Los de antes no estaban
+    # validados, y varios de los que se pasaban (fixed_frame,
+    # detect_distance_frame_id, use_scan_header_stamp_for_tfs, plot_*,
+    # fixed_frame_active_area_*) no los declara detect_steps.cpp: se
+    # ignoraban en silencio. detection_threshold y max_detected_clusters
+    # activan el filtro de confianza del clasificador (sus defaults, -1.0/-1,
+    # lo desactivan). No hay kalman_enabled: el EKF esta siempre activo.
+    # publish_clusters=False: solo activa is_debug (log DEBUG + CSV en el
+    # cwd), no cambia el tracking.
     detect_steps_node = Node(
             package="walker_step_detector",
             executable="detect_steps",
             name="detect_steps",
             parameters= [
                 {"scan_topic" : "/scan_filtered"},
-                #{"scan_topic" : "/scan_filtered2"},
-                {"fixed_frame" : "base_link"},
                 {"forest_file" : forest_file_path},
-                {"detection_threshold": 0.001},
-                {"cluster_dist_euclid": 0.02},
-                {"min_points_per_cluster":  5},
-                {"detect_distance_frame_id": "base_link"},
-                {"max_detect_distance": 0.45},
-                {"use_scan_header_stamp_for_tfs": False},
-                {"max_detected_clusters": 4},
-                {"plot_all_clusters": False},
-                {"plot_leg_kalman": False},
-                {"plot_leg_clusters": False},
-                {"fixed_frame_active_area_x": [-0.75, 0.4]},
-                {"fixed_frame_active_area_y": [-0.4, 0.4]}
+                {"detected_steps_topic_name": "/detected_step"},
+                {"kalman_model_d0": 0.001}, {"kalman_model_a0": 0.001},
+                {"kalman_model_f0": 0.001}, {"kalman_model_p0": 0.001},
+                {"detection_threshold": 0.01},
+                {"cluster_dist_euclid": 0.13},
+                {"max_detect_distance": 1.25},
+                {"max_detected_clusters": 2},
+                {"min_points_per_cluster": 3},
+                {"publish_clusters": False},
             ],
-        # Cheap way to reuse node with recorded rosbags
-        #remappings=[ ("detected_step_left", "new_detected_step_left"),
-        #             ("detected_step_right", "new_detected_step_right")]
     )
-
-    #ld.add_action(laser_filter2_node)
+ 
     ld.add_action(detect_steps_node)
     
     return ld 
