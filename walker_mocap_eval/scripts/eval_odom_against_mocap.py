@@ -3,13 +3,14 @@
 walker_laser_imu_odom.launch.py -- laser CSM/PL-ICP + IMU WitMotion) contra
 el ground truth de mocap (rigid_bodies[0] = el andador), usando la misma
 calibracion rigid_body->base_footprint que walker_step_detector/scripts/
-eval_against_mocap.py (config/mocap_to_base_footprint.yaml).
+eval_against_mocap.py (walker_step_detector/config/mocap_to_base_footprint.yaml,
+fuente unica: se referencia desde aqui, no se duplica).
 
 Que hay que grabar: al menos el topic de odometria a evaluar y /rigid_bodies,
-mientras corre test_laser_imu_odom.launch.py contra un bag de
+mientras corre walker_laser_imu_odom_test.launch.py contra un bag de
 bagsFolder_unified, p.ej.:
 
-    ros2 launch walker_bringup test_laser_imu_odom.launch.py \\
+    ros2 launch walker_bringup walker_laser_imu_odom_test.launch.py \\
         bag_path:=/home/mfcarmona/bagsFolder_unified/MF_test01 rate:=1.0 &
     ros2 bag record -o /tmp/odom_eval_MF_test01 /odom /rigid_bodies
 
@@ -33,8 +34,8 @@ Metrica -- ATE (Absolute Trajectory Error), como en el benchmark TUM RGB-D:
      interior suele rondar 1-5% de deriva.
 
 Uso:
-    python3 eval_odom_against_mocap.py --eval-bag /tmp/odom_eval_MF_test01 \\
-        --calib ../config/mocap_to_base_footprint.yaml
+    python3 walker_mocap_eval/scripts/eval_odom_against_mocap.py \\
+        --eval-bag /tmp/odom_eval_MF_test01
 """
 import argparse
 import json
@@ -45,7 +46,14 @@ from pathlib import Path
 
 import numpy as np
 
-from mocap_bag_io import bag_topics, load_bag, load_calib, nearest, rigid_body_pose_xy_yaw
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from mocap_eval.bag_io import bag_topics, load_bag, load_calib, nearest, rigid_body_pose_xy_yaw  # noqa: E402
+
+DEFAULT_CALIB = (
+    Path(__file__).resolve().parent.parent.parent
+    / "walker_step_detector" / "config" / "mocap_to_base_footprint.yaml"
+)
 
 DEFAULT_ODOM_TOPICS = ("/odom", "/ekf_odom", "/scan_odom")
 
@@ -197,9 +205,10 @@ def print_report(name, m):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--eval-bag", required=True, help="bag grabado con ros2 bag record durante test_laser_imu_odom.launch.py")
+    ap.add_argument("--eval-bag", required=True, help="bag grabado con ros2 bag record durante walker_laser_imu_odom_test.launch.py")
     ap.add_argument("--odom-topic", default=None, help=f"por defecto autodetecta entre {DEFAULT_ODOM_TOPICS}")
-    ap.add_argument("--calib", default=str(Path(__file__).resolve().parent.parent / "config" / "mocap_to_base_footprint.yaml"))
+    ap.add_argument("--calib", default=str(DEFAULT_CALIB),
+                    help="mocap_to_base_footprint.yaml (por defecto, el de walker_step_detector)")
     ap.add_argument("--max-dt-ms", type=float, default=50.0, help="tolerancia de emparejado odom<->rigid_bodies")
     ap.add_argument("--out", default=None, help="JSON de salida con las metricas")
     args = ap.parse_args()
