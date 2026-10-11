@@ -10,8 +10,8 @@ Este launcher lanza SOLO dos cosas; el resto lo lanza el robot real:
                  (CSM / PL-ICP)]--> /scan_odom (nav_msgs/Odometry, pose+twist
                  con covarianza fija, ver laser_scan_matcher.cpp)
 
-    /scan_odom + /bwt901cl/imu_filtered --[robot_localization ekf_node,
-        walker_ekf.yaml: odom0 (x,y,yaw abs + vx,vy) + imu0 (vroll,vpitch,vyaw
+    /scan_odom + /bwt901cl/imu (cruda) --[robot_localization ekf_node,
+        walker_ekf.yaml: odom0 (x,y,yaw abs + vx,vy) + imu0 (vyaw
         only, ver comentarios en walker_ekf.yaml sobre por que no se fusiona
         yaw absoluto del IMU)]--> /odom (remap de /odometry/filtered) + TF
         odom -> base_footprint
@@ -19,8 +19,8 @@ Este launcher lanza SOLO dos cosas; el resto lo lanza el robot real:
 Entradas que ha de proporcionar el resto del sistema (NO se lanzan aqui):
   - /scan_nav: scan recortado de nav_laser_filter.launch.py (a su vez alimentado
     por /scan_filtered de laser_filter.launch.py, sobre el /scan de rplidar_ros).
-  - /bwt901cl/imu_filtered: walker_witmotion.launch.py (witmotion_ros +
-    imu_complementary_filter, use_mag:false).
+  - /bwt901cl/imu: walker_witmotion.launch.py (witmotion_ros, IMU cruda; NO la
+    filtrada: su estimador de sesgo corrompe el gyro, ver walker_ekf.yaml).
   - TF: walker_state_publisher (walker_description), que da
     base_footprint->laser y base_footprint->witmotion.
 
@@ -74,7 +74,7 @@ def generate_launch_description():
                           'params_file': LaunchConfiguration('lsm_params_file')}.items())
     ld.add_action(lsm_launch)
 
-    # --- Fusion: EKF (robot_localization) de /scan_odom + /bwt901cl/imu_filtered
+    # --- Fusion: EKF (robot_localization) de /scan_odom + /bwt901cl/imu
     # -> /odom + TF odom->base_footprint -------------------------------------
     ekf_node = Node(
         package='robot_localization',

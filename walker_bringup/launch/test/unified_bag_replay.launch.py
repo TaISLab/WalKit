@@ -99,6 +99,11 @@ def generate_launch_description():
                             'walker_state_publisher.launch.py'
                         )
                     ),
+                    # walker_state_publisher declara log_level=DEBUG por defecto y los argumentos de un
+                    # include se filtran al ambito del padre: sin esto, todo launch incluido despues (scan
+                    # matcher, EKF...) heredaba --log-level DEBUG y se ahogaba en logs. use_sim_time porque el
+                    # bag se reproduce con --clock.
+                    launch_arguments={'log_level': 'warn', 'use_sim_time': 'true'}.items(),
                     condition=IfCondition(LaunchConfiguration('publish_walker_tf'))
                 )
     ld.add_action(walker_tf)
