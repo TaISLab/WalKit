@@ -7,6 +7,8 @@ Se corre con walker_lsm.yaml pero con odom_time_offset_ns=0 (el desfase temporal
 barrerlo sin repetir esto).
 
 Uso:  python3 stage1.py [--workers 6] [--rate 2.0] [--bags clean|scan_anom|mocap_suspect|all]
+                       [--lsm-set clave=valor ...]   p.ej. --lsm-set imu_topic=/bwt901cl/imu  (prior del gyro)
+Para comparar con y sin un cambio del scan matcher, usar dos ODOM_TUNE_DIR distintos.
 Tarda ~25 min para los 47 bags con 6 trabajos. Los bags ya grabados y completos se saltan.
 """
 import argparse
@@ -61,10 +63,15 @@ def main():
     ap.add_argument("--rate", default="2.0")
     ap.add_argument("--bags", default="all", choices=["clean", "scan_anom", "mocap_suspect", "all"])
     ap.add_argument("--domain-base", type=int, default=150)
+    ap.add_argument("--lsm-set", action="append", default=[], metavar="CLAVE=VALOR",
+                    help="parametro del scan matcher a fijar (repetible); el valor se interpreta como YAML")
     a = ap.parse_args()
 
     lsm = yaml.safe_load(open(tlib.BRINGUP_CONFIG / "walker_lsm.yaml"))
     lsm["laser_scan_matcher_node"]["ros__parameters"]["odom_time_offset_ns"] = 0
+    for kv in a.lsm_set:
+        k, v = kv.split("=", 1)
+        lsm["laser_scan_matcher_node"]["ros__parameters"][k] = yaml.safe_load(v)
     W.mkdir(parents=True, exist_ok=True)
     lsm_file = W / "lsm_stage1.yaml"
     yaml.safe_dump(lsm, open(lsm_file, "w"))

@@ -37,6 +37,7 @@ no_imu:                    # sin mensajes /bwt901cl/imu (solo un imu_filtered co
   MT_test11: "no hay IMU; ademas rumbo laser-mocap 31 deg"
 
 notes:
+  - "Las etiquetas de scan_matching_anomalous describen el scan matcher SIN el prior del gyro en el ICP; con el prior (ya activo en walker_lsm.yaml) esos bags bajan de 13.9 a 5.9 deg de media, pero se mantienen apartados para que la puntuacion de los limpios no mezcle regimenes."
   - "Casos limite que se MANTIENEN como limpios aunque diagnose_bags.py los marca: CA_test02 (cum l-m 12 vs g-m 5.8) y CA_test07 (10.6 vs 2.5)."
   - "MF_test07: la guinada del mocap es ruidosa (0.94 deg de ruido, 8 saltos >5 deg) pero el gyro y el laser la siguen; se mantiene como limpio."
   - "Cortes del mocap de hasta ~0.5 s en MF_test20, MF_test09, MF_test12, MF_test07 (rigid body perdido)."
