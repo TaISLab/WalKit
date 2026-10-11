@@ -1,3 +1,7 @@
+
+.claude/
+walker_step_detector/eval_results
+
 ####################
 ## PYTHON RELATED ##
 ####################

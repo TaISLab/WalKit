@@ -16,8 +16,10 @@ setup(
     maintainer='Manuel Fernandez-Carmona',
     maintainer_email='manolofc@gmail.com',
     description='Plot walker handle forces in rviz',
-    license='Creative Commons',
-    tests_require=['pytest'],
+    license='Creative Commons',    
+    extras_require={
+        'test': ['pytest'],
+    },
     entry_points={
         'console_scripts': [
             'plot_forces = walker_plot.plot_forces:main',

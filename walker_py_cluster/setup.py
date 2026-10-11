@@ -17,7 +17,9 @@ setup(
     maintainer_email='manolofc@gmail.com',
     description='Do crappy stuff',
     license='Creative Commons',
-    tests_require=['pytest'],
+    extras_require={
+        'test': ['pytest'],
+    },
     entry_points={
         'console_scripts': [
             'cluster_plot = walker_py_cluster.cluster_plot:main',

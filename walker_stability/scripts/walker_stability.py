@@ -156,7 +156,7 @@ class WalkerStability(Node):
                 self.get_logger().error("Can't GET transform from handles frame  [" + self.left_handle_frame + ", " + self.right_handle_frame + "] into centroid frame [" + self.base_footprint_frame + "]: [" + str(e) + "]")   
                 return 
 
-            (self.bos_x_min,self.bos_x_max)  = self.get_bos_x(self.user_gender, self.user_age, self.user_height, self.handle_x, self.handle_z)
+            (self.bos_x_min,self.bos_x_max)  = self.get_bos_x(self.user_gender, self.user_age, self.user_height, self.handle_z)
             # Stability depends on centroid distance to these
             feet_handle_dist_x = self.handle_x - centroid.x
 

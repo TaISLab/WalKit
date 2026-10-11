@@ -592,6 +592,18 @@ Mismo eje `t_s` (segundos desde el primer `/tag`) que el resto de CSV:
 `scripts/selftest_imu_metrics.py` (RMS, HR, autocorrelacion, aceleracion
 AP/ML sintetica) y `scripts/selftest_correlation_utils.py`.
 
+## Aviso pendiente (sesión mocap_analysis, 2026-10-08)
+
+`~/bagsFolder/2024_05_fused` y `2024_06_fused` se regeneraron (arreglo de
+sellos de `/sh*`, `/rosout` y 1 mensaje de `/bwt901cl/temperature`): no
+afecta a los topics que usa este paquete. SIN RESOLVER: en 2024_06 test05,
+06, 11, 12, 13 y 14 la escala de sincronización calculada con `/tag`
+(0.93-1.13) parece espuria (deriva de hasta 7 s respecto a los sellos de
+Shimmer). No se ha comprobado si alguno de esos tests está entre los 47
+bags de `labeled_bags` ni si este dataset salió de los bags anteriores o de
+los regenerados; si lo está, las duraciones de la ventana `/tag` y los
+tiempos de los resultados podrían estar distorsionados en ese bag.
+
 ## Ajuste de la odometria laser-inercial (`scripts/odom_tuning/`)
 
 Herramientas para ajustar y validar `walker_bringup/launch/walker_laser_imu_odom.launch.py` (scan matcher
