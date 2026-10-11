@@ -101,7 +101,7 @@ def generate_launch_description():
     odom_topic_name_arg = DeclareLaunchArgument('odom_topic_name', default_value=TextSubstitution(text="odom"))
     ticks_meter_arg = DeclareLaunchArgument('ticks_meter', default_value=TextSubstitution(text="76694")) # small wheels have 17mm diam. and 4096 ticks 
     base_width_arg = DeclareLaunchArgument('base_width', default_value=TextSubstitution(text="0.57"))
-    base_frame_id_arg = DeclareLaunchArgument('base_frame_id', default_value=TextSubstitution(text="base_link"))
+    base_frame_id_arg = DeclareLaunchArgument('base_frame_id', default_value=TextSubstitution(text="base_footprint"))
     odom_frame_id_arg = DeclareLaunchArgument('odom_frame_id', default_value=TextSubstitution(text="odom"))
     encoder_min_arg = DeclareLaunchArgument('encoder_min', default_value=TextSubstitution(text="0"))
     encoder_max_arg = DeclareLaunchArgument('encoder_max', default_value=TextSubstitution(text="4096"))

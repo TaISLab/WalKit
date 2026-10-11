@@ -34,7 +34,7 @@ def generate_launch_description():
           ('rgb/image', '/camera/color/image_raw'),
           ('rgb/camera_info', '/camera/color/camera_info'),
           ('depth/image', '/camera/depth/image_rect_raw'),
-          ('odom', '/ekf_odom')  # /visual/odom
+          ('odom', '/odom')  # laser-inertial EKF (walker_laser_imu_odom.launch.py); was /ekf_odom of the old walker_ekf.launch.py
           
           ]
 
