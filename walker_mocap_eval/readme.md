@@ -666,8 +666,26 @@ selecciona la suerte. `tune.py` solo acepta mejoras mayores que el ruido, y **to
 `compare.py` (varias repeticiones) antes de comitearlo**. Cualquier cifra entre dos candidatos que difiera menos
 de ~0.02 de J es indistinguible.
 
-### Siguiente paso pendiente
+### Gyro como estimacion inicial del ICP (implementado)
 
-Usar el gyro integrado como estimacion inicial del ICP dentro del scan matcher (el README de
-`ros2_laser_scan_matcher` lo lista como "Support of IMU"): atacaria la causa de los bags de `scan_matching_anomalous`
-en vez de corregirla despues en el EKF.
+Hecho en `ros2_laser_scan_matcher` (parametro `imu_topic`, ver su README) y activado en `walker_lsm.yaml`. El
+scan matcher solo pasa en los 8 bags anomalos de 13.9 a 5.9 deg de rumbo (MF_test20 de 30.0 a 4.7 deg y de 8.1 a
+1.2 % de deriva) y en los 32 limpios de 2.50 a 2.21 deg. Con el EKF encima y las covarianzas reajustadas
+(`pose_covariance` de rumbo 0.2, ruido de proceso de yaw 0.0003) `/odom` da **1.91 deg** en los limpios y 5.4 deg en los
+anomalos.
+
+Para regrabar con y sin el cambio y compararlos: `ODOM_TUNE_DIR=<dir> stage1.py --lsm-set imu_topic=/bwt901cl/imu`
+frente a `--lsm-set imu_topic=` (dos directorios de trabajo distintos).
+
+Dos lecciones que cuestan caro redescubrir:
+
+- **Comprobar la semilla contra el resultado del propio ICP no detecta un gyro mal.** Con el signo del IMU invertido
+  (TF con roll=180) el prior sembrado daba 65 deg / 2.6 m en MF_test20, peor que sin prior (30 deg / 1.25 m), y la
+  comprobacion de consistencia no saltaba porque el ICP, donde el escenario restringe poco el giro, se queda cerca de
+  la semilla. Lo que lo arregla es ejecutar tambien el ICP sin semilla y quedarse con el de menor error medio
+  (`imu_prior_arbitration_ratio`): con el signo invertido el resultado vuelve al de sin prior.
+- **El mejor candidato de una busqueda con una sola medida suele ser suerte.** Los valores de covarianza se eligieron con
+  `compare.py` (3 repeticiones por candidato); `tune.py` solo sirve para proponer.
+
+Pendiente aparte: si el gyro se pierde, el EKF actual (rumbo del laser deliberadamente debil) empeora el rumbo a ~4.5 deg
+frente a 2.2 deg del scan matcher solo; no hay conmutacion automatica de covarianzas en `robot_localization`.
