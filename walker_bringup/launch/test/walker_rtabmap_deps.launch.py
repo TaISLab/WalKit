@@ -42,6 +42,7 @@ def generate_launch_description():
 
         # laser
         # ros2 launch rplidar_ros rplidar_a1_launch.py inverted:=true serial_port:=/dev/rplidar
+        # /dev/rplidar is created by a udev rule: see walker_bringup/udev/README.md
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(rplidar_ros_launch_file),
                                           launch_arguments={

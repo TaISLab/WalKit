@@ -12,7 +12,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 
 
-install(DIRECTORY launch param script config maps
+install(DIRECTORY launch config maps script tmule udev
   DESTINATION share/${PROJECT_NAME}/
 )
 

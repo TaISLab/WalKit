@@ -82,6 +82,13 @@ mask_filter
 )
 
 
+# Calibration tools: find which scan indices hit the walker legs and build a mask filter
+install(PROGRAMS
+  scripts/find_minimums.py
+  scripts/laser_filter_generator.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 # Install launchers and configs
 install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
 install(DIRECTORY config DESTINATION share/${PROJECT_NAME})

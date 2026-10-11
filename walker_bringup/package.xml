@@ -4,7 +4,8 @@
   <name>walker_bringup</name>
   <version>0.0.1</version>
   <description>
-    ROS 2 launch scripts for starting the walker 
+    Bringup package for the Walkit walker: system configurations (config/, maps/),
+    launch files and TMuLE sessions (tmule/) used to start sensors, localization and mapping.
   </description>
 
   <maintainer email="manolofc@gmail.com">Manuel Fernandez Carmona</maintainer>  
@@ -16,26 +17,38 @@
 
   <exec_depend>robot_state_publisher</exec_depend>
   <exec_depend>rviz2</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>rclcpp_components</exec_depend>
   <exec_depend>walker_description</exec_depend>
   <exec_depend>walker_arduino</exec_depend>
   <exec_depend>walker_diff_odom</exec_depend>
   <exec_depend>laser_filters</exec_depend>
   <exec_depend>rosbridge_server</exec_depend>
-
-  <!-- Laser-inertial odometry (walker_laser_imu_odom.launch.py), replacing
-       walker_diff_odom now that the wheel encoders are broken: CSM/PL-ICP
-       laser scan matching (ros2_laser_scan_matcher, needs nav2_common for
-       walker_lsm.launch.py's RewrittenYaml) + WitMotion IMU driver +
-       complementary filter, fused by robot_localization's EKF. None of
-       these were declared here before even though walker_lsm.launch.py,
-       walker_witmotion.launch.py and walker_efk.launch.py already used them,
-       so `rosdep install` would silently skip them. -->
   <exec_depend>ros2_laser_scan_matcher</exec_depend>
   <exec_depend>nav2_common</exec_depend>
+  <!-- witmotion_ros is not a released package: it is built from the workspace
+       (src/witmotion/witmotion_ros), so rosdep will not resolve it. -->
   <exec_depend>witmotion_ros</exec_depend>
   <exec_depend>imu_complementary_filter</exec_depend>
+  <exec_depend>imu_filter_madgwick</exec_depend>
   <exec_depend>robot_localization</exec_depend>
-  
+  <exec_depend>nav2_amcl</exec_depend>
+  <exec_depend>nav2_map_server</exec_depend>
+  <exec_depend>nav2_lifecycle_manager</exec_depend>
+  <exec_depend>slam_toolbox</exec_depend>
+  <exec_depend>rplidar_ros</exec_depend>
+  <exec_depend>realsense2_camera</exec_depend>
+  <exec_depend>usb_cam</exec_depend>
+  <exec_depend>image_proc</exec_depend>
+  <exec_depend>rqt_image_view</exec_depend>
+  <exec_depend>rtabmap_odom</exec_depend>
+  <exec_depend>rtabmap_slam</exec_depend>
+  <exec_depend>rtabmap_viz</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>std_srvs</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>python3-psutil</exec_depend>
+
   <export>
     <build_type>ament_cmake</build_type>
   </export>

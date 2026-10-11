@@ -8,12 +8,12 @@ odometria sin el robot.
 Que lanza:
   1. unified_bag_replay.launch.py: reproduce del bag solo
        - /scan,
-       - /tf y /tf_static (el /tf_static del bag trae el arbol del andador,
-         asi que no se lanza walker_state_publisher),
-       - /bwt901cl/imu_filtered (lo que en el robot da walker_witmotion.launch.py),
+       - /bwt901cl/imu (IMU cruda; lo que en el robot da walker_witmotion.launch.py),
        - /rigid_bodies (ground truth, para grabarlo junto a /odom).
-     No se reproducen /scan_filtered, /scan_nav, /odom ni nada que vaya a
-     regenerar este test.
+     No se reproducen /scan_filtered, /scan_nav, /odom, /tf ni /tf_static: el
+     /tf_static de los bags lleva el witmotion girado 180 grados (el xacro lo
+     tenia mal), asi que el TF del andador lo publica walker_state_publisher
+     desde el xacro actual, igual que en el robot.
   2. La cadena de scan del robot, siempre completa y con los filtros actuales
      (los bags solo traen /scan_filtered en 20 de 47 casos y con el filtro con
      el que se grabaron):
@@ -25,7 +25,7 @@ Que lanza:
      sin cambios, con use_sim_time:=true. Consume /scan_nav (laser_scan_topic en
      walker_lsm.yaml).
   No se lanza witmotion: en el robot real viene de fuera, y aqui
-  /bwt901cl/imu_filtered sale del bag.
+  /bwt901cl/imu sale del bag.
 
 Argumentos:
   bag_path          carpeta del rosbag2 (por defecto MF_test07).
@@ -62,7 +62,7 @@ def generate_launch_description():
     ld.add_action(DeclareLaunchArgument(
         'rate', default_value='1.0', description='velocidad de reproduccion del bag'))
     ld.add_action(DeclareLaunchArgument(
-        'extra_topics', default_value='/tf /tf_static /bwt901cl/imu_filtered /rigid_bodies',
+        'extra_topics', default_value='/bwt901cl/imu /rigid_bodies',
         description='otros topics del bag a reproducir, separados por espacios (ademas de /scan)'))
     ld.add_action(DeclareLaunchArgument(
         'lsm_params_file', default_value=join(bringup_dir, 'config', 'walker_lsm.yaml'),
@@ -79,7 +79,7 @@ def generate_launch_description():
         launch_arguments={'bag_path': LaunchConfiguration('bag_path'),
                           'rate': LaunchConfiguration('rate'),
                           'topics': PythonExpression(["'/scan ' + '", LaunchConfiguration('extra_topics'), "'"]),
-                          'publish_walker_tf': 'false'}.items()))
+                          'publish_walker_tf': 'true'}.items()))
 
     # /scan -> /scan_filtered -> /scan_nav (en el robot real lo lanzan otros launch)
     ld.add_action(IncludeLaunchDescription(

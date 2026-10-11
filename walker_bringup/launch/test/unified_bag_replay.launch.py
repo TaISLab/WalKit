@@ -12,6 +12,7 @@ Argumentos:
                      (por defecto) = todos los del bag. Util para no
                      reproducir topics grabados que otro nodo del test va a
                      volver a generar (p.ej. /scan_nav, /odom).
+  clock_hz           frecuencia de /clock (por defecto 200, ver su descripcion).
   publish_walker_tf  true (por defecto): lanza ademas walker_state_publisher
                      (TF del xacro). Ponlo a false si reproduces /tf_static
                      del bag, que ya trae el arbol del andador, para no tener
@@ -35,7 +36,8 @@ from os.path import join
 
 def _bag_play(context):
     cmd = ['ros2', 'bag', 'play', LaunchConfiguration('bag_path').perform(context),
-           '-r', LaunchConfiguration('rate').perform(context), '--clock',
+           '-r', LaunchConfiguration('rate').perform(context),
+           '--clock', LaunchConfiguration('clock_hz').perform(context),
            '--qos-profile-overrides-path',
            join(get_package_share_directory('walker_bringup'), 'config', 'tf_static_qos_override.yaml')]
 
@@ -70,6 +72,16 @@ def generate_launch_description():
         description="topics a reproducir separados por espacios; vacio = todos los del bag"
     )
     ld.add_action(topics_arg)
+
+    clock_hz_arg = DeclareLaunchArgument(
+        "clock_hz",
+        default_value="200",
+        description="frecuencia (Hz de pared) de /clock. ros2 bag play publica a 40 Hz por defecto y los "
+                    "temporizadores en tiempo simulado (el del EKF, a 30 Hz) solo disparan una vez por tick de "
+                    "reloj: con 40 Hz la salida del EKF caia a ~14-19 Hz reales y variaba con la velocidad de "
+                    "reproduccion; a 200 Hz es ~30 Hz y no depende de 'rate'"
+    )
+    ld.add_action(clock_hz_arg)
 
     publish_walker_tf_arg = DeclareLaunchArgument(
         "publish_walker_tf",

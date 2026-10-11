@@ -45,7 +45,7 @@ laser_scan_matcher_node:
     # off (expensive per-scan), so this fixed estimate is what
     # robot_localization (walker_ekf.yaml, odom0) actually weights this
     # sensor by. Starting point only: re-tune from the ATE numbers produced
-    # by walker_step_detector/scripts/eval_odom_against_mocap.py against the
+    # by walker_mocap_eval/scripts/eval_odom_against_mocap.py against the
     # mocap-labeled bags in bagsFolder_unified before trusting these values
     # in the field.
     pose_covariance_diagonal:  [0.0025, 0.0025, 1.0e-6, 1.0e-6, 1.0e-6, 0.0012]
