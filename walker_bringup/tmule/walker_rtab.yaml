@@ -14,7 +14,7 @@ windows:
     tags: ['core']
     panes:
       # /dev/rplidar is created by a udev rule: see walker_bringup/udev/README.md
-      - ros2 launch rplidar_ros  rplidar_a1_launch.py inverted:=true
+      - ros2 launch rplidar_ros  rplidar_a1_launch.py inverted:=true serial_port:=/dev/rplidar
       - ros2 launch walker_bringup nav_laser_filter.launch.py
       - ros2 launch walker_bringup laser_filter.launch.py
   - name: sensors2

@@ -64,8 +64,8 @@ def generate_launch_description():
 
     declare_map_yaml_cmd = DeclareLaunchArgument(
         'map',
-        default_value=os.path.join(map_server_dir, 'maps', 'map_1681990569.yaml'),
-        description='Full path to map yaml file to load')
+        default_value=os.environ.get('MAP_YAML', ''),
+        description='Full path to map yaml file to load (default: $MAP_YAML, set at ~/.walker_cfg.bash)')
 
     declare_use_sim_time_cmd = DeclareLaunchArgument(
         'use_sim_time',

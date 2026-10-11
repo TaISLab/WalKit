@@ -55,7 +55,7 @@ windows:
   #   panes:
   #     - ros2 launch walker_bringup walker_amcl.launch.py
   #     # MAP IS SET AT ~/.walker_cfg.bash !!!
-  #     - ros2 launch walker_bringup walker_map_server.launch.py map:=$MAP_YAML
+  #     - ros2 launch walker_bringup walker_map_server.launch.py   # uses $MAP_YAML by default
   # TODO: we are not recording by default.
   # - name: record
   #   tags: ['record']
