@@ -20,7 +20,11 @@
     <xacro:arg name="witmotion_pos_x_prop" default="0.565"/>
     <xacro:arg name="witmotion_pos_y_prop" default="0.0"/>
     <xacro:arg name="witmotion_pos_z_prop" default="0.305"/>
-    <xacro:arg name="witmotion_pos_roll_prop" default="180.0"/>
+    <!-- roll 0: el eje z del WitMotion apunta ARRIBA (su acelerometro marca +9.8 m/s2 en z en reposo y su
+         giroscopio z correlaciona +0.99 con la velocidad de guinada del mocap, en bags de todas las sesiones).
+         Con el 180.0 que habia aqui, robot_localization giraba el sensor a la fuerza y fusionaba la velocidad
+         de guinada con el signo cambiado, empeorando el rumbo de la odometria. -->
+    <xacro:arg name="witmotion_pos_roll_prop" default="0.0"/>
     <xacro:arg name="witmotion_pos_pitch_prop" default="0.0"/>
     <xacro:arg name="witmotion_pos_yaw_prop" default="0.0"/>
 
