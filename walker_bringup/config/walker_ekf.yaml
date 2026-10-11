@@ -134,7 +134,9 @@ walker_ekf_node:
         # Tuned against mocap on bagsFolder_unified (see walker_mocap_eval, 32 clean bags, 3
         # repetitions per candidate; evaluation noise sigma ~0.007-0.01 in J): the yaw entry
         # went from 0.06 to 0.001 so the filter integrates the (accurate) gyro between laser
-        # corrections instead of re-deriving heading from each scan. Other entries unchanged:
+        # corrections instead of re-deriving heading from each scan (0.0003 after the ICP got the
+        # gyro prior: with the laser heading weakened to 0.2 rad2 in walker_lsm.yaml it gave 1.91 deg
+        # vs 2.16 deg at 0.001 on 32 clean bags). Other entries unchanged:
         # sweeping x/y/vx/vy/vyaw, fusing or not vx/vy and the rejection thresholds moved the
         # score by less than the noise.
         process_noise_covariance: [0.05, 0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
@@ -142,7 +144,7 @@ walker_ekf_node:
                                    0.0,    0.0,    0.06, 0.0,    0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
                                    0.0,    0.0,    0.0,    0.03, 0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
                                    0.0,    0.0,    0.0,    0.0,    0.03, 0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
-                                   0.0, 0.0, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                   0.0, 0.0, 0.0, 0.0, 0.0, 0.0003, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                                    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.025, 0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
                                    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.025, 0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
                                    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.04, 0.0,    0.0,    0.0,    0.0,    0.0,    0.0,

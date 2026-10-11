@@ -39,6 +39,16 @@ laser_scan_matcher_node:
     laser_scan_topic: /scan_nav      # Which topic to subscribe for the laser_scan
     kf_dist_linear: 0.10             #  When to generate keyframe scan
     kf_dist_angular: 0.087           # (~5.0º) When to generate keyframe scan
+    # Gyro prior for the ICP initial guess (see ros2_laser_scan_matcher README). RAW gyro, not
+    # imu_filtered. Needs base_footprint->witmotion in TF (z axis up, no 180 deg roll).
+    imu_topic: /bwt901cl/imu
+    imu_prior_max_rate: 10.0
+    imu_prior_max_gap: 0.1
+    imu_prior_residual_max_deg: 15.0
+    # Also run the ICP WITHOUT the gyro seed; take it only if it fits clearly better (mean error < 0.7x).
+    # This is what makes a wrong-sign or faulty gyro harmless instead of worse than no prior.
+    imu_prior_arbitration_ratio: 0.7
+    imu_prior_disable_s: 2.0
     # The RPLidar sweep takes ~0.157 s (/scan scan_time) and the scan is stamped at its START,
     # but the matched pose describes the robot about mid-sweep. Stamping the odometry half a
     # sweep later keeps it consistent with the gyro in the EKF (ns added to the Odometry stamp).
@@ -52,13 +62,13 @@ laser_scan_matcher_node:
     # by walker_mocap_eval/scripts/eval_odom_against_mocap.py against the
     # mocap-labeled bags in bagsFolder_unified before trusting these values
     # in the field.
-    # yaw 0.05 rad2 (std ~13 deg) instead of the geometric 0.0012: consecutive scan matches
-    # are NOT independent heading measurements (each is chained to the previous keyframe),
-    # so treating them as 2-deg-accurate each made the EKF follow every scan's heading noise
-    # and ignore the gyro. At 0.05 the gyro carries the heading between scans and the laser
-    # corrects it slowly. Tuned on mocap bags: no cost on clean bags (rumbo 2.48 vs 2.50 deg
-    # laser-only) and it recovers part of the bags where the scan matcher fails.
-    pose_covariance_diagonal:  [0.0025, 0.0025, 1.0e-6, 1.0e-6, 1.0e-6, 0.05]
+    # Heading variance 0.2 rad2 (std ~26 deg): deliberately weak. Successive scan matches are chained to
+    # one keyframe, so they are not independent heading measurements, and since the gyro also seeds
+    # the ICP (imu_topic below) the heading is dominated by the gyro and the laser only anchors it
+    # slowly. Measured on 32 clean mocap bags (3 repetitions): heading 2.22 deg (scan matcher alone)
+    # -> 1.91 deg, ATE 0.213 -> 0.208 m; worst bag +0.5 deg, most improve. Going weaker still
+    # (R 0.2 / Q 1e-4) averages 1.77 deg but its worst bag regresses +1.1 deg: it leans on the gyro.
+    pose_covariance_diagonal:  [0.0025, 0.0025, 1.0e-6, 1.0e-6, 1.0e-6, 0.2]
     twist_covariance_diagonal: [0.01,   0.01,   1.0e-6, 1.0e-6, 1.0e-6, 0.02]
 
     # Laser params
