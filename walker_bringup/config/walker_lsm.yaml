@@ -39,6 +39,10 @@ laser_scan_matcher_node:
     laser_scan_topic: /scan_nav      # Which topic to subscribe for the laser_scan
     kf_dist_linear: 0.10             #  When to generate keyframe scan
     kf_dist_angular: 0.087           # (~5.0º) When to generate keyframe scan
+    # The RPLidar sweep takes ~0.157 s (/scan scan_time) and the scan is stamped at its START,
+    # but the matched pose describes the robot about mid-sweep. Stamping the odometry half a
+    # sweep later keeps it consistent with the gyro in the EKF (ns added to the Odometry stamp).
+    odom_time_offset_ns: 80000000
 
     # Fixed diagonal covariance published on /scan_odom (x, y, z, roll, pitch,
     # yaw / vx, vy, vz, vroll, vpitch, vyaw) -- CSM's do_compute_covariance is
@@ -48,7 +52,13 @@ laser_scan_matcher_node:
     # by walker_mocap_eval/scripts/eval_odom_against_mocap.py against the
     # mocap-labeled bags in bagsFolder_unified before trusting these values
     # in the field.
-    pose_covariance_diagonal:  [0.0025, 0.0025, 1.0e-6, 1.0e-6, 1.0e-6, 0.0012]
+    # yaw 0.05 rad2 (std ~13 deg) instead of the geometric 0.0012: consecutive scan matches
+    # are NOT independent heading measurements (each is chained to the previous keyframe),
+    # so treating them as 2-deg-accurate each made the EKF follow every scan's heading noise
+    # and ignore the gyro. At 0.05 the gyro carries the heading between scans and the laser
+    # corrects it slowly. Tuned on mocap bags: no cost on clean bags (rumbo 2.48 vs 2.50 deg
+    # laser-only) and it recovers part of the bags where the scan matcher fails.
+    pose_covariance_diagonal:  [0.0025, 0.0025, 1.0e-6, 1.0e-6, 1.0e-6, 0.05]
     twist_covariance_diagonal: [0.01,   0.01,   1.0e-6, 1.0e-6, 1.0e-6, 0.02]
 
     # Laser params

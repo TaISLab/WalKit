@@ -77,35 +77,37 @@ walker_ekf_node:
         # odom1_pose_rejection_threshold: 1.0
         # odom1_twist_rejection_threshold: 0.1
 
-# witmotion WT901 IMU, via witmotion_ros + imu_complementary_filter
-# (walker_witmotion.launch.py), topic /bwt901cl/imu_filtered.
+# witmotion WT901 IMU, via witmotion_ros (walker_witmotion.launch.py), RAW topic /bwt901cl/imu.
 #
-# Only angular velocity (vroll, vpitch, vyaw) is fused, not absolute
-# orientation: the complementary filter runs with use_mag: false (see
-# wt901.yaml), so its "orientation" quaternion is gravity-referenced roll and
-# pitch (fine, but two_d_mode already forces those to zero for a walker that
-# doesn't tip over) plus a purely gyro-integrated yaw with no absolute
-# reference -- fusing that as an absolute yaw would just add a second,
-# uncorrected drift source alongside the scan matcher's real one. The gyro's
-# raw angular velocity has no such issue and gives the filter a high-rate
-# (~50-100 Hz vs ~5-6 Hz for the lidar) heading-rate signal to integrate
-# between laser corrections. Linear acceleration is not fused either: on a
-# human-pushed walker it is dominated by hand/gait vibration and provides no
-# useful absolute-position information for a 2D EKF.
-        imu0: /bwt901cl/imu_filtered
+# RAW, not /bwt901cl/imu_filtered: imu_complementary_filter runs with
+# do_bias_estimation:true, and that estimator assumes the sensor is stationary;
+# while the walker moves it "estimates" a bias and subtracts it from the angular
+# velocity it republishes. Against mocap ground truth (47 bags) the raw gyro z has
+# offset 0.000 +-0.003 rad/s, scale 1.00 and correlation 0.99-1.00, while the
+# filtered one has offsets of up to +-0.13 rad/s (7 deg/s), different in every bag,
+# scales up to 1.25 and 3-5x the residual. This EKF uses the IMU only for yaw rate,
+# so the filter adds nothing and corrupts the one thing we take from it.
+#
+# Only vyaw is fused: two_d_mode forces roll/pitch to zero, absolute orientation
+# from a gyro integrates a drift the laser already corrects, and linear
+# acceleration on a human-pushed walker is dominated by hand/gait vibration.
+#
+# The sensor's z axis points UP (static accelerometer reads +9.8 m/s2 on z), so
+# base_footprint->witmotion must have no 180 deg roll (walker_description xacro,
+# witmotion_pos_roll_prop). With the old roll=180 robot_localization flipped the
+# sign of this yaw rate and the IMU made the heading worse.
+        imu0: /bwt901cl/imu
         imu0_config:  [false, false, false, # x,     y,      z
                        false, false, false, # roll,  pitch,  yaw
                        false, false, false, # vx,    vy,     vz
-                       true,  true,  true,  # vroll, vpitch, vyaw
+                       false, false, true,  # vroll, vpitch, vyaw
                        false, false, false] # ax,    ay,     az
         imu0_nodelay: false
         imu0_differential: false
         imu0_relative: true
         imu0_queue_size: 10
-        # Same lockout risk as odom0's thresholds above (see that comment) --
-        # 0.8 std dev is even tighter. Only twist (vroll/vpitch/vyaw) is
-        # actually fused here (imu0_config), so the pose/accel thresholds are
-        # inert today, but left consistent in case that config ever changes.
+        # Same lockout risk as odom0's thresholds above (see that comment). Only
+        # vyaw is fused here, so the pose/accel thresholds are inert today.
         imu0_pose_rejection_threshold: 5.0
         imu0_twist_rejection_threshold: 5.0
         imu0_linear_acceleration_rejection_threshold: 5.0
@@ -129,12 +131,18 @@ walker_ekf_node:
 # to be larger, which will cause the filter to trust the incoming measurement more during correction. The values are
 # ordered as x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az. Defaults to the matrix below if
 # unspecified.
+        # Tuned against mocap on bagsFolder_unified (see walker_mocap_eval, 32 clean bags, 3
+        # repetitions per candidate; evaluation noise sigma ~0.007-0.01 in J): the yaw entry
+        # went from 0.06 to 0.001 so the filter integrates the (accurate) gyro between laser
+        # corrections instead of re-deriving heading from each scan. Other entries unchanged:
+        # sweeping x/y/vx/vy/vyaw, fusing or not vx/vy and the rejection thresholds moved the
+        # score by less than the noise.
         process_noise_covariance: [0.05, 0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
                                    0.0,    0.05, 0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
                                    0.0,    0.0,    0.06, 0.0,    0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
                                    0.0,    0.0,    0.0,    0.03, 0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
                                    0.0,    0.0,    0.0,    0.0,    0.03, 0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
-                                   0.0,    0.0,    0.0,    0.0,    0.0,    0.06, 0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                                   0.0, 0.0, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                                    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.025, 0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
                                    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.025, 0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
                                    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.04, 0.0,    0.0,    0.0,    0.0,    0.0,    0.0,

@@ -15,7 +15,10 @@ witmotion:
           covariance: [0.0364, 0.0, 0.0, 0.0, 0.0048, 0.0, 0.0, 0.0, 0.0796]
         angular_velocity:
           enabled: true
-          covariance: [0.0663, 0.0, 0.0, 0.0, 0.1453, 0.0, 0.0, 0.0, 0.0378]
+          # 4e-4 rad2/s2 = (0.02 rad/s)^2: matches the raw gyro's residual against mocap yaw rate
+          # (std 0.01-0.02 rad/s). The old [0.0663, 0.1453, 0.0378] told the EKF the gyro was ~10x
+          # noisier than it is.
+          covariance: [0.0004, 0.0, 0.0, 0.0, 0.0004, 0.0, 0.0, 0.0, 0.0004]
         orientation:
           enabled: true
           covariance: [0.0479, 0.0, 0.0, 0.0, 0.0207, 0.0, 0.0, 0.0, 0.0041]
