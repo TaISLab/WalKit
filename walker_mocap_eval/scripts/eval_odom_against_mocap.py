@@ -33,6 +33,16 @@ Metrica -- ATE (Absolute Trajectory Error), como en el benchmark TUM RGB-D:
      mucho peor que en uno de 40 m; salvo aviso, "buena" odometria de
      interior suele rondar 1-5% de deriva.
 
+Correccion temporal del mocap. En algunos bags el eje de tiempo del mocap esta desplazado y escalado respecto al
+de los sensores del robot (hasta 5 s y 7 %); sin corregirlo el ATE y el rumbo salen mal por un problema de
+referencia, no de la odometria. La correccion por bag esta en odom_tuning/time_warp.yaml (la genera
+odom_tuning/fit_time_warp.py) y este script la aplica a los sellos del mocap. La clave del yaml es el nombre del bag
+ORIGINAL (CA_test05): se deduce del nombre del directorio del eval-bag (odom_eval_CA_test05 -> CA_test05) o se da con
+--bag-name. Como el yaml esta expresado en sellos de cabecera, el emparejado odom<->mocap se hace por defecto con
+sellos de cabecera (--time-basis header; el odom lleva el tiempo de simulacion = el del bag original); con
+--time-basis record se usa el tiempo de grabacion del eval-bag, como antes, y la correccion NO se aplica.
+--time-warp none la desactiva.
+
 Uso:
     python3 walker_mocap_eval/scripts/eval_odom_against_mocap.py \\
         --eval-bag /tmp/odom_eval_MF_test01
@@ -45,6 +55,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -56,6 +67,36 @@ DEFAULT_CALIB = (
 )
 
 DEFAULT_ODOM_TOPICS = ("/odom", "/ekf_odom", "/scan_odom")
+
+DEFAULT_TIME_WARP = Path(__file__).resolve().parent / "odom_tuning" / "time_warp.yaml"
+
+
+def load_time_warp(path=DEFAULT_TIME_WARP):
+    """{bag: {offset_s, slope, t_ref, ...}} de time_warp.yaml; {} si path es None o no existe."""
+    if not path or not Path(path).exists():
+        return {}
+    return yaml.safe_load(open(path)) or {}
+
+
+def warp_ns(t_ns, w):
+    """Sello del mocap -> sello del robot (ver time_warp.yaml): t + offset_s + slope * (t - t_ref)."""
+    t = t_ns * 1e-9
+    return int(round((t + w["offset_s"] + w["slope"] * (t - w["t_ref"])) * 1e9))
+
+
+def find_warp(name, warps):
+    """(clave, correccion) del bag cuyo nombre aparece en `name` (p.ej. odom_eval_CA_test05), o (None, None).
+    Coincidencia con limites (CA_test05 no casa con CA_test051); gana la clave mas larga."""
+    import re
+    best = None
+    for key in warps:
+        if re.search(rf"(?<![A-Za-z0-9]){re.escape(key)}(?![0-9])", name) and (best is None or len(key) > len(best)):
+            best = key
+    return (best, warps[best]) if best else (None, None)
+
+
+def stamp_ns(header):
+    return header.stamp.sec * 10**9 + header.stamp.nanosec
 
 
 def discover_odom_topic(bag_dir, requested=None):
@@ -92,15 +133,24 @@ def mocap_to_base_footprint(rb_x, rb_y, rb_yaw, calib):
     return bx, by, byaw
 
 
-def load_gt_trajectory(rbs, calib):
-    return [(t, *mocap_to_base_footprint(*rigid_body_pose_xy_yaw(msg), calib)) for t, msg in rbs]
+def load_gt_trajectory(rbs, calib, warp=None, use_header=False):
+    """Referencia en base_footprint. use_header: sellos de cabecera en vez del tiempo de grabacion; warp:
+    correccion de time_warp.yaml (solo tiene sentido con sellos de cabecera)."""
+    out = []
+    for t, msg in rbs:
+        if use_header:
+            t = stamp_ns(msg.header)
+        if warp:
+            t = warp_ns(t, warp)
+        out.append((t, *mocap_to_base_footprint(*rigid_body_pose_xy_yaw(msg), calib)))
+    return out
 
 
-def load_odom_trajectory(msgs):
+def load_odom_trajectory(msgs, use_header=False):
     out = []
     for t, msg in msgs:
         p = msg.pose.pose.position
-        out.append((t, p.x, p.y, yaw_from_quat(msg.pose.pose.orientation)))
+        out.append((stamp_ns(msg.header) if use_header else t, p.x, p.y, yaw_from_quat(msg.pose.pose.orientation)))
     return out
 
 
@@ -211,6 +261,13 @@ def main():
                     help="mocap_to_base_footprint.yaml (por defecto, el de walker_step_detector)")
     ap.add_argument("--max-dt-ms", type=float, default=50.0, help="tolerancia de emparejado odom<->rigid_bodies")
     ap.add_argument("--out", default=None, help="JSON de salida con las metricas")
+    ap.add_argument("--time-warp", default=str(DEFAULT_TIME_WARP),
+                    help="time_warp.yaml con la correccion temporal del mocap por bag; 'none' la desactiva")
+    ap.add_argument("--bag-name", default=None,
+                    help="nombre del bag ORIGINAL (clave de time_warp.yaml); por defecto se deduce del nombre del eval-bag")
+    ap.add_argument("--time-basis", choices=("header", "record"), default="header",
+                    help="sellos con los que se empareja odom y mocap: cabecera (defecto; admite la correccion) "
+                         "o tiempo de grabacion del eval-bag (sin correccion)")
     args = ap.parse_args()
 
     calib = load_calib(args.calib)
@@ -221,8 +278,25 @@ def main():
     print(f"Topic de odometria evaluado: {odom_topic}")
 
     data = load_bag(args.eval_bag, topics=(odom_topic, "/rigid_bodies"), require_all=True)
-    gt_traj = load_gt_trajectory(data["/rigid_bodies"], calib)
-    odom_traj = load_odom_trajectory(data[odom_topic])
+    use_header = args.time_basis == "header"
+    odom_msgs = data[odom_topic]
+    if use_header and odom_msgs and all(stamp_ns(m.header) == 0 for _, m in odom_msgs):
+        print("AVISO: la odometria no lleva sellos de cabecera; se empareja por tiempo de grabacion y no se corrige el mocap")
+        use_header = False
+    warp, warp_key = None, None
+    if use_header and args.time_warp.lower() != "none":
+        warps = load_time_warp(args.time_warp)
+        warp_key, warp = find_warp(args.bag_name or Path(args.eval_bag).resolve().name, warps)
+        if warp:
+            print(f"Correccion temporal del mocap ({warp_key}, {args.time_warp}): offset={warp['offset_s']:+.2f} s "
+                  f"deriva={warp['slope']:+.4f} s/s")
+        else:
+            print(f"Correccion temporal del mocap: ninguna (bag no figura en {args.time_warp}; "
+                  f"--bag-name para indicarlo)")
+    elif not use_header:
+        print("Correccion temporal del mocap: no aplicable con --time-basis record")
+    gt_traj = load_gt_trajectory(data["/rigid_bodies"], calib, warp, use_header)
+    odom_traj = load_odom_trajectory(odom_msgs, use_header)
     if not gt_traj or not odom_traj:
         sys.exit(f"{args.eval_bag}: sin datos en /rigid_bodies o {odom_topic}")
 
@@ -233,7 +307,10 @@ def main():
 
     if args.out:
         out = {**metrics, "_meta": {"eval_bag": args.eval_bag, "odom_topic": odom_topic,
-                                     "calib": args.calib, "max_dt_ms": args.max_dt_ms}}
+                                     "calib": args.calib, "max_dt_ms": args.max_dt_ms,
+                                     "time_basis": "header" if use_header else "record",
+                                     "time_warp": {"bag": warp_key, **{k: warp[k] for k in ("offset_s", "slope", "t_ref")}}
+                                     if warp else None}}
         with open(args.out, "w") as f:
             json.dump(out, f, indent=2, ensure_ascii=False)
         print(f"\nGuardado en {args.out}")

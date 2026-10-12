@@ -37,8 +37,7 @@ BRINGUP_CONFIG = WALKIT / "walker_bringup" / "config"
 ALL_BAGS = sorted(Path(p).parent.name for p in glob.glob(str(BAGS_DIR / "*" / "metadata.yaml")))
 
 _Q = yaml.safe_load(open(HERE / "bag_quality.yaml"))
-_WARP_FILE = HERE / "time_warp.yaml"
-WARP = yaml.safe_load(open(_WARP_FILE)) if _WARP_FILE.exists() else {}
+WARP = ev.load_time_warp(HERE / "time_warp.yaml")
 SCAN_ANOM = sorted(_Q["scan_matching_anomalous"])
 MOCAP_SUSPECT = sorted(_Q.get("mocap_suspect") or {})
 IMU_ANOM = sorted(_Q.get("imu_gyro_scale") or {})
@@ -77,10 +76,7 @@ def stamp_ns(h):
     return h.stamp.sec * 10**9 + h.stamp.nanosec
 
 
-def warp_ns(t_ns, w):
-    """Sello del mocap -> sello del robot (ver time_warp.yaml)."""
-    t = t_ns * 1e-9
-    return int(round((t + w["offset_s"] + w["slope"] * (t - w["t_ref"])) * 1e9))
+warp_ns = ev.warp_ns        # sello del mocap -> sello del robot (ver time_warp.yaml)
 
 
 def gt_traj(bag, apply_warp=True):
