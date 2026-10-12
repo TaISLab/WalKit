@@ -37,15 +37,19 @@ BRINGUP_CONFIG = WALKIT / "walker_bringup" / "config"
 ALL_BAGS = sorted(Path(p).parent.name for p in glob.glob(str(BAGS_DIR / "*" / "metadata.yaml")))
 
 _Q = yaml.safe_load(open(HERE / "bag_quality.yaml"))
+_WARP_FILE = HERE / "time_warp.yaml"
+WARP = yaml.safe_load(open(_WARP_FILE)) if _WARP_FILE.exists() else {}
 SCAN_ANOM = sorted(_Q["scan_matching_anomalous"])
-MOCAP_SUSPECT = sorted(_Q["mocap_suspect"])
+MOCAP_SUSPECT = sorted(_Q.get("mocap_suspect") or {})
+IMU_ANOM = sorted(_Q.get("imu_gyro_scale") or {})
 NO_IMU = sorted(_Q["no_imu"])
-CLEAN = [b for b in ALL_BAGS if b not in SCAN_ANOM + MOCAP_SUSPECT + NO_IMU]
+CLEAN = [b for b in ALL_BAGS if b not in SCAN_ANOM + MOCAP_SUSPECT + IMU_ANOM + NO_IMU]
 
 
 def bag_set(name):
     return {"clean": CLEAN, "scan_anom": [b for b in SCAN_ANOM if b in ALL_BAGS],
-            "mocap_suspect": [b for b in MOCAP_SUSPECT if b in ALL_BAGS], "all": ALL_BAGS}[name]
+            "mocap_suspect": [b for b in MOCAP_SUSPECT if b in ALL_BAGS],
+            "imu_anom": [b for b in IMU_ANOM if b in ALL_BAGS], "all": ALL_BAGS}[name]
 
 
 def read_topic(bag, topic):
@@ -73,15 +77,24 @@ def stamp_ns(h):
     return h.stamp.sec * 10**9 + h.stamp.nanosec
 
 
-def gt_traj(bag):
-    """[(t_ns_cabecera, x, y, yaw)] de base_footprint en 'map' segun el mocap; cacheado en WORK/gtcache."""
-    cache = WORK / "gtcache" / f"{bag}.pkl"
+def warp_ns(t_ns, w):
+    """Sello del mocap -> sello del robot (ver time_warp.yaml)."""
+    t = t_ns * 1e-9
+    return int(round((t + w["offset_s"] + w["slope"] * (t - w["t_ref"])) * 1e9))
+
+
+def gt_traj(bag, apply_warp=True):
+    """[(t_ns_cabecera, x, y, yaw)] de base_footprint en 'map' segun el mocap, con el eje temporal del mocap
+    corregido al del robot si el bag figura en time_warp.yaml; cacheado en WORK/gtcache."""
+    w = WARP.get(bag) if apply_warp else None
+    cache = WORK / "gtcache" / (f"{bag}.warp.pkl" if w else f"{bag}.pkl")
     if cache.exists():
         return pickle.load(open(cache, "rb"))
     out = []
     for _, m in read_topic(BAGS_DIR / bag, "/rigid_bodies"):
         x, y, yaw = ev.rigid_body_pose_xy_yaw(m)
-        out.append((stamp_ns(m.header),) + ev.mocap_to_base_footprint(x, y, yaw, CALIB))
+        t = warp_ns(stamp_ns(m.header), w) if w else stamp_ns(m.header)
+        out.append((t,) + ev.mocap_to_base_footprint(x, y, yaw, CALIB))
     cache.parent.mkdir(parents=True, exist_ok=True)
     pickle.dump(out, open(cache, "wb"))
     return out

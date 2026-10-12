@@ -82,7 +82,7 @@ def main():
     a = ap.parse_args()
     with Pool(8) as p:
         R = p.map(run, tlib.ALL_BAGS)
-    labelled = {b: k for k in ("scan_matching_anomalous", "mocap_suspect", "no_imu") for b in Q[k]}
+    labelled = {b: k for k in ("scan_matching_anomalous", "mocap_suspect", "imu_gyro_scale", "no_imu") for b in (Q.get(k) or {})}
     print(f"{'bag':10s} {'drift%':>6s} {'yaw_c':>6s} {'bias':>6s} | {'l-m rms/corr':>13s} {'g-m rms/corr':>13s} "
           f"{'l-g rms/corr':>13s} | {'cum l-m':>7s} {'cum g-m':>7s} | {'sugerido':>24s} {'etiqueta actual':>24s}")
     for r in R:

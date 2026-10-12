@@ -6,7 +6,7 @@ solo hay que repetirlo si cambian los parametros del scan matcher (covarianza no
 Se corre con walker_lsm.yaml pero con odom_time_offset_ns=0 (el desfase temporal lo aplica el arnes, para poder
 barrerlo sin repetir esto).
 
-Uso:  python3 stage1.py [--workers 6] [--rate 2.0] [--bags clean|scan_anom|mocap_suspect|all]
+Uso:  python3 stage1.py [--workers 6] [--rate 2.0] [--bags clean|scan_anom|mocap_suspect|imu_anom|all]
                        [--lsm-set clave=valor ...]   p.ej. --lsm-set imu_topic=/bwt901cl/imu  (prior del gyro)
 Para comparar con y sin un cambio del scan matcher, usar dos ODOM_TUNE_DIR distintos.
 Tarda ~25 min para los 47 bags con 6 trabajos. Los bags ya grabados y completos se saltan.
@@ -61,7 +61,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--workers", type=int, default=6)
     ap.add_argument("--rate", default="2.0")
-    ap.add_argument("--bags", default="all", choices=["clean", "scan_anom", "mocap_suspect", "all"])
+    ap.add_argument("--bags", default="all", choices=["clean", "scan_anom", "mocap_suspect", "imu_anom", "all"])
     ap.add_argument("--domain-base", type=int, default=150)
     ap.add_argument("--lsm-set", action="append", default=[], metavar="CLAVE=VALOR",
                     help="parametro del scan matcher a fijar (repetible); el valor se interpreta como YAML")

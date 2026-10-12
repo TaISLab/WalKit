@@ -22,7 +22,7 @@ import tlib
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--bags", default="clean", choices=["clean", "scan_anom", "mocap_suspect", "all"])
+    ap.add_argument("--bags", default="clean", choices=["clean", "scan_anom", "mocap_suspect", "imu_anom", "all"])
     ap.add_argument("--reps", type=int, default=3)
     ap.add_argument("--candidates", help="JSON nombre -> cambios sobre prod_cfg()")
     ap.add_argument("--out", default=None, help="JSON de salida")

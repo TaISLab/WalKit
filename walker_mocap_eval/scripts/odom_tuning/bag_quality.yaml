@@ -21,22 +21,31 @@ scan_matching_anomalous:   # el scan matching deriva en rumbo; el gyro y el moca
               real de orientacion del mocap (~1.8e5 deg/s) que infla el giro total a 2129 deg y contamina las
               velocidades (por eso diagnose_bags.py lo ve tambien como mocap dudoso)"
 
-mocap_suspect:             # la guinada del mocap no cuadra con gyro ni laser (que coinciden entre si)
-  MT_test12: "corr g-m 0.50, l-g 0.96"
-  MT_test13: "corr g-m 0.53, l-g 0.98"
-  MT_test14: "corr g-m 0.60, l-g 0.98"
-  MT_test15: "corr g-m 0.82, l-g 0.98 (parcial)"
-  CA_test05: "corr g-m 0.62, l-g 0.90"
-  CA_test06: "corr g-m 0.64, l-g 0.98"
-  # Patron: la guinada del mocap es suave (sin saltos ni ruido), pero discrepa de forma sistematica;
-  # apunta a que el cuerpo rigido de esas sesiones esta definido con otra orientacion.
-  # Ojo: la posicion del andador se obtiene de pose del cuerpo rigido + (dx,dy) girado por su yaw
-  # (mocap_to_base_footprint.yaml), asi que un yaw malo tambien contamina la posicion de referencia.
+mocap_suspect:             # (vacio) la guinada del mocap no cuadra con gyro ni laser que coinciden entre si
+  # Los 6 bags que estaban aqui (MT_test12-15, CA_test05, CA_test06) eran RELOJ del mocap desfasado respecto al
+  # del robot (offset y/o deriva lineal), no un cuerpo rigido mal definido: con la correccion de time_warp.yaml
+  # (ajustada maximizando la correlacion de velocidad de guinada gyro-mocap) la guinada total del laser y la del
+  # mocap coinciden a <1.5 %. diagnose_bags.py sigue clasificando como mocap_suspect un bag cuyo desfase no este
+  # en time_warp.yaml. MT_test15 pasa a "limpios"; los otros cinco ver imu_gyro_scale.
+
+imu_gyro_scale:            # mocap OK (con time_warp.yaml) y laser OK, pero la integral del gyro NO cuadra
+  # Cociente (guinada integrada del gyro) / (guinada del laser), en valor absoluto, medido en ventanas de 30 s
+  # con >= 150 deg de giro. En los 38 bags restantes 0.948-1.036; aqui 0.93-1.06 y estable durante todo el bag,
+  # asi que es una ESCALA del gyro distinta en esas sesiones, no ruido (el laser coincide con el mocap <1.5 %).
+  # Con ello el EKF de produccion empeora respecto al scan matcher solo (CA_test05: 6.2 vs 3.1 deg).
+  # Causa sin identificar: en estas sesiones el IMU llega a 60-80 msg/s (mediana de dt 93-106 Hz => huecos).
+  CA_test05: "gyro/laser 0.932; EKF 6.24 deg vs laser 3.06"
+  CA_test06: "gyro/laser 1.060; EKF 5.66 deg vs laser 2.19"
+  MT_test12: "gyro/laser 0.934; EKF 2.80 deg vs laser 2.68 (casi neutro)"
+  MT_test13: "gyro/laser 0.948; EKF 6.46 deg vs laser 4.08"
+  MT_test14: "gyro/laser 1.037; EKF 4.82 deg vs laser 2.57"
 
 no_imu:                    # sin mensajes /bwt901cl/imu (solo un imu_filtered con 0 mensajes)
   MT_test11: "no hay IMU; ademas rumbo laser-mocap 31 deg"
 
 notes:
+  - "Revision de los 14 bags apartados (2026-10): los 6 mocap_suspect eran reloj desfasado (time_warp.yaml); 5 de ellos tienen ademas una escala de gyro distinta (imu_gyro_scale) y MT_test15 queda limpio. Los 8 scan_matching_anomalous se confirman: ninguna firma en estadisticas de escena (puntos validos, rango, planitud); lo que los distingue es MAS giro, mas giro en el sitio y giros rapidos (saltos de rumbo con rotacion moderada y poca velocidad lineal)."
+  - "CA_test02 y CA_test07 son scan matching limite de verdad: NO se explican por desfase de reloj (time_warp.yaml les aplica un ajuste pequeno que no cambia el diagnostico)."
   - "Las etiquetas de scan_matching_anomalous describen el scan matcher SIN el prior del gyro en el ICP; con el prior (ya activo en walker_lsm.yaml) esos bags bajan de 13.9 a 5.9 deg de media, pero se mantienen apartados para que la puntuacion de los limpios no mezcle regimenes."
   - "Casos limite que se MANTIENEN como limpios aunque diagnose_bags.py los marca: CA_test02 (cum l-m 12 vs g-m 5.8) y CA_test07 (10.6 vs 2.5)."
   - "MF_test07: la guinada del mocap es ruidosa (0.94 deg de ruido, 8 saltos >5 deg) pero el gyro y el laser la siguen; se mantiene como limpio."
