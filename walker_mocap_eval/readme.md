@@ -625,6 +625,7 @@ python3 compare.py --bags scan_anom --reps 2          # ayuda la IMU donde el sc
 python3 tune.py [--grid]     # busqueda por coordenadas (OJO al ruido, ver abajo)
 python3 validate_prod.py     # lo comiteado en walker_bringup/config, extremo a extremo con el launcher de test
 python3 gyro_check.py        # signo/escala/sesgo/desfase del IMU contra el mocap, crudo y filtrado
+python3 fit_time_warp.py     # desajuste temporal empirico mocap-gyro por bag (escribe time_warp.yaml con --write)
 ```
 
 Como la salida del scan matcher no depende de los parametros del EKF, se graba una sola vez y `harness.py` repite
