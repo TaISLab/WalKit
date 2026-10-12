@@ -11,6 +11,8 @@ Cada configuracion es un dict `cfg`; claves reconocidas (todas opcionales):
   pose_cov / twist_cov       diagonal (6) del /scan_odom             scan_stamp_offset      s sumados al sello
   imu_roll_deg               roll del TF base_footprint->witmotion (0: eje z del sensor hacia arriba)
   extra                      parametros del ekf_node a sobrescribir tal cual
+  supervisor / supervisor_params   intercala walker_bringup/scripts/odom_supervisor.py entre el rele y el EKF
+  imu_dropout_start_s / imu_dropout_len_s   fallo inyectado: el IMU deja de publicar
 `prod_cfg()` es la configuracion equivalente a lo que hay comiteado en walker_bringup/config.
 """
 import copy
@@ -110,6 +112,11 @@ def make_ekf_yaml(cfg, path):
             p[k] = cfg[k]
     p.update(cfg.get("extra", {}))
     p["imu0"] = "/imu_tuned"        # la salida del rele de tune_node.py
+    if cfg.get("supervisor"):       # el EKF se alimenta de las salidas de odom_supervisor.py
+        p["odom0"] = "/scan_odom_ekf"
+        p["imu0"] = "/imu_ekf"
+        if "odom_rej" not in cfg:   # igual que walker_laser_imu_odom.launch.py con supervise_imu:=true
+            p["odom0_pose_rejection_threshold"] = p["odom0_twist_rejection_threshold"] = 100.0
     if cfg.get("no_imu"):
         p.pop("imu0")
     p["debug"] = False
@@ -130,7 +137,8 @@ def run_bag(bag, cfg, tag, dom, rate=10.0):
             na += ["-p override_scan_cov:=true",
                    f"-p pose_cov:=[{','.join(map(str, cfg['pose_cov']))}]",
                    f"-p twist_cov:=[{','.join(map(str, cfg['twist_cov']))}]"]
-        for k in ("scan_stamp_offset", "gyro_var", "gyro_bias_z", "gyro_sign", "imu_topic"):
+        for k in ("scan_stamp_offset", "gyro_var", "gyro_bias_z", "gyro_sign", "imu_topic",
+                  "imu_dropout_start_s", "imu_dropout_len_s"):
             if k in cfg:
                 na.append(f"-p {k}:={cfg[k]}")
         procs.append(sh(f"python3 {tlib.HERE}/tune_node.py --ros-args {' '.join(na)}", dom))
@@ -139,6 +147,11 @@ def run_bag(bag, cfg, tag, dom, rate=10.0):
                         f"--roll {roll} --pitch 0 --yaw 0 --frame-id base_footprint --child-frame-id witmotion", dom))
         procs.append(sh("ros2 run robot_localization ekf_node --ros-args -r __node:=walker_ekf_node "
                         f"-r /odometry/filtered:=/odom -p use_sim_time:=true --params-file {yml}", dom))
+        if cfg.get("supervisor"):
+            sp = [f"-p {k}:={v}" for k, v in cfg.get("supervisor_params", {}).items()]
+            procs.append(sh("python3 " + str(tlib.WALKIT / "walker_bringup" / "scripts" / "odom_supervisor.py")
+                            + " --ros-args -p use_sim_time:=true -p scan_in:=/scan_odom -p imu_in:=/imu_tuned "
+                            + " ".join(sp), dom, out / f"{bag}.supervisor.log"))
         time.sleep(3.0)
         play = sh(f"ros2 bag play {WORK}/stage2/{bag} --clock {CLOCK_HZ} -r {rate} "
                   "--topics /scan_odom /bwt901cl/imu /bwt901cl/imu_filtered --remap /scan_odom:=/scan_odom_raw", dom)

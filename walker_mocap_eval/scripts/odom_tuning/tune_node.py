@@ -28,6 +28,11 @@ class Tune(Node):
         self.gyro_bias = d("gyro_bias_z", 0.0).value
         self.gyro_sign = d("gyro_sign", 1.0).value
         imu_topic = d("imu_topic", "/bwt901cl/imu").value
+        # fallo inyectado: el IMU deja de publicar desde imu_dropout_start_s (tiempo del IMU desde su primer
+        # mensaje) durante imu_dropout_len_s (<=0: para siempre). Para probar al supervisor.
+        self.drop_start = d("imu_dropout_start_s", -1.0).value
+        self.drop_len = d("imu_dropout_len_s", 0.0).value
+        self.imu_t0 = None
         self.rows = []
         self.pub_s = self.create_publisher(Odometry, "/scan_odom", 10)
         self.pub_i = self.create_publisher(Imu, "/imu_tuned", 50)
@@ -46,6 +51,13 @@ class Tune(Node):
         self.pub_s.publish(m)
 
     def on_imu(self, m):
+        if self.drop_start >= 0.0:
+            t = m.header.stamp.sec + m.header.stamp.nanosec * 1e-9
+            if self.imu_t0 is None:
+                self.imu_t0 = t
+            rel = t - self.imu_t0
+            if rel >= self.drop_start and (self.drop_len <= 0.0 or rel < self.drop_start + self.drop_len):
+                return
         m.angular_velocity.z = self.gyro_sign * m.angular_velocity.z - self.gyro_bias
         if self.gyro_var > 0:
             for k in (0, 4, 8):
