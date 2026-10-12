@@ -31,6 +31,9 @@ ver launch/test/walker_laser_imu_odom_test.launch.py):
   use_sim_time      true al reproducir un rosbag.
   lsm_params_file   parametros del scan matcher (por defecto config/walker_lsm.yaml).
   ekf_params_file   parametros del EKF (por defecto config/walker_ekf.yaml).
+  supervise_imu     true (por defecto): lanza scripts/odom_supervisor.py, que vigila el gyro y conmuta las
+                    covarianzas que ve el EKF (el rumbo del laser pasa a pesar mas si el gyro falla). El EKF se
+                    alimenta entonces de /scan_odom_ekf y /imu_ekf, no de /scan_odom ni /bwt901cl/imu.
 
 Validado offline contra rosbags con ground-truth de mocap (rigid_bodies[0] =
 el andador) en bagsFolder_unified -- ver launch/test/walker_laser_imu_odom_test.launch.py
@@ -40,6 +43,7 @@ y walker_mocap_eval/scripts/eval_odom_against_mocap.py.
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node, SetParameter
@@ -62,6 +66,10 @@ def generate_launch_description():
         'ekf_params_file', default_value=join(bringup_dir, 'config', 'walker_ekf.yaml'),
         description='parametros del EKF de robot_localization'))
 
+    ld.add_action(DeclareLaunchArgument(
+        'supervise_imu', default_value='true',
+        description='vigilar el gyro y conmutar las covarianzas del EKF (scripts/odom_supervisor.py)'))
+
     use_sim_time = LaunchConfiguration('use_sim_time')
 
     ld.add_action(SetParameter(name='use_sim_time', value=use_sim_time))
@@ -76,14 +84,36 @@ def generate_launch_description():
 
     # --- Fusion: EKF (robot_localization) de /scan_odom + /bwt901cl/imu
     # -> /odom + TF odom->base_footprint -------------------------------------
-    ekf_node = Node(
+    # Con supervisor el EKF se alimenta de sus salidas; el YAML sigue apuntando a /scan_odom y /bwt901cl/imu
+    # para que sea valido por si solo (sin supervisor).
+    ekf_args = dict(
         package='robot_localization',
         executable='ekf_node',
         name='walker_ekf_node',
         output='screen',
         remappings=[('/odometry/filtered', '/odom')],
-        parameters=[LaunchConfiguration('ekf_params_file')],
     )
-    ld.add_action(ekf_node)
+    ld.add_action(Node(
+        **ekf_args, condition=IfCondition(LaunchConfiguration('supervise_imu')),
+        # Con supervisor el gate de Mahalanobis de odom0 se relaja (5 -> 100 sigma): al conmutar, el rumbo del
+        # laser entra con varianza 0.0012 y, si el gyro malo ya desvio el EKF mas de ~10 deg, un gate de 5 sigma
+        # RECHAZARIA esa correccion hasta que el error diera la vuelta (medido: signo invertido 48 deg con 5, 24 con
+        # 1000). Los outliers del ICP ya los acota max_linear_correction/max_angular_correction del scan matcher.
+        parameters=[LaunchConfiguration('ekf_params_file'),
+                    {'odom0': '/scan_odom_ekf', 'imu0': '/imu_ekf',
+                     'odom0_pose_rejection_threshold': 100.0,
+                     'odom0_twist_rejection_threshold': 100.0}]))
+    ld.add_action(Node(
+        **ekf_args, condition=UnlessCondition(LaunchConfiguration('supervise_imu')),
+        parameters=[LaunchConfiguration('ekf_params_file')]))
+
+    ld.add_action(Node(
+        package='walker_bringup',
+        executable='odom_supervisor.py',
+        name='odom_supervisor',
+        output='screen',
+        condition=IfCondition(LaunchConfiguration('supervise_imu')),
+        parameters=[{'base_frame': 'base_footprint'}],
+    ))
 
     return ld

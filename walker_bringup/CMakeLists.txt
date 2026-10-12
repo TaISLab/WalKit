@@ -18,6 +18,7 @@ install(DIRECTORY launch config maps script tmule udev
 
 install(PROGRAMS
   scripts/record_service.py
+  scripts/odom_supervisor.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
