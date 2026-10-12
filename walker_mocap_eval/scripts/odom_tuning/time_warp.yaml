@@ -1,13 +1,27 @@
-# Correccion del eje temporal del mocap (rigid_bodies) respecto al del robot, por bag.
-# El reloj del PC del mocap y el del andador no estan sincronizados: en estos bags el desfase vale `offset_s` en
-# t_ref y deriva `slope` s por s (p.ej. -0.066 = 6.6 s cada 100 s; un error de escala de tiempo de hasta ~7 %).
-# Sin corregirlo la guinada del mocap se ve con correlacion 0.5-0.8 respecto al gyro y parece "mocap malo".
+# Correccion EMPIRICA del eje temporal del mocap (rigid_bodies) respecto a los sensores del robot, por bag.
+#
+# Que es: en estos bags la velocidad de guinada del mocap solo concuerda con la del gyro (y con la del laser, que
+# concuerdan entre si) si el eje del mocap se desplaza y se escala linealmente: un offset `offset_s` en `t_ref` mas
+# una deriva `slope` s por s (-0.066 = 6.6 s cada 100 s). Sin corregirla la correlacion de guinada es 0.5-0.8 y el bag
+# parece "mocap malo". Con la correccion pasa a 0.99+ y la rotacion total del mocap coincide con la del laser al 1.5 %.
 #
 #   t_robot = t_mocap + offset_s + slope * (t_mocap - t_ref)       (segundos, sellos de cabecera)
 #
-# Se ajusta por bag maximizando la correlacion entre la velocidad de guinada del mocap y el gyro crudo
-# (gyro_check.py / fit_time_warp.py). Solo se aplica si mejora la correlacion >0.01 y el efecto es apreciable.
-# Tras corregir, la correlacion pasa de 0.54-0.84 a 0.993-0.997 en los 6 bags antes "sospechosos".
+# Que NO es: no esta demostrado que sea un reloj desfasado. Los sellos de cabecera del mocap, del IMU y del scan
+# estan en el mismo eje que el tiempo de grabacion (header - grabacion: mocap 6 ms sin deriva; IMU y scan deriva
+# < 1e-3 s/s; medido en CA_test05, MT_test14 y CA_test01) y el frame_number del mocap avanza a 120.000 fps en los 8
+# bags comprobados, corregidos y limpios. La causa fisica es desconocida. En los 5 bags de deriva grande
+# (CA_test05/06, MT_test12-14) el signo de `slope` coincide con el del cociente gyro/laser (grupo imu_gyro_scale de
+# bag_quality.yaml), asi que podrian ser un unico fenomeno; sin explicar. Los offsets constantes pequenos
+# (-0.15 a -0.3 s con slope ~0: CA_test02/07, MT_test15/18/19/20) son compatibles con una latencia del mocap.
+#
+# Como se obtiene: fit_time_warp.py (retardo por ventanas de 15 s, recta robusta, refinado de la correlacion global).
+# Se aplica solo si la correlacion mejora > 0.01 respecto a no corregir (MT_test18 queda en el limite, 0.008).
+# Los valores de abajo vienen de un ajuste anterior con otro t_ref; el script los reproduce a <= 0.2 s a lo largo
+# de todo el bag (offset y slope no son comparables uno a uno por el t_ref distinto).
+#
+# Uso: tlib.gt_traj() lo aplica solo (apply_warp=False para ver el mocap sin corregir). eval_odom_against_mocap.py NO
+# lo aplica. Si se cambia este fichero hay que borrar $ODOM_TUNE_DIR/gtcache/<bag>.warp.pkl (tlib cachea por bag).
 CA_test02:
   corr_after: 0.996
   corr_before: 0.97

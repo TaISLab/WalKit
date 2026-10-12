@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Comprueba el IMU contra el mocap en cada bag: signo/orientacion, escala, sesgo y desfase de reloj.
+"""Comprueba el IMU contra el mocap en cada bag: signo/orientacion, escala, sesgo y desfase temporal.
 
 Para el gyro z crudo y el filtrado: correlacion con la velocidad de guinada del mocap, pendiente (escala),
-ordenada (sesgo, rad/s), desfase de reloj (s) y desviacion del residuo. Ademas imprime la media de la aceleracion z:
+ordenada (sesgo, rad/s), desfase temporal (s) y desviacion del residuo. Ademas imprime la media de la aceleracion z:
 con el robot parado debe ser +9.8 si el eje z del sensor apunta ARRIBA (entonces base_footprint->witmotion NO debe
 llevar un giro de 180 deg; con el roll=180 antiguo del xacro robot_localization fusionaba la guinada con signo cambiado).
 
