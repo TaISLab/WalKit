@@ -114,7 +114,7 @@ python3 scripts/compute_imu_stability_metrics.py \
     --bags-dir $DATASETS --gait-json /tmp/report_gait_mocap.json \
     --out /tmp/report_imu_mocap.json
 # Punto 1 ampliación: Harmonic Ratio / RMS / regularidad por autocorrelación,
-# IMU real del andador (/bwt901cl/imu_filtered) vs equivalente por mocap
+# IMU real del andador (/bwt901cl/imu) vs equivalente por mocap
 
 python3 scripts/compute_handle_symmetry_vs_gait.py \
     --extra-json /tmp/report_extra_mocap.json --gait-json /tmp/report_gait_mocap.json \

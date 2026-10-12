@@ -18,7 +18,7 @@ extra_metrics.py, sin replay -- calculado directamente de /labeled_markers,
   {bag}_mocap_handle_weight.csv t_s,left_kg,right_kg,total_fraction  (sensor real del andador, sin replay: solo calibracion offline)
 
 Series de la AMPLIACION (sin replay; tambien con --ampliacion-only):
-  {bag}_imu_real_accel.csv         t_s,ap_m_s2,ml_m_s2,v_m_s2   (IMU real /bwt901cl/imu_filtered, crudo; asume x=AP,y=ML,z=V)
+  {bag}_imu_real_accel.csv         t_s,ap_m_s2,ml_m_s2,v_m_s2   (IMU real /bwt901cl/imu, crudo; asume x=AP,y=ML,z=V)
   {bag}_mocap_walker_accel.csv     t_s,ap_m_s2,ml_m_s2          (2a derivada de rigid_bodies[0], remuestreo 60 Hz + suavizado)
   {bag}_mocap_handle_symmetry.csv  t_s,left_kg,right_kg,si_pct  (Symmetry Index por muestra; kg>=0, SI=NaN si L+R<0.5 kg)
 
@@ -216,14 +216,14 @@ def export_ampliacion_series(bag_dir, out_dir, t0_ref):
 
     tag_window = bag_io.read_tag_window(bag_dir)
     data = bag_io.load_bag(
-        bag_dir, topics=("/bwt901cl/imu_filtered", "/bwt901cl/imu", "/rigid_bodies", "/left_handle", "/right_handle"),
+        bag_dir, topics=("/bwt901cl/imu", "/bwt901cl/imu_filtered", "/rigid_bodies", "/left_handle", "/right_handle"),
         require_all=False)
 
     def clip(msgs):
         return bag_io.clip_track(msgs, *tag_window) if tag_window is not None else msgs
 
     name = bag_dir.name
-    imu = clip(data.get("/bwt901cl/imu_filtered") or data.get("/bwt901cl/imu") or [])
+    imu = clip(data.get("/bwt901cl/imu") or data.get("/bwt901cl/imu_filtered") or [])
     if imu:
         rows = [((t - t0_ref) / 1e9, m.linear_acceleration.x, m.linear_acceleration.y, m.linear_acceleration.z)
                 for t, m in imu]

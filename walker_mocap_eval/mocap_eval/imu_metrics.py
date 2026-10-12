@@ -3,7 +3,7 @@
 la ampliacion del informe: Harmonic Ratio (HR), RMS de aceleracion y
 regularidad de paso/zancada por autocorrelacion, sobre dos fuentes:
 
-  - IMU real del andador (/bwt901cl/imu o /imu_filtered, sensor_msgs/Imu,
+  - IMU real del andador (/bwt901cl/imu, o /imu_filtered en bags antiguos, sensor_msgs/Imu,
     grabado en todos los bags -- no hace falta reproducir nada).
   - Equivalente estimado por mocap: doble derivada numerica de la posicion
     del rigid body del andador, proyectada a los ejes antero-posterior

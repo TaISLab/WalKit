@@ -509,12 +509,13 @@ Candidatos de la literatura que usan sensores que el andador YA lleva y
 cuya precision se puede corroborar con mocap. Se comprobo contra los
 topics realmente grabados en los bags (no solo contra el codigo): cada bag
 trae `/bwt901cl/imu` + `/imu_filtered` (IMU WitMotion, en produccion solo
-alimenta la velocidad angular del EKF) y los ticks crudos
+alimenta la velocidad angular del EKF; `imu_filtered` ya no se genera: se dejo de lanzar
+`imu_complementary_filter`, y las grabaciones nuevas solo traen `/bwt901cl/imu`) y los ticks crudos
 `/left_wheel`/`/right_wheel`.
 
 | # | Parametro | Sensor real | Referencia mocap | Modulo / script |
 |---|---|---|---|---|
-| 1 | RMS, Harmonic Ratio (Moe-Nilssen 1998), regularidad de paso/zancada Ad1/Ad2 (Moe-Nilssen & Helbostad 2004) | IMU del chasis (`/bwt901cl/imu_filtered`) | 2a derivada de `rigid_bodies[0]` | `imu_metrics.py`, `compute_imu_stability_metrics.py` |
+| 1 | RMS, Harmonic Ratio (Moe-Nilssen 1998), regularidad de paso/zancada Ad1/Ad2 (Moe-Nilssen & Helbostad 2004) | IMU del chasis (`/bwt901cl/imu`) | 2a derivada de `rigid_bodies[0]` | `imu_metrics.py`, `compute_imu_stability_metrics.py` |
 | 2 | Symmetry Index (Robinson 1987) de fuerza en manetas vs asimetria cinematica de paso | `/left_handle`, `/right_handle` calibrados | SpT/SdT/SpL/SdL izq-dcha de `compute_gait_from_mocap.py` | `extra_metrics.symmetry_index`, `compute_handle_symmetry_vs_gait.py` |
 | 5 | Correlacion inclinacion sagital de tronco vs margen de estabilidad lateral | (ninguno nuevo) | dos parametros ya calculados | `compute_lean_vs_margin_correlation.py` |
 | 3 | Validacion de `walker_stability.py` (`/user_stability`) vs margen mocap | -- | -- | **bloqueado**, ver abajo |

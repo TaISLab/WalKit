@@ -4,7 +4,7 @@ de aceleracion (Harmonic Ratio, RMS, regularidad de paso/zancada por
 autocorrelacion -- ver mocap_eval/imu_metrics.py para las formulas) sobre
 DOS fuentes independientes, sin reproducir ningun bag:
 
-  - IMU real del andador (/bwt901cl/imu_filtered, grabado en todos los bags).
+  - IMU real del andador (/bwt901cl/imu cruda; solo se usa su aceleracion lineal).
   - Equivalente estimado por mocap (doble derivada de la posicion del rigid
     body del andador, proyectada a ejes AP/ML del propio andador).
 
@@ -29,8 +29,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from mocap_eval import bag_io, imu_metrics  # noqa: E402
 
-IMU_TOPIC_PREFERRED = "/bwt901cl/imu_filtered"
-IMU_TOPIC_FALLBACK = "/bwt901cl/imu"
+# La aceleracion lineal de imu_filtered era la de imu pasada tal cual por imu_complementary_filter (ya no se lanza);
+# se conserva como respaldo solo por si un bag antiguo trajera unicamente ese topic.
+IMU_TOPIC_PREFERRED = "/bwt901cl/imu"
+IMU_TOPIC_FALLBACK = "/bwt901cl/imu_filtered"
 
 
 def _mean_dt(ts):
