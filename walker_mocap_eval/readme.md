@@ -56,6 +56,7 @@ scripts/   (orden de ejecucion y ejemplos de comandos: ver scripts/README.md)
   compare_cog_mocap_vs_walker.py   punto 3 (comparacion): CoM de mocap vs /support_centroid real (walker_centroid_support)
   eval_odom_against_mocap.py       evalua una odometria grabada (/odom del EKF laser+IMU, walker_bringup) contra el mocap:
                                     ATE tras alinear con Umeyama 2D + deriva en % del recorrido (antes en walker_step_detector/scripts)
+                                    (aplica odom_tuning/time_warp.yaml al eje de tiempo del mocap; --time-warp none la desactiva)
 ```
 
 ## Uso

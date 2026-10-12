@@ -20,8 +20,9 @@
 # Los valores de abajo vienen de un ajuste anterior con otro t_ref; el script los reproduce a <= 0.2 s a lo largo
 # de todo el bag (offset y slope no son comparables uno a uno por el t_ref distinto).
 #
-# Uso: tlib.gt_traj() lo aplica solo (apply_warp=False para ver el mocap sin corregir). eval_odom_against_mocap.py NO
-# lo aplica. Si se cambia este fichero hay que borrar $ODOM_TUNE_DIR/gtcache/<bag>.warp.pkl (tlib cachea por bag).
+# Uso: tlib.gt_traj() y eval_odom_against_mocap.py lo aplican solos (apply_warp=False / --time-warp none para ver el
+# mocap sin corregir). Si se cambia este fichero hay que borrar $ODOM_TUNE_DIR/gtcache/<bag>.warp.pkl (tlib cachea
+# por bag).
 CA_test02:
   corr_after: 0.996
   corr_before: 0.97

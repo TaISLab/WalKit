@@ -219,3 +219,7 @@ report_posture_mocap.json ---------------------> compute_lean_vs_margin_correlat
   sale del propio mocap (`mocap_odom_bridge.py`), así que `d` y `WV` del
   informe solo validan la aritmética de `gait_monitor_speed`. No forma
   parte del flujo del informe; ver su docstring para qué grabar.
+  Aplica por defecto la corrección temporal del mocap de
+  `odom_tuning/time_warp.yaml` (clave = nombre del bag original, deducido del
+  nombre del eval-bag o con `--bag-name`; `--time-warp none` la desactiva) y
+  empareja por sellos de cabecera (`--time-basis header`).
