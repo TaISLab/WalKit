@@ -72,14 +72,14 @@ class OdomSupervisor(Node):
         self.imu_var_degraded = d("imu_var_degraded", 1.0).value               # (rad/s)2: el EKF lo ignora
         self.imu_timeout = d("imu_timeout", 1.0).value
         self.imu_max_rate = d("imu_max_rate", 10.0).value
-        self.window_s = d("window_s", 8.0).value
-        self.turn_min = math.radians(d("turn_min_deg", 45.0).value)
+        self.window_s = d("window_s", 4.0).value
+        self.turn_min = math.radians(d("turn_min_deg", 20.0).value)
         self.dead_ratio = d("dead_ratio", 0.3).value
         self.stationary_xy = d("stationary_xy", 0.05).value
         self.stationary_yaw = math.radians(d("stationary_yaw_deg", 2.0).value)
         self.bias_max = d("bias_max", 0.02).value
         self.straight_yaw = math.radians(d("straight_yaw_deg", 10.0).value)
-        self.persist_s = d("persist_s", 2.0).value
+        self.persist_s = d("persist_s", 1.0).value
         self.startup_grace_s = d("startup_grace_s", 10.0).value
         self.recover_s = d("recover_s", 5.0).value
 
