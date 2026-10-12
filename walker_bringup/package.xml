@@ -29,7 +29,6 @@
   <!-- witmotion_ros is not a released package: it is built from the workspace
        (src/witmotion/witmotion_ros), so rosdep will not resolve it. -->
   <exec_depend>witmotion_ros</exec_depend>
-  <exec_depend>imu_complementary_filter</exec_depend>
   <exec_depend>imu_filter_madgwick</exec_depend>
   <exec_depend>robot_localization</exec_depend>
   <exec_depend>nav2_amcl</exec_depend>

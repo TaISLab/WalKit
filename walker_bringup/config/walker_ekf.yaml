@@ -79,8 +79,8 @@ walker_ekf_node:
 
 # witmotion WT901 IMU, via witmotion_ros (walker_witmotion.launch.py), RAW topic /bwt901cl/imu.
 #
-# RAW, not /bwt901cl/imu_filtered: imu_complementary_filter runs with
-# do_bias_estimation:true, and that estimator assumes the sensor is stationary;
+# RAW, not /bwt901cl/imu_filtered: imu_complementary_filter (no longer launched, see
+# walker_witmotion.launch.py) ran with do_bias_estimation:true, and that estimator assumes the sensor is stationary;
 # while the walker moves it "estimates" a bias and subtracts it from the angular
 # velocity it republishes. Against mocap ground truth (47 bags) the raw gyro z has
 # offset 0.000 +-0.003 rad/s, scale 1.00 and correlation 0.99-1.00, while the
