@@ -14,7 +14,7 @@ import yaml
 
 import tlib
 
-DEFAULT = ["CA_test01", "LA_test3", "MF_test04", "MT_test17", "LA_test7", "MF_test20", "CA_test03", "LA_test1"]
+DEFAULT = ["CA_test01", "LA_test03", "MF_test04", "MT_test17", "LA_test07", "MF_test20", "CA_test03", "LA_test01"]
 RATE = 1.5
 
 

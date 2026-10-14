@@ -196,7 +196,7 @@ uniforme:
 - **30 bags siguen mal** (todos los `CA_test*` y `LA_test*` restantes, y
   `MF_test01-15`): NoS del walker solo 8-23% del de mocap, igual de mal que
   antes del fix.
-- **4 bags sin datos**: `CA_test03`, `LA_test5`, `MF_test02`, `MF_test16`.
+- **4 bags sin datos**: `CA_test03`, `LA_test05`, `MF_test02`, `MF_test16`.
 
 Se comprobo si la diferencia esta en la calidad del propio `/scan` (huecos,
 timestamps duplicados o no monotonos) entre un bag "bueno" y uno "malo":
@@ -640,7 +640,7 @@ Los 47 bags no valen igual para puntuar. `bag_quality.yaml` anota por que se apa
 scripts (limpios = el resto, 32 bags):
 
 - **`scan_matching_anomalous` (8)**: el scan matching deriva en rumbo; gyro y mocap coinciden entre si y el laser no
-  (MF_test20, MF_test19, CA_test03, CA_test09, LA_test1, LA_test7, MF_test05, MF_test06).
+  (MF_test20, MF_test19, CA_test03, CA_test09, LA_test01, LA_test07, MF_test05, MF_test06).
 - **`mocap_suspect` (6)**: gyro y laser coinciden entre si y el mocap no (MT_test12..15, CA_test05, CA_test06). Su
   guinada es suave pero discrepa de forma sistematica: parece que el cuerpo rigido de esas sesiones esta definido
   con otra orientacion. Ojo: la posicion de referencia sale de la pose del cuerpo rigido + (dx, dy) girado por su
@@ -657,7 +657,7 @@ limite anotados. Si se anaden bags, pasar el diagnostico antes de puntuar con el
 | El sensor WitMotion tiene el eje z **arriba**: el xacro con `roll=180` hacia que `robot_localization` fusionara la guinada con el signo cambiado | acelerometro z = +9.8 en reposo; gyro z correlaciona +0.99 con el mocap; con roll=180 el rumbo del EKF salia 3.81 deg frente a 2.50 deg del laser solo |
 | El gyro **crudo** es excelente y el **filtrado** esta corrompido | crudo: sesgo 0.000 +-0.003 rad/s, escala 1.00, corr 0.99-1.00. `imu_complementary_filter` (`do_bias_estimation`): sesgos de hasta 0.13 rad/s, distintos en cada bag |
 | Con el scan matching sano la IMU no aporta | bags limpios: rumbo 2.48 deg con IMU frente a 2.50 deg solo laser (ATE 0.211 frente a 0.216 m) |
-| Donde el scan matching falla en rumbo, la IMU rescata parte | LA_test7 7.3 -> 1.9 deg; MF_test20 29.6 -> 27.6; CA_test03 15.4 -> 14.7; LA_test1 8.4 -> 7.9 |
+| Donde el scan matching falla en rumbo, la IMU rescata parte | LA_test07 7.3 -> 1.9 deg; MF_test20 29.6 -> 27.6; CA_test03 15.4 -> 14.7; LA_test01 8.4 -> 7.9 |
 | El desfase temporal importa: el scan se sella al empezar el barrido (0.157 s) y la pose describe su mitad | `odom_time_offset_ns: 80000000` mejora el ATE ~1 % y el rumbo del propio `/scan_odom` contra el mocap |
 | La covarianza de rumbo del laser debe ser holgada (0.05, no 0.001) | los matches sucesivos van encadenados al mismo keyframe: no son medidas independientes |
 

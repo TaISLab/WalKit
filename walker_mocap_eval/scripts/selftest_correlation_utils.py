@@ -28,18 +28,18 @@ def test_pearson_ignores_nan_pairs():
 
 
 def test_group_bags_by_prefix():
-    bags = ["CA_test01", "CA_test02", "LA_test1", "MF_test01"]
+    bags = ["CA_test01", "CA_test02", "LA_test01", "MF_test01"]
     groups = correlation_utils.group_bags(bags)
-    assert groups == {"CA": ["CA_test01", "CA_test02"], "LA": ["LA_test1"], "MF": ["MF_test01"]}, groups
+    assert groups == {"CA": ["CA_test01", "CA_test02"], "LA": ["LA_test01"], "MF": ["MF_test01"]}, groups
     print("test_group_bags_by_prefix: OK")
 
 
 def test_correlation_by_group():
     # pearson_r exige >=3 puntos (con 2, r es siempre +/-1 o indefinido y no
     # es estadisticamente informativo) -- 3 bags por sujeto en este test.
-    bags = ["CA_test01", "CA_test02", "CA_test03", "LA_test1", "LA_test2", "LA_test3"]
-    x = {"CA_test01": 1, "CA_test02": 2, "CA_test03": 3, "LA_test1": 10, "LA_test2": 20, "LA_test3": 30}
-    y = {"CA_test01": 2, "CA_test02": 4, "CA_test03": 6, "LA_test1": 20, "LA_test2": 40, "LA_test3": 60}
+    bags = ["CA_test01", "CA_test02", "CA_test03", "LA_test01", "LA_test02", "LA_test03"]
+    x = {"CA_test01": 1, "CA_test02": 2, "CA_test03": 3, "LA_test01": 10, "LA_test02": 20, "LA_test03": 30}
+    y = {"CA_test01": 2, "CA_test02": 4, "CA_test03": 6, "LA_test01": 20, "LA_test02": 40, "LA_test03": 60}
     out = correlation_utils.correlation_by_group(bags, x, y)
     assert approx(out["CA"][0], 1.0), out["CA"]
     assert approx(out["LA"][0], 1.0), out["LA"]

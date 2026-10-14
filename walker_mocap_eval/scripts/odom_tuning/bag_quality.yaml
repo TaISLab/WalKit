@@ -14,8 +14,8 @@ scan_matching_anomalous:   # el scan matching deriva en rumbo; el gyro y el moca
   MF_test19: "cum l-m 36 deg vs g-m 2.3; 1395 deg de giro total"
   CA_test03: "cum l-m 23 deg vs g-m 3.5"
   CA_test09: "cum l-m 26 deg vs g-m 3.3; 924 deg de giro total"
-  LA_test1:  "cum l-m 12 deg vs g-m 1.7; deriva 4.75 %; 12.7 deg de sesgo constante"
-  LA_test7:  "velocidad de guinada laser-mocap rms 10.8 deg/s (corr 0.76) frente a 0.8 (corr 1.00) del gyro; salto puntual de heading"
+  LA_test01:  "cum l-m 12 deg vs g-m 1.7; deriva 4.75 %; 12.7 deg de sesgo constante"
+  LA_test07:  "velocidad de guinada laser-mocap rms 10.8 deg/s (corr 0.76) frente a 0.8 (corr 1.00) del gyro; salto puntual de heading"
   MF_test05: "cum l-m 11 deg vs g-m 5.6 (moderado); 1170 deg de giro total"
   MF_test06: "cum l-m 17 deg vs g-m 2.7 (el laser se aleja ~17 deg tanto del gyro como del mocap). ADEMAS tiene un salto
               real de orientacion del mocap (~1.8e5 deg/s) que infla el giro total a 2129 deg y contamina las

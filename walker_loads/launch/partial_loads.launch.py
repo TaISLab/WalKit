@@ -51,7 +51,7 @@ def generate_launch_description():
                  # este fix Y del fix de timestamp de km_detect_steps,
                  # numeros del readme.md) -> MAE=23.5 pasos/25.1% MAPE. Los 3
                  # bags que antes no producian NINGUN GaitStamped
-                 # (CA_test03, LA_test2, LA_test6) ahora si. d/wv siguen
+                 # (CA_test03, LA_test02, LA_test06) ahora si. d/wv siguen
                  # bien (MAPE 1.3%/13.2%). SpT/SdT/SpL/SdL siguen con error
                  # alto (MAPE 30-230%): heredan el ~25% de error de NoS que
                  # queda (ruido de km_detect_steps, mismo mecanismo de

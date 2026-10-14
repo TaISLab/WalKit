@@ -168,7 +168,7 @@ walker_ekf_node:
 # threshold of "1.0 std dev" is nearly always exceeded by any real update,
 # which then gets rejected -- so the filter's belief never gets a chance to
 # correct itself and just keeps predicting forward from a stale state.
-# Validated live against a mocap-labeled bag (LA_test7): with 1e-9 here,
+# Validated live against a mocap-labeled bag (LA_test07): with 1e-9 here,
 # yaw output was frozen at exactly 0.0 rad for the entire ~17 s run, no
 # matter which odom0/imu0 fusion settings were tried, while position still
 # advanced -- both symptoms of x/y and yaw only being predicted, not
