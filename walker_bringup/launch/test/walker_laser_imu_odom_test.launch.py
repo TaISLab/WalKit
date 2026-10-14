@@ -1,19 +1,20 @@
 #!/usr/bin/python3
 
 """Banco de pruebas offline de walker_laser_imu_odom.launch.py: reproduce un
-rosbag con ground-truth de mocap (bagsFolder_unified, rigid_bodies[0] = el
-andador) como si fuera el robot real, para ajustar los parametros de la
-odometria sin el robot.
+rosbag definitivo con ground-truth de mocap (rigid_bodies[0] = el andador)
+como si fuera el robot real, para ajustar los parametros de la odometria sin
+el robot.
 
 Que lanza:
-  1. unified_bag_replay.launch.py: reproduce del bag solo
+  1. walker_replay (replay_actions): reproduce del bag solo
        - /scan,
        - /bwt901cl/imu (IMU cruda; lo que en el robot da walker_witmotion.launch.py),
-       - /rigid_bodies (ground truth, para grabarlo junto a /odom).
-     No se reproducen /scan_filtered, /scan_nav, /odom, /tf ni /tf_static: el
-     /tf_static de los bags lleva el witmotion girado 180 grados (el xacro lo
-     tenia mal), asi que el TF del andador lo publica walker_state_publisher
-     desde el xacro actual, igual que en el robot.
+       - /rigid_bodies (ground truth, para grabarlo junto a /odom),
+     con /clock y use_sim_time:=true para todo lo que se lanza despues. Publica
+     ademas /user_desc, /handle_height y el TF del andador (walker_state_publisher
+     desde el xacro actual, igual que en el robot; los bags definitivos no traen
+     /tf ni /tf_static, y el que traian los originales llevaba el witmotion
+     girado 180 grados).
   2. La cadena de scan del robot, siempre completa y con los filtros actuales
      (los bags solo traen /scan_filtered en 20 de 47 casos y con el filtro con
      el que se grabaron):
@@ -28,15 +29,19 @@ Que lanza:
   /bwt901cl/imu sale del bag.
 
 Argumentos:
-  bag_path          carpeta del rosbag2 (por defecto MF_test07).
+  bag_folder        carpeta base de los bags definitivos y de test_config.txt.
+  bag_name          bag a reproducir (por defecto MF_test07).
   rate              velocidad de reproduccion.
   extra_topics      resto de topics del bag a reproducir (ademas de /scan).
   lsm_params_file   parametros del scan matcher a probar.
   ekf_params_file   parametros del EKF a probar.
+  sim_time          true (por defecto, es un banco de pruebas de bags): use_sim_time
+                    para todo lo del test. Con false no hay /clock ni tiempo de bag.
+  debug             false por defecto: log en debug del reproductor.
 
 Ejemplo de ajuste (grabar la salida y puntuarla contra mocap):
     ros2 launch walker_bringup walker_laser_imu_odom_test.launch.py \\
-        bag_path:=/home/mfcarmona/bagsFolder_unified/CA_test01 rate:=2.0 &
+        bag_name:=CA_test01 rate:=2.0 &
     ros2 bag record -o /tmp/odom_CA_test01 /odom /scan_odom /rigid_bodies
     python3 walker_mocap_eval/scripts/eval_odom_against_mocap.py --eval-bag /tmp/odom_CA_test01
 """
@@ -46,9 +51,10 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PythonExpression
-from launch_ros.actions import SetParameter
 
-from os.path import join
+from walker_replay.launch_utils import replay_actions
+
+from os.path import expanduser, join
 
 
 def generate_launch_description():
@@ -57,8 +63,10 @@ def generate_launch_description():
     ld = LaunchDescription()
 
     ld.add_action(DeclareLaunchArgument(
-        'bag_path', default_value='/home/mfcarmona/bagsFolder_unified/MF_test07',
-        description='carpeta de un rosbag2 de bagsFolder_unified'))
+        'bag_folder', default_value=expanduser('~/bagsFolder/definitive'),
+        description='carpeta base de los bags definitivos (y de test_config.txt)'))
+    ld.add_action(DeclareLaunchArgument(
+        'bag_name', default_value='MF_test07', description='bag definitivo a reproducir'))
     ld.add_action(DeclareLaunchArgument(
         'rate', default_value='1.0', description='velocidad de reproduccion del bag'))
     ld.add_action(DeclareLaunchArgument(
@@ -71,15 +79,22 @@ def generate_launch_description():
         'ekf_params_file', default_value=join(bringup_dir, 'config', 'walker_ekf.yaml'),
         description='parametros del EKF a probar'))
 
-    # use_sim_time para todo lo de este test (el yaml de nav_laser_filter lo trae a false)
-    ld.add_action(SetParameter(name='use_sim_time', value=True))
+    ld.add_action(DeclareLaunchArgument(
+        'sim_time', default_value='true',
+        description='use_sim_time para todo lo del test (en un banco de pruebas de bags, true)'))
+    ld.add_action(DeclareLaunchArgument(
+        'debug', default_value='false', description='log en debug del reproductor del bag'))
 
-    ld.add_action(IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(join(bringup_dir, 'launch', 'test', 'unified_bag_replay.launch.py')),
-        launch_arguments={'bag_path': LaunchConfiguration('bag_path'),
-                          'rate': LaunchConfiguration('rate'),
-                          'topics': PythonExpression(["'/scan ' + '", LaunchConfiguration('extra_topics'), "'"]),
-                          'publish_walker_tf': 'true'}.items()))
+    # Reproduccion del bag + use_sim_time para todo lo que viene despues
+    # (el yaml de nav_laser_filter lo trae a false)
+    for action in replay_actions(
+            bag_folder=LaunchConfiguration('bag_folder'),
+            bag_name=LaunchConfiguration('bag_name'),
+            rate=LaunchConfiguration('rate'),
+            topics=PythonExpression(["'/scan ' + '", LaunchConfiguration('extra_topics'), "'"]),
+            sim_time=LaunchConfiguration('sim_time'),
+            debug=LaunchConfiguration('debug')):
+        ld.add_action(action)
 
     # /scan -> /scan_filtered -> /scan_nav (en el robot real lo lanzan otros launch)
     ld.add_action(IncludeLaunchDescription(
@@ -89,7 +104,7 @@ def generate_launch_description():
 
     ld.add_action(IncludeLaunchDescription(
         PythonLaunchDescriptionSource(join(bringup_dir, 'launch', 'walker_laser_imu_odom.launch.py')),
-        launch_arguments={'use_sim_time': 'true',
+        launch_arguments={'use_sim_time': LaunchConfiguration('sim_time'),
                           'lsm_params_file': LaunchConfiguration('lsm_params_file'),
                           'ekf_params_file': LaunchConfiguration('ekf_params_file')}.items()))
 
