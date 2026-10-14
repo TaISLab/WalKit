@@ -7,11 +7,11 @@ eval_against_mocap.py (walker_step_detector/config/mocap_to_base_footprint.yaml,
 fuente unica: se referencia desde aqui, no se duplica).
 
 Que hay que grabar: al menos el topic de odometria a evaluar y /rigid_bodies,
-mientras corre walker_laser_imu_odom_test.launch.py contra un bag de
-bagsFolder_unified, p.ej.:
+mientras corre walker_laser_imu_odom_test.launch.py contra un bag definitivo
+(bagsFolder/definitive, reproducido con walker_replay), p.ej.:
 
     ros2 launch walker_bringup walker_laser_imu_odom_test.launch.py \\
-        bag_path:=/home/mfcarmona/bagsFolder_unified/MF_test01 rate:=1.0 &
+        bag_name:=MF_test01 rate:=1.0 &
     ros2 bag record -o /tmp/odom_eval_MF_test01 /odom /rigid_bodies
 
 Metrica -- ATE (Absolute Trajectory Error), como en el benchmark TUM RGB-D:

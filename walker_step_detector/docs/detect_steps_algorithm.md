@@ -320,28 +320,34 @@ y produjo una conclusión falsa ("catastrófico") que tuvo que corregirse.
   filtro láser: `/scan_filtered` lo genera `walker_bringup
   laser_filter.launch.py` en el robot.
 - **`launch/test_step_detector.launch.py`** -- el mismo launcher del robot,
-  sin robot: incluye `walker_bringup/launch/test/unified_bag_replay.launch.py`
-  (reproduce `/scan`, `/tf`, `/tf_static` del bag y lanza el TF del andador),
+  sin robot: usa `walker_replay` (reproduce `/scan` del bag definitivo con
+  `/clock` y `use_sim_time:=true`, y publica el TF del andador),
   `laser_filter.launch.py` (genera `/scan_filtered` como el robot) y
   `step_detector.launch.py` sin tocar. `step_detector` solo se suscribe a
   `/scan_filtered`, así que no hacen falta handles ni configuración de
-  usuario. Argumentos: `bag_path`, `rate`, `topics` (por defecto `/scan /tf
-  /tf_static`), `publish_walker_tf`, `replay_delay` (espera antes de
-  reproducir, por defecto 3 s, para que el detector ya esté suscrito).
+  usuario. Argumentos: `bag_folder`, `bag_name`, `rate`, `topics` (por defecto
+  `/scan`), `delay` (espera antes de reproducir, por defecto 3 s, para que el
+  detector ya esté suscrito), `sim_time` (true), `debug`.
 - **`launch/test_step_detector_variants.launch.py`** -- el de antes (se
   llamaba `test_step_detector.launch.py`): las cuatro variantes juntas
   (rf/km/seg/fused) sobre el mismo bag. Es el que usaron todas las
-  evaluaciones de `eval_results/` anteriores a 2026-10.
+  evaluaciones de `eval_results/` anteriores a 2026-10. Mismos argumentos
+  (`rate` por defecto 0.3); reproduce `/scan`, `/labeled_markers` y
+  `/rigid_bodies`.
+
+Los bags son los definitivos (`~/bagsFolder/definitive`, ver
+`soma13kp/GENERAR_BAGS_DEFINITIVOS.md`) y siempre se reproducen con
+`walker_replay`; los `datasets/labeled_bags` ya no se pueden reproducir.
 
 Evaluar contra mocap con el launcher nuevo (hay que reproducir también el
 ground truth, que no está en el `topics` por defecto; elige un
 `--domain-id` que nadie más use):
 
 ```bash
-python3 scripts/run_multibag_eval.py --bags-dir $DATASETS/labeled_bags \
-    --out-dir /tmp/eval --rate 4.0 --domain-id <libre> \
+python3 scripts/run_multibag_eval.py --bags-dir ~/bagsFolder/definitive \
+    --out-dir ~/claudtemp/eval --rate 4.0 --domain-id <libre> \
     --launch-file test_step_detector.launch.py \
-    --launch-args "topics:='/scan /tf /tf_static /labeled_markers /rigid_bodies'" \
+    --launch-args "topics:='/scan /labeled_markers /rigid_bodies'" \
     --detected-topics "/detected_step_left /detected_step_right" \
     --replay-delay 8 --out result.json
 ```

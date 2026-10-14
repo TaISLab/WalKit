@@ -91,7 +91,7 @@ def main():
         dom = a.domain_base + k
         rec = sh(f"ros2 bag record --use-sim-time -o {out} /scan_odom /odom", dom, W / "stage1" / "logs" / f"{bag}_rec.log")
         time.sleep(3)
-        la = sh(f"ros2 launch walker_bringup walker_laser_imu_odom_test.launch.py bag_path:={bp} rate:={a.rate} "
+        la = sh(f"ros2 launch walker_bringup walker_laser_imu_odom_test.launch.py bag_folder:={bp.parent} bag_name:={bag} rate:={a.rate} "
                 f"lsm_params_file:={lsm_file}", dom, W / "stage1" / "logs" / f"{bag}_launch.log")
         try:
             time.sleep(dur / float(a.rate) + 12)

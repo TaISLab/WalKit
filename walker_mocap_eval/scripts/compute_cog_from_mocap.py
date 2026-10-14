@@ -5,13 +5,13 @@ altura solo como contraste, ver cog_estimation.py), el centro de gravedad
 adelante contra lo que publica el andador (`support_centroid` de
 walker_centroid_support, `StabilityStamped` de walker_stability).
 
-El sexo/peso/altura por bag salen de bagsFolder_unified/test_config.txt
-(mismo fichero que usa walker_loads/launch/replay_offline.launch.py),
+El sexo/peso/altura por bag salen de bagsFolder/definitive/test_config.txt
+(mismo fichero que lee walker_replay para publicar /user_desc),
 columnas [test]:[handle_height]:[age]:[height]:[weight]:[user_id]:[gender]:[notes].
 
 Uso:
-    python3 compute_cog_from_mocap.py --bag $DATASETS/labeled_bags/CA_test01
-    python3 compute_cog_from_mocap.py --bags-dir $DATASETS/labeled_bags \\
+    python3 compute_cog_from_mocap.py --bag ~/bagsFolder/definitive/CA_test01
+    python3 compute_cog_from_mocap.py --bags-dir ~/bagsFolder/definitive \\
         --out /tmp/mocap_cog_results.json
 """
 import argparse
@@ -25,11 +25,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from mocap_eval import bag_io, cog_estimation  # noqa: E402
 
-DEFAULT_TEST_CONFIG = str(Path.home() / "bagsFolder_unified" / "test_config.txt")
+DEFAULT_TEST_CONFIG = str(Path.home() / "bagsFolder" / "definitive" / "test_config.txt")
 
 
 def read_test_config_row(test_config_file, bag_name):
-    """Mismo parseo que replay_offline.launch.py::read_test_config_row."""
+    """Fila de test_config.txt como lista de campos (mismo formato que walker_replay.test_config)."""
     with open(test_config_file) as f:
         for line in f:
             fields = [t.strip() for t in line.strip().split(':')]

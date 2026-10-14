@@ -1,35 +1,32 @@
 #!/usr/bin/python3
 
-"""Reproduce the walker_loads pipeline offline against a labeled rosbag
-(soma13kp/datasets/labeled_bags) that is missing /user_desc, /handle_height
-and part of the walker's tf tree: partial_loads -> walker_diff_odom ->
+"""Reproduce the walker_loads pipeline offline against a definitive rosbag
+(~/bagsFolder/definitive): partial_loads -> walker_diff_odom ->
 gait_monitor_speed, end to end, so its published GaitStamped/WalkStats can
 be compared against the mocap-derived reference computed by
 walker_mocap_eval (see WalKit/walker_mocap_eval/readme.md, punto 2 del plan
 de validacion).
 
-Those are reconstructed from bagsFolder_unified/test_config.txt, a ':'
-separated csv with columns
+The replay itself (the bag, /clock, use_sim_time, /user_desc,
+/handle_height and the walker's tf tree) is walker_replay's: this launch
+only adds the nodes under study. What walker_replay builds from
+<bag_folder>/test_config.txt, a ':' separated csv with columns
 [test]:[handle_height]:[age]:[height]:[weight]:[user_id]:[gender]:[notes]:
-  - /user_desc  <- columns 3-8 ("age:height:weight:user_id:gender:notes"),
-    republished latched (transient_local) as a walker_msgs/msg/UserDesc,
-    since partial_loads only reads it to update the tracked weight and
-    doesn't need a live stream. test_config.txt has no Tinetti column, so
-    tinetti_score is always published as 0.
-  - handle_height (column 2) <- passed as a parameter straight into
-    walker_description's handle_tf_publisher.py, instead of round-tripping
-    it through the /handle_height topic.
+  - /user_desc  <- columns 3-8, published latched (transient_local) as a
+    walker_msgs/msg/UserDesc, since partial_loads only reads it to update
+    the tracked weight and doesn't need a live stream. test_config.txt has
+    no Tinetti column, so tinetti_score is always published as 0.
+  - /handle_height (column 2) and the left/right handle frames derived
+    from it (walker_description/config/params.yaml), also latched.
 
 The rest of the pipeline mirrors partial_loads.launch.py +
-step_detector_km.launch.py, with the walker's static tf tree rebuilt via
-walker_description/walker_state_publisher.launch.py and
-handle_tf_publisher.py (neither is recorded in these bags).
+step_detector_km.launch.py.
 
 Leg detection needs a scan cropped to where the legs can appear (km_detect_
 steps does no distance filtering of its own): originally this launched
 km_detect_steps straight on a /scan_filtered assumed to be already in the
-bag, but datasets/labeled_bags only has raw /scan -- there is no onboard
-filter recorded. Fixed the same way walker_step_detector/launch/
+bag, but the bags only have raw /scan -- there is no onboard filter
+recorded. Fixed the same way walker_step_detector/launch/
 test_step_detector.launch.py already does for these same bags: an
 `inverted_box_filter` (walker_laser_filter/box_filter,
 walker_step_detector/config/box_filter_eval.yaml) crops /scan -> /scan_feet
@@ -102,83 +99,80 @@ not chased further here. See the task flagged for walker_step_detector
 was already in progress here: check both for
 overlapping findings before doing more work on it).
 
+Arguments: bag_folder / bag_name (the definitive bag and its test_config.txt),
+rate, start_offset, sim_time (true: the pipeline runs on bag time, which
+gait_monitor_speed needs for its stamps), debug. The launch shuts down when the
+bag ends.
+
 Usage:
-    ros2 launch walker_loads replay_offline.launch.py \\
-        bag_path:=/home/mfcarmona/workspace/walker_ws/src/soma13kp/datasets/labeled_bags/MF_test05
+    ros2 launch walker_loads replay_offline.launch.py bag_name:=MF_test05 rate:=4.0
 """
-from os.path import basename, join
+from os.path import expanduser, join
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import (DeclareLaunchArgument, ExecuteProcess,
-                             IncludeLaunchDescription, OpaqueFunction, Shutdown)
+                             IncludeLaunchDescription)
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from walker_replay.launch_utils import replay_actions
 
-DEFAULT_BAG = "/home/mfcarmona/workspace/walker_ws/src/soma13kp/datasets/labeled_bags/MF_test05"
-DEFAULT_TEST_CONFIG = "/home/mfcarmona/bagsFolder_unified/test_config.txt"
 MOCAP_ODOM_BRIDGE = "/home/mfcarmona/workspace/walker_ws/src/WalKit/walker_mocap_eval/scripts/mocap_odom_bridge.py"
 
-
-def read_test_config_row(test_config_file, bag_name):
-    with open(test_config_file) as f:
-        for line in f:
-            fields = [t.strip() for t in line.strip().split(':')]
-            if fields and fields[0] == bag_name:
-                return fields
-    raise RuntimeError(f"No row for '{bag_name}' in {test_config_file}")
+# What the pipeline consumes of the bag (the rest of the recording is not played).
+TOPICS = ['/left_handle', '/right_handle', '/scan', '/rigid_bodies']
 
 
-def launch_setup(context, *args, **kwargs):
-    bag_path = LaunchConfiguration('bag_path').perform(context)
-    test_config_file = LaunchConfiguration('test_config_file').perform(context)
-    rate = LaunchConfiguration('rate').perform(context)
-    start_offset = LaunchConfiguration('start_offset').perform(context)
-    bag_name = basename(bag_path.rstrip('/'))
-
-    fields = read_test_config_row(test_config_file, bag_name)
-    handle_height = int(fields[1])
-    user_age, user_height, user_weight, user_id, user_gender, user_notes = fields[2:8]
-    print(f"[replay_offline] {bag_name}: handle_height={handle_height} "
-          f"user='{user_id}' age={user_age} height={user_height} weight={user_weight}")
-
-    walker_description_dir = get_package_share_directory('walker_description')
+def generate_launch_description():
     walker_loads_dir = get_package_share_directory('walker_loads')
     box_filter_cfg_eval = join(
         get_package_share_directory('walker_step_detector'), 'config', 'box_filter_eval.yaml')
-    tf_static_qos_override = join(walker_loads_dir, 'config', 'tf_static_qos_override.yaml')
+    sim_time = LaunchConfiguration('sim_time')
 
-    actions = []
+    ld = LaunchDescription([
+        DeclareLaunchArgument(
+            'bag_folder', default_value=expanduser('~/bagsFolder/definitive'),
+            description='Base folder of the definitive bags (and test_config.txt)'),
+        DeclareLaunchArgument(
+            'bag_name', default_value='MF_test05', description='Definitive bag to replay'),
+        DeclareLaunchArgument(
+            'rate', default_value='1.0', description='Rosbag playback rate'),
+        DeclareLaunchArgument(
+            'start_offset', default_value='0.0',
+            description='Seconds into the bag (bag-time) to start playback at -- see /tag note below'),
+        DeclareLaunchArgument(
+            'sim_time', default_value='true',
+            description='use_sim_time for the whole pipeline (bag time). Replaying a bag: true'),
+        DeclareLaunchArgument(
+            'debug', default_value='false', description='Debug logging of the bag player'),
+    ])
 
-    # Static tf tree from the URDF (base_footprint -> laser, wheels, ...),
-    # not recorded in these bags.
-    actions.append(IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            join(walker_description_dir, 'launch', 'walker_state_publisher.launch.py'))))
+    # The replay: /clock, use_sim_time for everything below, /user_desc, /handle_height,
+    # /robot_description and the walker's tf (URDF + handles). First, so the global
+    # use_sim_time reaches the nodes. Replay only what's needed; the player waits
+    # `delay` seconds so the subscribers below are already up when messages start
+    # flowing. start_offset (seconds into the bag, bag-time, unaffected by rate)
+    # defaults to 0 = whole bag; walker_mocap_eval/scripts/
+    # compare_gait_mocap_vs_walker.py passes the first /tag message's offset to
+    # skip the pre-test setup/calibration portion, matching mocap_analysis/
+    # scripts/merge_rosbags.py's own crop-to-/tag behaviour.
+    for action in replay_actions(
+            bag_folder=LaunchConfiguration('bag_folder'),
+            bag_name=LaunchConfiguration('bag_name'),
+            rate=LaunchConfiguration('rate'),
+            start_offset=LaunchConfiguration('start_offset'),
+            topics=TOPICS,
+            sim_time=sim_time,
+            debug=LaunchConfiguration('debug'),
+            shutdown_on_end=True):
+        ld.add_action(action)
 
-    # Handle tf, reconstructed from test_config.txt's handle_height column.
-    actions.append(Node(
-        package='walker_description', executable='handle_tf_publisher.py',
-        name='handle_tf_publisher',
-        parameters=[{'handle_height': handle_height}]))
-
-    # user_desc isn't in the bag: republish it latched, from test_config.txt.
-    user_desc_yaml = (
-        "{age: " + user_age + ", height: " + user_height + ", weight: " + user_weight +
-        ", user_id: '" + user_id + "', gender: '" + user_gender +
-        "', tinetti_score: 0, description: '" + user_notes + "'}")
-    actions.append(ExecuteProcess(
-        cmd=['ros2', 'topic', 'pub', '--qos-history', 'keep_last', '--qos-depth', '1',
-             '--qos-durability', 'transient_local', '--qos-reliability', 'reliable',
-             '/user_desc', 'walker_msgs/msg/UserDesc', user_desc_yaml],
-        output='log'))
-
-    # datasets/labeled_bags only has raw /scan (no onboard filter recorded):
-    # crop it to the leg-detection zone the same way test_step_detector.
-    # launch.py does for these same bags (km_detect_steps does no distance
-    # filtering of its own -- see box_filter_eval.yaml's docstring).
-    actions.append(Node(
+    # The bags only have raw /scan (no onboard filter recorded): crop it to the
+    # leg-detection zone the same way test_step_detector.launch.py does for these
+    # same bags (km_detect_steps does no distance filtering of its own -- see
+    # box_filter_eval.yaml's docstring).
+    ld.add_action(Node(
         package='walker_laser_filter', executable='box_filter',
         name='step_laser_filter',
         parameters=[box_filter_cfg_eval]))
@@ -194,7 +188,7 @@ def launch_setup(context, *args, **kwargs):
     # RF's confidence filter (defaults are -1.0/-1 = "no filter") -- this is
     # also expected to fix the CA_test09-style outliers from km's unfiltered
     # k-means (see walker_mocap_eval/readme.md, punto 2).
-    actions.append(Node(
+    ld.add_action(Node(
         package='walker_step_detector', executable='detect_steps',
         name='detect_steps_rf',
         parameters=[
@@ -216,7 +210,7 @@ def launch_setup(context, *args, **kwargs):
         ]))
 
     # The node under study.
-    actions.append(IncludeLaunchDescription(
+    ld.add_action(IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             join(walker_loads_dir, 'launch', 'partial_loads.launch.py'))))
 
@@ -224,40 +218,35 @@ def launch_setup(context, *args, **kwargs):
     # comparing against walker_mocap_eval's mocap-based CoM estimate
     # (mocap_eval/cog_estimation.py, De Leva segmental model) -- default
     # topic names already match partial_loads' outputs, no remapping.
-    actions.append(IncludeLaunchDescription(
+    ld.add_action(IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             join(get_package_share_directory('walker_centroid_support'),
                  'launch', 'centroid_support.launch.py'))))
 
     # /odom for gait_monitor_speed, from mocap ground truth -- see the
     # module docstring above and mocap_odom_bridge.py for why not
-    # walker_diff_odom on these bags.
-    actions.append(ExecuteProcess(
+    # walker_diff_odom on these bags. Not a launch_ros Node: the global
+    # use_sim_time does not reach it, so it is passed explicitly.
+    ld.add_action(ExecuteProcess(
         cmd=['python3', MOCAP_ODOM_BRIDGE, '--ros-args',
              '-p', 'rigid_bodies_topic_name:=/rigid_bodies',
-             '-p', 'odom_topic_name:=/odom'],
+             '-p', 'odom_topic_name:=/odom',
+             '-p', ['use_sim_time:=', sim_time]],
         output='screen'))
 
     # The node this whole replay is for: consumes partial_loads' /left_loads,
     # /right_loads and walker_diff_odom's /odom above.
     #
-    # use_sim_time: True -- gait_monitor_speed.py stamps /left_gait_stats,
-    # /right_gait_stats with self.get_clock().now() (see that file), which
-    # without this is the REAL wall clock (today), not bag time -- found
+    # use_sim_time (from walker_replay's global parameter): gait_monitor_speed.py
+    # stamps /left_gait_stats, /right_gait_stats with self.get_clock().now() (see
+    # that file), which on the wall clock is today, not bag time -- found
     # exporting CSVs for walker_mocap_eval's report (their header.stamp was
-    # unusable to align against mocap's real timestamps). With
-    # use_sim_time:=true here AND `ros2 bag play --clock` below (publishing
-    # /clock as a ROS time source from the bag's own advancing timeline),
-    # self.get_clock().now() returns bag time instead -- fixing this at the
-    # source instead of approximating it downstream. Only this node gets
-    # use_sim_time here (scoped fix); the rest of the pipeline still runs on
-    # wall time, which is fine since nothing else in it calls now() for a
-    # published stamp (everything else forwards an upstream header).
-    actions.append(Node(
+    # unusable to align against mocap's real timestamps). On sim time,
+    # self.get_clock().now() returns bag time instead.
+    ld.add_action(Node(
         package='walker_loads', executable='gait_monitor_speed.py',
         name='gait_stats',
         parameters=[
-            {'use_sim_time': True},
             {'period': 0.05},
             {'left_loads_topic_name': '/left_loads'},
             {'right_loads_topic_name': '/right_loads'},
@@ -268,42 +257,4 @@ def launch_setup(context, *args, **kwargs):
             {'global_frame_id': '/odom'},
         ]))
 
-    # Replay only what's needed, added last so the subscribers above are
-    # already up when messages start flowing. start_offset (seconds into
-    # the bag, bag-time, unaffected by --rate) defaults to 0 = whole bag;
-    # walker_mocap_eval/scripts/compare_gait_mocap_vs_walker.py passes the
-    # first /tag message's offset to skip the pre-test setup/calibration
-    # portion, matching mocap_analysis/scripts/merge_rosbags.py's own
-    # crop-to-/tag behaviour.
-    # --clock 200: publish /clock (200Hz, comfortably above sensor rates) as
-    # a ROS time source from the bag's own advancing timeline -- what
-    # gait_monitor_speed's use_sim_time above actually consumes. Without a
-    # node subscribing with use_sim_time:=true this would be a no-op; see
-    # the comment on that node.
-    actions.append(ExecuteProcess(
-        cmd=['ros2', 'bag', 'play', '-s', 'sqlite3', '--disable-keyboard-controls',
-             '--rate', rate, '--start-offset', start_offset, '--clock', '200',
-             '--qos-profile-overrides-path', tf_static_qos_override,
-             bag_path, '--topics', '/left_handle', '/right_handle', '/scan',
-             '/rigid_bodies', '/tf', '/tf_static'],
-        output='screen',
-        on_exit=Shutdown()))
-
-    return actions
-
-
-def generate_launch_description():
-    return LaunchDescription([
-        DeclareLaunchArgument(
-            'bag_path', default_value=DEFAULT_BAG,
-            description='Folder of a labeled rosbag2 (soma13kp/datasets/labeled_bags)'),
-        DeclareLaunchArgument(
-            'test_config_file', default_value=DEFAULT_TEST_CONFIG,
-            description='CSV with handle_height/user_desc per bag (bagsFolder_unified)'),
-        DeclareLaunchArgument(
-            'rate', default_value='1.0', description='Rosbag playback rate'),
-        DeclareLaunchArgument(
-            'start_offset', default_value='0.0',
-            description='Seconds into the bag (bag-time) to start playback at -- see /tag note above'),
-        OpaqueFunction(function=launch_setup),
-    ])
+    return ld

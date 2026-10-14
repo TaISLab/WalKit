@@ -171,23 +171,19 @@ ever, trigger.
 
 ## Reproducing / testing this offline
 
-`launch/replay_offline.launch.py` replays a labeled rosbag (from
-`soma13kp/datasets/labeled_bags`, e.g. `MF_test05`) that is missing
-`/user_desc`, `/handle_height` and part of the walker's tf tree, and
-reconstructs them from `bagsFolder_unified/test_config.txt`:
+`launch/replay_offline.launch.py` replays a definitive rosbag (from
+`~/bagsFolder/definitive`, e.g. `MF_test05`) through `walker_replay`, which
+also provides what the bags do not carry (`/user_desc`, `/handle_height`,
+`/robot_description` and the walker's tf, from `test_config.txt` and the URDF):
 
 ```bash
-ros2 launch walker_loads replay_offline.launch.py \
-    bag_path:=/path/to/soma13kp/datasets/labeled_bags/MF_test05 \
-    rate:=3.0
+ros2 launch walker_loads replay_offline.launch.py bag_name:=MF_test05 rate:=3.0
 ```
 
-It brings up the walker's static tf tree (`walker_description`), the handle
-tf (from the bag's configured `handle_height`), `walker_step_detector`
-(`km_detect_steps`) and `partial_loads` itself, then plays back only the
-topics needed (`/left_handle`, `/right_handle`, `/scan_filtered`, `/tf`,
-`/tf_static`). See the file's own docstring for the exact field mapping from
-`test_config.txt`.
+On top of that replay it brings up `walker_step_detector` (`detect_steps`),
+`partial_loads` itself, `walker_centroid_support`, `gait_monitor_speed`, and
+plays back only the topics needed (`/left_handle`, `/right_handle`, `/scan`,
+`/rigid_bodies`). See the file's own docstring for details.
 
 ### Debugging the Kalman tracker
 

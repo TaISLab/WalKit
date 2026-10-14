@@ -6,7 +6,7 @@ nav_msgs/Odometry en /odom a partir del rigid body del andador en el mocap
 
 Por que hace falta: walker_loads/launch/replay_offline.launch.py reproduce
 el pipeline completo (deteccion de pasos + partial_loads + gait_monitor_
-speed) contra los bags de datasets/labeled_bags para poder comparar sus
+speed) contra los bags definitivos (via walker_replay) para poder comparar sus
 Step/Stride time/length, NoS, d, CAD y WV contra el ground truth de mocap
 (walker_mocap_eval, punto 2 del plan de validacion). gait_monitor_speed
 necesita /odom para "d" (antes hardcodeado, ver el propio nodo -- ya
