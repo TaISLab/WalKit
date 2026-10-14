@@ -37,16 +37,17 @@
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
   <exec_depend>ament_index_python</exec_depend>
-  <!-- test_step_detector.launch.py: unified_bag_replay.launch.py y
-       laser_filter.launch.py (walker_bringup); unified_bag_replay lanza el
-       TF del andador (walker_description) -->
+  <!-- test_step_detector*.launch.py: walker_replay (reproduce el bag y
+       publica el TF del andador, de walker_description) y, para
+       test_step_detector.launch.py, laser_filter.launch.py (walker_bringup) -->
+  <exec_depend>walker_replay</exec_depend>
   <exec_depend>walker_bringup</exec_depend>
   <exec_depend>walker_description</exec_depend>
   <!-- test_step_detector_variants.launch.py / step_detector_s.launch.py -->
   <exec_depend>walker_laser_filter</exec_depend>
   <exec_depend>laser_segmentation</exec_depend>
   <exec_depend>rviz2</exec_depend>
-  <!-- ros2 bag play / record en los launchers de test y en scripts/run_multibag_eval.py -->
+  <!-- ros2 bag record en scripts/run_multibag_eval.py -->
   <exec_depend>ros2bag</exec_depend>
   <exec_depend>rosbag2_storage_default_plugins</exec_depend>
 

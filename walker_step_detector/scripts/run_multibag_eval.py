@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Corre test_step_detector.launch.py contra TODOS los bags de una carpeta
-(datasets/labeled_bags), grabando la salida de las tres variantes y
+"""Corre test_step_detector_variants.launch.py contra TODOS los bags
+definitivos de una carpeta (~/bagsFolder/definitive; el reproductor es
+walker_replay), grabando la salida de las variantes y
 evaluandolas contra el ground truth de mocap -- automatiza el ciclo
 lanzar -> grabar -> parar -> evaluar que se hacia a mano bag a bag.
 
@@ -14,12 +15,13 @@ medianas no es la mediana del conjunto). En su lugar:
     contaria un "swap" falso en cada frontera entre bags, donde el ultimo
     frame de un bag y el primero del siguiente no tienen relacion real).
 
-Requiere: walker_step_detector, walker_description y laser_segmentation ya
-compilados (colcon build) y disponibles via install/setup.bash.
+Requiere: walker_step_detector, walker_replay, walker_description y
+laser_segmentation ya compilados (colcon build) y disponibles via
+install/setup.bash.
 
 Uso:
-    python3 run_multibag_eval.py --bags-dir $DATASETS/labeled_bags \
-        --out-dir /tmp/multibag_eval --rate 4.0 --out /tmp/multibag_result.json
+    python3 run_multibag_eval.py --bags-dir ~/bagsFolder/definitive \
+        --out-dir ~/claudtemp/multibag_eval --rate 4.0 --out multibag_result.json
 """
 import argparse
 import json
@@ -33,7 +35,7 @@ import time
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from mocap_bag_io import bag_duration_seconds, find_labeled_bags, load_calib, repair_bag_metadata
+from mocap_bag_io import bag_duration_seconds, find_labeled_bags, load_calib
 from eval_against_mocap import evaluate_bag, print_table, summarize
 
 ROS_SETUP = "/opt/ros/jazzy/setup.bash"
@@ -52,9 +54,9 @@ GT_TOPICS = ["/labeled_markers", "/rigid_bodies"]
 
 # Por defecto, el launcher de las cuatro variantes (el de todas las
 # evaluaciones historicas de eval_results/). Para evaluar step_detector.
-# launch.py tal como corre en el robot, via unified_bag_replay:
+# launch.py tal como corre en el robot, via walker_replay:
 #   --launch-file test_step_detector.launch.py \
-#   --launch-args "topics:='/scan /tf /tf_static /labeled_markers /rigid_bodies'" \
+#   --launch-args "topics:='/scan /labeled_markers /rigid_bodies'" \
 #   --detected-topics "/detected_step_left /detected_step_right" --replay-delay 8
 # (el ground truth de mocap hay que reproducirlo tambien para poder grabarlo).
 LAUNCH_FILE = "test_step_detector_variants.launch.py"
@@ -108,16 +110,12 @@ def run_one_bag(bag_dir, out_dir, rate, startup_wait):
     if eval_bag.exists():
         shutil.rmtree(eval_bag)
 
-    # `ros2 bag play` (a diferencia de mocap_bag_io.load_bag) no pasa por
-    # nuestra reparacion de metadata.yaml -- y la tarea de etiquetado sigue
-    # corriendo en paralelo regenerando bags, asi que puede volver a
-    # corromperse en cualquier momento (visto en vivo en esta sesion).
-    repair_bag_metadata(bag_dir)
-
+    # El bag lo reproduce walker_replay (bag definitivo: su metadata.yaml ya
+    # sale bien formada de merge_definitive.py, no hace falta repararla).
     launch = sh(
         f"ros2 launch walker_step_detector {LAUNCH_FILE} "
-        f"bag_path:={bag_dir} rate:={rate} {LAUNCH_ARGS}"
-        + (f" replay_delay:={REPLAY_DELAY}" if REPLAY_DELAY > 0 else "")
+        f"bag_folder:={bag_dir.parent} bag_name:={bag_dir.name} rate:={rate} {LAUNCH_ARGS}"
+        + (f" delay:={REPLAY_DELAY}" if REPLAY_DELAY > 0 else "")
     )
     record = None
     try:
@@ -131,7 +129,7 @@ def run_one_bag(bag_dir, out_dir, rate, startup_wait):
 
         duration = bag_duration_seconds(bag_dir)
         # REPLAY_DELAY: el launcher espera ese tiempo antes de reproducir
-        # (test_step_detector.launch.py), asi el grabador ya esta listo.
+        # (delay de walker_replay), asi el grabador ya esta listo.
         # Reduce la parte perdida del bag pero no la elimina: medido en
         # CA_test01 a rate 4, de 14.7 s a 7.4 s de 89 s, porque el ground
         # truth solo existe cuando arranca el reproductor y el grabador
@@ -208,8 +206,8 @@ def main():
     ap.add_argument("--detected-topics", default=None,
                     help="topics de salida a grabar, separados por espacios (default: los de las cuatro variantes)")
     ap.add_argument("--replay-delay", type=float, default=REPLAY_DELAY,
-                    help="segundos que el launcher espera antes de reproducir el bag (replay_delay de "
-                         "test_step_detector.launch.py); 0 = no se pasa")
+                    help="segundos que el launcher espera antes de reproducir el bag (delay de "
+                         "walker_replay); 0 = no se pasa, vale el del launcher")
     args = ap.parse_args()
 
     ROS_DOMAIN_ID_EVAL = str(args.domain_id)

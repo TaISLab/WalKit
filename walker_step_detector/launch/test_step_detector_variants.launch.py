@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 """(Antes test_step_detector.launch.py; renombrado al convertirse ese nombre
-en el launcher de test de step_detector.launch.py via unified_bag_replay.
+en el launcher de test de step_detector.launch.py.
 Este sigue siendo el que compara las variantes entre si: scripts/
 run_multibag_eval.py lo usa por defecto.)
 
@@ -16,9 +16,9 @@ anadirse a la LaunchDescription -- solo se lanzaba km_detect_steps, nunca
 las otras dos variantes, pese a que el nombre del fichero sugiere que
 prueba "el" detector de pasos en general.
 
-Bags: por defecto usa los de datasets/labeled_bags (soma13kp) -- traen
-/scan crudo (sin pasar por walker_laser_filter) + ground truth de mocap
-(/labeled_markers, /rigid_bodies). Aqui mismo se recorta ese /scan crudo a
+Bags: reproduce los bags definitivos con walker_replay -- traen /scan crudo
+(sin pasar por walker_laser_filter) + ground truth de mocap (/labeled_markers,
+/rigid_bodies). Aqui mismo se recorta ese /scan crudo a
 /scan_feet con box_filter (walker_laser_filter, config/box_filter_eval.yaml
 -- misma caja que inverted_box_filter.yaml, solo cambia el topic de
 entrada) antes de pasarselo a las tres variantes: sin este recorte,
@@ -68,7 +68,9 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
-from os.path import join
+from walker_replay.launch_utils import replay_actions
+
+from os.path import expanduser, join
 
 step_detector_path = get_package_share_directory('walker_step_detector')
 forest_file_path = join(step_detector_path, "config", "trained_step_detector_res_0.33.yaml")
@@ -76,33 +78,44 @@ segmentation_cfg_eval = join(step_detector_path, "config", "laser_segmentation_e
 box_filter_cfg_eval = join(step_detector_path, "config", "box_filter_eval.yaml")
 rviz2_config_path = join(step_detector_path, "config", "test_step_detector.rviz")
 
-DEFAULT_BAG = "/home/mfcarmona/workspace/walker_ws/src/soma13kp/datasets/labeled_bags/CA_test01"
 
 
 def generate_launch_description():
 
     ld = LaunchDescription()
 
-    bag_path_arg = DeclareLaunchArgument(
-        "bag_path", default_value=DEFAULT_BAG,
-        description="carpeta de un rosbag2 de datasets/labeled_bags (soma13kp)")
-    rate_arg = DeclareLaunchArgument(
-        "rate", default_value="0.3", description="velocidad de reproduccion del bag")
-    use_rviz_arg = DeclareLaunchArgument("use_rviz", default_value="false")
-    ld.add_action(bag_path_arg)
-    ld.add_action(rate_arg)
-    ld.add_action(use_rviz_arg)
+    ld.add_action(DeclareLaunchArgument(
+        "bag_folder", default_value=expanduser("~/bagsFolder/definitive"),
+        description="carpeta base de los bags definitivos (y de test_config.txt)"))
+    ld.add_action(DeclareLaunchArgument(
+        "bag_name", default_value="CA_test01", description="bag definitivo a reproducir"))
+    ld.add_action(DeclareLaunchArgument(
+        "rate", default_value="0.3", description="velocidad de reproduccion del bag"))
+    ld.add_action(DeclareLaunchArgument(
+        "delay", default_value="3.0",
+        description="segundos de espera antes de reproducir el bag, para que los detectores "
+                    "(el random forest tarda en cargar) ya esten suscritos"))
+    ld.add_action(DeclareLaunchArgument(
+        "sim_time", default_value="true",
+        description="use_sim_time para todo lo del test (en un banco de pruebas de bags, true)"))
+    ld.add_action(DeclareLaunchArgument(
+        "debug", default_value="false", description="log en debug del reproductor del bag"))
+    ld.add_action(DeclareLaunchArgument("use_rviz", default_value="false"))
 
-    bag_path = LaunchConfiguration("bag_path")
-    rate = LaunchConfiguration("rate")
-
-    # TF real del andador (base_footprint -> laser, etc.), desde el xacro de
+    # El bag (y use_sim_time para lo que viene despues) primero: /scan para los
+    # detectores (via box_filter abajo), /labeled_markers + /rigid_bodies para
+    # poder grabarlos junto a las salidas y evaluar despues. El TF del andador
+    # (base_footprint -> laser, etc.) lo publica walker_replay desde el xacro de
     # walker_description -- no hardcodear el offset del laser aqui.
-    walker_tf = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            join(get_package_share_directory('walker_description'),
-                 'launch', 'walker_state_publisher.launch.py')))
-    ld.add_action(walker_tf)
+    for action in replay_actions(
+            bag_folder=LaunchConfiguration("bag_folder"),
+            bag_name=LaunchConfiguration("bag_name"),
+            rate=LaunchConfiguration("rate"),
+            topics=["/scan", "/labeled_markers", "/rigid_bodies"],
+            delay=LaunchConfiguration("delay"),
+            sim_time=LaunchConfiguration("sim_time"),
+            debug=LaunchConfiguration("debug")):
+        ld.add_action(action)
 
     # Recorta /scan (crudo) a /scan_feet -- la zona donde pueden aparecer
     # las piernas -- antes de pasarselo a cualquier detector (ver nota
@@ -120,16 +133,6 @@ def generate_launch_description():
                  'launch', 'segmentation.launch.py')),
         launch_arguments={'params_file': segmentation_cfg_eval}.items())
     ld.add_action(segmentation_launch)
-
-    # Reproduce el bag: /scan para los detectores (via box_filter arriba),
-    # /tf* para el arbol propio del andador, /labeled_markers +
-    # /rigid_bodies para poder grabarlos junto a las salidas y evaluar
-    # despues.
-    rosbag_cmd = ExecuteProcess(
-        cmd=['ros2', 'bag', 'play', bag_path, '-r', rate, '--topics',
-             '/scan', '/tf', '/tf_static', '/labeled_markers', '/rigid_bodies'],
-        output='screen')
-    ld.add_action(rosbag_cmd)
 
     # --- Las tres variantes, cada una a un topic de salida distinto -------
 
@@ -193,7 +196,8 @@ def generate_launch_description():
     # Visualizacion opcional (apagada por defecto: para grabar/evaluar no
     # hace falta rviz corriendo).
     rviz_cmd = ExecuteProcess(
-        cmd=['ros2', 'run', 'rviz2', 'rviz2', '-d', rviz2_config_path],
+        cmd=['ros2', 'run', 'rviz2', 'rviz2', '-d', rviz2_config_path,
+             '--ros-args', '-p', ['use_sim_time:=', LaunchConfiguration('sim_time')]],
         output='screen',
         condition=IfCondition(LaunchConfiguration('use_rviz')))
     ld.add_action(rviz_cmd)
