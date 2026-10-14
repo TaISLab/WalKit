@@ -33,8 +33,8 @@ ventana /tag, UNA sola pasada de replay graba todos los topics de golpe):
   {bag}_walker_hand_loads.csv         t_s,left_kg,right_kg                  (/left_hand_loads, /right_hand_loads)
 
 Uso:
-    python3 export_bag_timeseries.py --bag $DATASETS/labeled_bags/CA_test01 --out-dir /tmp/timeseries
-    python3 export_bag_timeseries.py --bags-dir $DATASETS/labeled_bags --out-dir /tmp/timeseries
+    python3 export_bag_timeseries.py --bag ~/bagsFolder/definitive/CA_test01 --out-dir /tmp/timeseries
+    python3 export_bag_timeseries.py --bags-dir ~/bagsFolder/definitive --out-dir /tmp/timeseries
 """
 import argparse
 import math
@@ -57,7 +57,7 @@ from compare_gait_mocap_vs_walker import tag_window_offset_and_duration  # noqa:
 ROS_SETUP = "/opt/ros/jazzy/setup.bash"
 WS_SETUP = str(Path.home() / "workspace" / "walker_ws" / "install" / "setup.bash")
 ROS_DOMAIN_ID_EVAL = "94"
-DEFAULT_TEST_CONFIG = str(Path.home() / "bagsFolder_unified" / "test_config.txt")
+DEFAULT_TEST_CONFIG = str(Path.home() / "bagsFolder" / "definitive" / "test_config.txt")
 DEFAULT_CALIB = (
     Path(__file__).resolve().parent.parent.parent
     / "walker_step_detector" / "config" / "mocap_to_base_footprint.yaml"
@@ -255,7 +255,7 @@ def run_replay_and_export_walker_side(bag_dir, out_dir, test_config_file, rate, 
 
     launch = sh(
         "ros2 launch walker_loads replay_offline.launch.py "
-        f"bag_path:={bag_dir} rate:={rate} test_config_file:={test_config_file} "
+        f"{bag_io.replay_launch_args(bag_dir, test_config_file)} rate:={rate} "
         f"start_offset:={start_offset_s}"
     )
     record = None

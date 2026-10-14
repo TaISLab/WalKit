@@ -9,7 +9,7 @@ source /home/mfcarmona/workspace/walker_ws/install/setup.bash
 cd WalKit/walker_mocap_eval
 ```
 
-`$DATASETS` en los ejemplos = `/home/mfcarmona/workspace/walker_ws/src/soma13kp/datasets/labeled_bags`
+`$DATASETS` en los ejemplos = `~/bagsFolder/definitive` (bags definitivos)
 (47 bags etiquetados, 4 sujetos: `CA`, `LA`, `MF`, `MT`).
 
 ## 0. Autotests (opcional, sin bags)
@@ -42,7 +42,7 @@ python3 scripts/compute_posture_from_mocap.py \
 python3 scripts/compute_cog_from_mocap.py \
     --bags-dir $DATASETS --out /tmp/report_cog_mocap.json
 # Punto 3: centro de gravedad (modelo De Leva 1996), requiere test_config.txt
-# (peso/altura/sexo por bag; por defecto ~/bagsFolder_unified/test_config.txt)
+# (peso/altura/sexo por bag; por defecto ~/bagsFolder/definitive/test_config.txt)
 
 python3 scripts/compute_extra_metrics_from_mocap.py \
     --bags-dir $DATASETS --out /tmp/report_extra_mocap.json

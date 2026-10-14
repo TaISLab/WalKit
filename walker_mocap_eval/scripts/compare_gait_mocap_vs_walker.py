@@ -30,14 +30,14 @@ dura esa ventana, en vez del bag completo -- que suele incluir tiempo de
 calibracion/colocacion antes y despues, diluyendo Tr/SpT/SdT/cadencia con
 un tramo que no es marcha real.
 
-Requiere: workspace compilado (colcon build), bagsFolder_unified/
-test_config.txt (columna user_desc/handle_height por bag, ver
-replay_offline.launch.py) y walker_step_detector/config/
+Requiere: workspace compilado (colcon build), bagsFolder/definitive/
+test_config.txt (user_desc/handle_height por bag; lo lee walker_replay, que
+reproduce el bag para replay_offline.launch.py) y walker_step_detector/config/
 mocap_to_base_footprint.yaml (calibracion mocap->laser, ya existente).
 
 Uso:
     python3 compare_gait_mocap_vs_walker.py \\
-        --bags-dir /home/mfcarmona/workspace/walker_ws/src/soma13kp/datasets/labeled_bags \\
+        --bags-dir /home/mfcarmona/bagsFolder/definitive \\
         --out-dir /tmp/gait_compare_runs --out /tmp/gait_compare_result.json
 
     # probar con pocos bags primero
@@ -70,7 +70,7 @@ WS_SETUP = str(Path.home() / "workspace" / "walker_ws" / "install" / "setup.bash
 # de su propio ROS_DOMAIN_ID_EVAL) -- mismo riesgo aqui si esta corriendo a
 # la vez que otra sesion/instancia de este mismo pipeline.
 ROS_DOMAIN_ID_EVAL = "92"
-DEFAULT_TEST_CONFIG = str(Path.home() / "bagsFolder_unified" / "test_config.txt")
+DEFAULT_TEST_CONFIG = str(Path.home() / "bagsFolder" / "definitive" / "test_config.txt")
 DEFAULT_CALIB = (
     Path(__file__).resolve().parent.parent.parent
     / "walker_step_detector" / "config" / "mocap_to_base_footprint.yaml"
@@ -159,7 +159,7 @@ def run_one_bag(bag_dir, test_config_file, out_dir, rate, startup_wait, use_tags
 
     launch = sh(
         "ros2 launch walker_loads replay_offline.launch.py "
-        f"bag_path:={bag_dir} rate:={rate} test_config_file:={test_config_file} "
+        f"{bag_io.replay_launch_args(bag_dir, test_config_file)} rate:={rate} "
         f"start_offset:={start_offset_s}"
     )
     record = None

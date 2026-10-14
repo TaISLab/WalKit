@@ -23,7 +23,7 @@ tiene sentido pese a que el andador se mueve.
 
 Uso:
     python3 compare_cog_mocap_vs_walker.py \\
-        --bags-dir /home/mfcarmona/workspace/walker_ws/src/soma13kp/datasets/labeled_bags \\
+        --bags-dir /home/mfcarmona/bagsFolder/definitive \\
         --out-dir /tmp/cog_compare_runs --out /tmp/cog_compare_result.json
 """
 import argparse
@@ -52,7 +52,7 @@ WS_SETUP = str(Path.home() / "workspace" / "walker_ws" / "install" / "setup.bash
 # un dominio DDS propio evita que otro proceso/sesion ajena contamine las
 # metricas sin error visible.
 ROS_DOMAIN_ID_EVAL = "93"
-DEFAULT_TEST_CONFIG = str(Path.home() / "bagsFolder_unified" / "test_config.txt")
+DEFAULT_TEST_CONFIG = str(Path.home() / "bagsFolder" / "definitive" / "test_config.txt")
 DEFAULT_CALIB = (
     Path(__file__).resolve().parent.parent.parent
     / "walker_step_detector" / "config" / "mocap_to_base_footprint.yaml"
@@ -147,7 +147,7 @@ def run_one_bag(bag_dir, test_config_file, out_dir, rate, startup_wait, use_tags
 
     launch = sh(
         "ros2 launch walker_loads replay_offline.launch.py "
-        f"bag_path:={bag_dir} rate:={rate} test_config_file:={test_config_file} "
+        f"{bag_io.replay_launch_args(bag_dir, test_config_file)} rate:={rate} "
         f"start_offset:={start_offset_s}"
     )
     record = None

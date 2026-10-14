@@ -1,4 +1,4 @@
-# Calidad de los bags de bagsFolder_unified para evaluar odometria contra el mocap.
+# Calidad de los bags definitivos (bagsFolder/definitive) para evaluar odometria contra el mocap.
 # Los generan/verifican diagnose_bags.py (taxonomia) y gyro_check.py (signo/sesgo del gyro).
 # Todos los scripts de odom_tuning leen ESTE fichero: un bag apartado aqui queda fuera de la puntuacion
 # ("limpios" = todos los demas), aunque sigue disponible con --bags scan_anom | mocap_suspect | all.

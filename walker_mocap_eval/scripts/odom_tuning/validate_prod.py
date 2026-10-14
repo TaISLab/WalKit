@@ -45,7 +45,7 @@ def run(i, bag):
     dur = yaml.safe_load(open(bp / "metadata.yaml"))["rosbag2_bagfile_information"]["duration"]["nanoseconds"] / 1e9
     rec = sh(f"ros2 bag record --use-sim-time -o {out} /odom /scan_odom", dom, out.parent / f"{bag}_rec.log")
     time.sleep(3)
-    la = sh(f"ros2 launch walker_bringup walker_laser_imu_odom_test.launch.py bag_path:={bp} rate:={RATE}",
+    la = sh(f"ros2 launch walker_bringup walker_laser_imu_odom_test.launch.py bag_folder:={bp.parent} bag_name:={bag} rate:={RATE}",
             dom, out.parent / f"{bag}_launch.log")
     try:
         time.sleep(dur / RATE + 12)

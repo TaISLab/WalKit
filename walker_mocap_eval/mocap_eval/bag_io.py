@@ -49,6 +49,23 @@ ALL_KEYPOINTS = (
 )
 
 
+def replay_launch_args(bag_dir, test_config_file=None):
+    """`bag_folder:=... bag_name:=...` de walker_replay para un bag definitivo.
+
+    walker_replay lee test_config.txt de la carpeta del bag: si se pide otro
+    fichero se avisa en vez de reproducir con datos de usuario que no son los
+    que usa el resto del script.
+    """
+    bag_dir = Path(bag_dir).resolve()
+    if test_config_file is not None:
+        expected = bag_dir.parent / "test_config.txt"
+        if Path(test_config_file).expanduser().resolve() != expected:
+            raise SystemExit(
+                f"walker_replay lee {expected}; --test-config-file {test_config_file} no se puede usar "
+                f"para reproducir. Ponlo en la carpeta de los bags")
+    return f"bag_folder:={bag_dir.parent} bag_name:={bag_dir.name}"
+
+
 def find_labeled_bags(root):
     root = Path(root)
     return sorted(p.parent for p in root.glob("*/metadata.yaml"))

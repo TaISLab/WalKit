@@ -4,7 +4,7 @@ y metricas. Usa las mismas funciones que ../eval_odom_against_mocap.py.
 Variables de entorno (todas opcionales):
   ODOM_TUNE_DIR  directorio de trabajo con grabaciones y caches (por defecto ~/odom_tuning; NO /tmp: las
                  grabaciones tardan ~25 min en rehacerse y /tmp se vacia al reiniciar)
-  BAGS_DIR       carpeta con los rosbags con mocap (por defecto ~/bagsFolder_unified)
+  BAGS_DIR       carpeta con los rosbags definitivos (por defecto ~/bagsFolder/definitive)
   MOCAP_CALIB    calibracion rigid_body -> base_footprint (por defecto la de eval_odom_against_mocap.py)
   WS_SETUP       install/setup.bash del workspace (por defecto el del arbol de fuentes de este fichero)
   ROS_SETUP      setup.bash de ROS 2 (por defecto /opt/ros/jazzy/setup.bash)
@@ -28,7 +28,7 @@ import eval_odom_against_mocap as ev                       # noqa: E402
 from mocap_eval.bag_io import load_calib                   # noqa: E402
 
 WORK = Path(os.environ.get("ODOM_TUNE_DIR", Path.home() / "odom_tuning"))
-BAGS_DIR = Path(os.environ.get("BAGS_DIR", Path.home() / "bagsFolder_unified"))
+BAGS_DIR = Path(os.environ.get("BAGS_DIR", Path.home() / "bagsFolder" / "definitive"))
 ROS_SETUP = os.environ.get("ROS_SETUP", "/opt/ros/jazzy/setup.bash")
 WS_SETUP = os.environ.get("WS_SETUP", str(HERE.parents[4] / "install" / "setup.bash"))
 CALIB = load_calib(os.environ.get("MOCAP_CALIB", str(ev.DEFAULT_CALIB)))
