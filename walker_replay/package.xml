@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>walker_replay</name>
+  <version>0.0.1</version>
+  <description>
+    Single entry point for replaying the definitive Walkit rosbags: plays the
+    bag with a /clock, publishes the context the bags do not carry
+    (/user_desc, /handle_height and the walker's static tf, from
+    test_config.txt and the URDF) and propagates use_sim_time, so that
+    whatever is replayed receives exactly the recorded data, always the same way.
+  </description>
+
+  <maintainer email="manolofc@gmail.com">Manuel Fernandez Carmona</maintainer>
+  <author email="manolofc@gmail.com">Manuel Fernandez Carmona.</author>
+
+  <license>Creative Commons</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
+
+  <depend>rclpy</depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>tf2_ros_py</depend>
+  <depend>walker_msgs</depend>
+  <depend>walker_description</depend>
+  <exec_depend>ros2bag</exec_depend>
+  <exec_depend>rosbag2_storage_default_plugins</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
