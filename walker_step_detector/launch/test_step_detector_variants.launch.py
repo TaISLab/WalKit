@@ -40,7 +40,7 @@ junto con /labeled_markers y /rigid_bodies (p.ej. `ros2 bag record -o
 eval_out /detected_step_rf_left /detected_step_rf_right ... /labeled_markers
 /rigid_bodies`, o usa scripts/run_multibag_eval.py que ya lo hace) mientras
 este launcher corre, y pasa ese bag de salida a scripts/eval_against_mocap.py
-junto con config/mocap_to_base_footprint.yaml.
+junto con mocap_odometry/config/mocap_to_base_footprint.yaml.
 
 kalman_model_a0/f0: se probo a subirlos de 0.001 (practicamente cero) a
 valores reales (a0=0.15m, f0=0.6Hz, medianas de 47 bags de mocap, ver

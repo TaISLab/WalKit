@@ -25,7 +25,7 @@ sobre el sesgo esperado por diferencia de altura tobillo/plano-laser.
 Uso:
     python3 calibrate_mocap_to_laser.py \
         --bags-dir $DATASETS/labeled_bags \
-        --out config/mocap_to_base_footprint.yaml
+        --out default      # escribe en mocap_odometry/config/mocap_to_base_footprint.yaml
 """
 import argparse
 import math
@@ -148,7 +148,7 @@ def fit_calib(frames, gate_schedule=(1.0, 0.6, 0.4, 0.3), n_iters_per_gate=2):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--bags-dir", required=True)
-    ap.add_argument("--out", default=None, help="YAML de salida con la calibracion")
+    ap.add_argument("--out", default=None, help="YAML de salida con la calibracion; 'default' = mocap_odometry/config/mocap_to_base_footprint.yaml")
     ap.add_argument("--max-range", type=float, default=2.5, help="recorta el scan a este radio (m) antes del ICP")
     args = ap.parse_args()
 
@@ -172,6 +172,9 @@ def main():
     print(f"RMSE final: {rmse:.4f} m sobre {n_matched} pares (gate={history[-1][0] if history else '?'} m)")
     print(f"RMSE inicial (calib=0): {history[0][2]:.4f} m sobre {history[0][1]} pares" if history else "")
 
+    if args.out == "default":
+        from mocap_odometry import core
+        args.out = str(core.writable_config_file(core.default_calibration_file()))
     if args.out:
         out = {
             "note": "rigid_body[0] (andador, mocap map frame) -> base_footprint. "

@@ -309,7 +309,7 @@ def project_map_to_laser(px, py, rb_x, rb_y, rb_yaw, calib):
     /labeled_markers) al frame "laser", combinando:
       - rigid_body[0].pose (rb_x, rb_y, rb_yaw): andador en frame map
       - calib = (dx, dy, dyaw): rigid_body -> base_footprint (ICP, ver
-        walker_step_detector/config/mocap_to_base_footprint.yaml)
+        mocap_odometry/config/mocap_to_base_footprint.yaml)
       - LASER_IN_BASE_FOOTPRINT: base_footprint -> laser (fijo, xacro)
     """
     dx, dy, dyaw = calib

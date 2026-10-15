@@ -13,6 +13,7 @@ Requiere bags grabados con --keep-bags (run_multibag_eval.py) que incluyan
 Uso:
     python3 analyze_fallback_gain.py --bags-dir /tmp/multibag_eval_fallback
 """
+from mocap_odometry.core import default_calibration_file  # noqa: E402
 import argparse
 import math
 import statistics
@@ -92,7 +93,7 @@ def process_bag(bag_dir, calib, gate, max_dt_ns):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--bags-dir", required=True, help="carpeta con los bags grabados (run_multibag_eval.py --keep-bags)")
-    ap.add_argument("--calib", default=str(Path(__file__).resolve().parent.parent / "config" / "mocap_to_base_footprint.yaml"))
+    ap.add_argument("--calib", default=str(default_calibration_file()))
     ap.add_argument("--gate", type=float, default=0.3)
     ap.add_argument("--max-dt-ms", type=float, default=50.0)
     args = ap.parse_args()

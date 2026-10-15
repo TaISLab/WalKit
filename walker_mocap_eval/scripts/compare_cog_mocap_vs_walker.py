@@ -26,6 +26,7 @@ Uso:
         --bags-dir /home/mfcarmona/bagsFolder/definitive \\
         --out-dir /tmp/cog_compare_runs --out /tmp/cog_compare_result.json
 """
+from mocap_odometry.core import default_calibration_file  # noqa: E402
 import argparse
 import json
 import math
@@ -53,10 +54,7 @@ WS_SETUP = str(Path.home() / "workspace" / "walker_ws" / "install" / "setup.bash
 # metricas sin error visible.
 ROS_DOMAIN_ID_EVAL = "93"
 DEFAULT_TEST_CONFIG = str(Path.home() / "bagsFolder" / "definitive" / "test_config.txt")
-DEFAULT_CALIB = (
-    Path(__file__).resolve().parent.parent.parent
-    / "walker_step_detector" / "config" / "mocap_to_base_footprint.yaml"
-)
+DEFAULT_CALIB = default_calibration_file()
 
 
 def sh(cmd):
