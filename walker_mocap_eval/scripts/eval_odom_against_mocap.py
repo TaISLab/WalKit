@@ -60,7 +60,7 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from mocap_odometry import core  # noqa: E402
+from mocap_odometry import core, metrics  # noqa: E402
 from mocap_eval.bag_io import bag_topics, load_bag, load_calib, nearest, rigid_body_pose_xy_yaw  # noqa: E402
 
 DEFAULT_CALIB = default_calibration_file()
@@ -132,45 +132,11 @@ def load_odom_trajectory(msgs, use_header=False):
     return out
 
 
-def pair_by_time(odom_traj, gt_traj, max_dt_ns):
-    gt_list = [(t, x, y, yaw) for t, x, y, yaw in gt_traj]
-    gt_index = [(t, (x, y, yaw)) for t, x, y, yaw in gt_list]
-    pairs = []
-    for t, ox, oy, oyaw in odom_traj:
-        best = nearest(gt_index, t, max_dt_ns)
-        if best is None:
-            continue
-        gx, gy, gyaw = best[1]
-        pairs.append((t, ox, oy, oyaw, gx, gy, gyaw))
-    return pairs
-
-
-def align_2d(src_xy, dst_xy):
-    """Rotacion + traslacion (sin escala) que mejor lleva src_xy a dst_xy en
-    minimos cuadrados (Umeyama/Kabsch restringido a 2D, via SVD). Devuelve
-    (theta, tx, ty) tal que dst ~= R(theta) @ src + t."""
-    src = np.asarray(src_xy)
-    dst = np.asarray(dst_xy)
-    src_c = src.mean(axis=0)
-    dst_c = dst.mean(axis=0)
-    src0 = src - src_c
-    dst0 = dst - dst_c
-    H = src0.T @ dst0
-    U, _, Vt = np.linalg.svd(H)
-    d = np.sign(np.linalg.det(Vt.T @ U.T))
-    R = Vt.T @ np.diag([1, d]) @ U.T
-    theta = math.atan2(R[1, 0], R[0, 0])
-    t = dst_c - R @ src_c
-    return theta, t[0], t[1]
-
-
-def apply_2d(theta, tx, ty, x, y):
-    c, s = math.cos(theta), math.sin(theta)
-    return c * x - s * y + tx, s * x + c * y + ty
-
-
-def path_length(traj_xy):
-    return sum(math.hypot(x2 - x1, y2 - y1) for (x1, y1), (x2, y2) in zip(traj_xy, traj_xy[1:]))
+# Alineacion 2D (Umeyama), emparejado por tiempo y longitud de trayectoria: en mocap_odometry.metrics
+pair_by_time = metrics.pair_by_time
+align_2d = metrics.align_2d
+apply_2d = metrics.apply_2d
+path_length = metrics.path_length
 
 
 def q(vals, p):

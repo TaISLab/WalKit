@@ -103,28 +103,16 @@ def odom_traj(bagdir, topic):
 
 
 def score_full(odom, gt, max_dt_ms=50.0):
-    """ATE alineado + error de rumbo separado en sesgo constante (calibracion/montaje del cuerpo rigido) y
-    variacion alrededor de ese sesgo (deriva real de la odometria). None si hay <20 pares."""
-    pairs = ev.pair_by_time(odom, gt, int(max_dt_ms * 1e6))
-    if len(pairs) < 20:
+    """ATE alineado + error de rumbo separado en sesgo constante y variacion (mocap_odometry.metrics.score_full).
+    Claves historicas de este arnes: n, ate, drift, path, yaw_raw, yaw_bias, yaw_c, ate_p90, ate_max. None si
+    hay < 20 pares."""
+    from mocap_odometry import metrics
+    s = metrics.score_full(ev.pair_by_time(odom, gt, int(max_dt_ms * 1e6)))
+    if s is None:
         return None
-    src = [(p[1], p[2]) for p in pairs]
-    dst = [(p[4], p[5]) for p in pairs]
-    th, tx, ty = ev.align_2d(src, dst)
-    pe, ye = [], []
-    for t, ox, oy, oyaw, gx, gy, gyaw in pairs:
-        ax, ay = ev.apply_2d(th, tx, ty, ox, oy)
-        pe.append(math.hypot(ax - gx, ay - gy))
-        ye.append(ev.wrap_angle(oyaw + th - gyaw))
-    pe = np.array(pe)
-    ye = np.degrees(np.array(ye))
-    bias = float(np.degrees(math.atan2(np.mean(np.sin(np.radians(ye))), np.mean(np.cos(np.radians(ye))))))
-    yc = np.degrees(np.array([ev.wrap_angle(math.radians(v - bias)) for v in ye]))
-    path = ev.path_length([(p[4], p[5]) for p in pairs])
-    rm = float(np.sqrt(np.mean(pe ** 2)))
-    return dict(n=len(pairs), ate=rm, drift=100 * rm / path if path > 1e-6 else float("nan"), path=path,
-                yaw_raw=float(np.sqrt(np.mean(ye ** 2))), yaw_bias=bias, yaw_c=float(np.sqrt(np.mean(yc ** 2))),
-                ate_p90=float(np.percentile(pe, 90)), ate_max=float(pe.max()))
+    return dict(n=s["n"], ate=s["ate_rmse_m"], drift=s["drift_pct"], path=s["path_ref_m"],
+                yaw_raw=s["yaw_rmse_deg"], yaw_bias=s["yaw_bias_deg"], yaw_c=s["yaw_c_rmse_deg"],
+                ate_p90=s["ate_p90_m"], ate_max=s["ate_max_m"])
 
 
 if __name__ == "__main__":
