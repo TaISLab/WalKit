@@ -63,7 +63,7 @@ python3 scripts/export_bag_timeseries.py \
 
 Para cada bag: calcula las series de mocap directamente (sin reproducir),
 y hace **una única reproducción** del pipeline real completo
-(`box_filter` → `detect_steps` → `partial_loads` → `mocap_odom_bridge` →
+(`box_filter` → `detect_steps` → `partial_loads` → `mocap_odometry` →
 `gait_monitor_speed` + `walker_centroid_support`) grabando todo lo que
 publica. Escribe un CSV por serie y por fuente
 (`{bag}_mocap_*.csv`, `{bag}_walker_*.csv`), todas con el mismo eje
@@ -206,7 +206,7 @@ report_posture_mocap.json ---------------------> compute_lean_vs_margin_correlat
   directamente (una reproducción por comparación, en vez de reutilizar
   los CSV de `export_bag_timeseries.py`). Se conservan como referencia /
   validación cruzada, pero el flujo recomendado es el de arriba.
-- `mocap_odom_bridge.py`: nodo ROS auxiliar (no CLI de análisis) que
+- `mocap_odometry (nodo)`: nodo ROS auxiliar (no CLI de análisis) que
   republica el *rigid body* del andador en mocap como `/odom`, porque
   `/left_wheel`/`/right_wheel` reales están rotos en estos bags; lo lanza
   internamente `export_bag_timeseries.py`/`compare_*_vs_walker.py` como
@@ -216,7 +216,7 @@ report_posture_mocap.json ---------------------> compute_lean_vs_margin_correlat
   alinear con Umeyama 2D, error de rumbo y deriva en % del recorrido. Es
   la vía para validar la odometría REAL del andador, que el flujo de arriba
   NO valida: en la reproducción de `export_bag_timeseries.py` el `/odom`
-  sale del propio mocap (`mocap_odom_bridge.py`), así que `d` y `WV` del
+  sale del propio mocap (`mocap_odometry (nodo)`), así que `d` y `WV` del
   informe solo validan la aritmética de `gait_monitor_speed`. No forma
   parte del flujo del informe; ver su docstring para qué grabar.
   Aplica por defecto la corrección temporal del mocap de

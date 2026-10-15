@@ -4,7 +4,7 @@ gait_monitor_speed calculados desde mocap (compute_gait_from_mocap.py)
 contra los que PUBLICA de verdad el nodo real, reproduciendo el pipeline
 completo contra cada bag etiquetado (walker_loads/launch/
 replay_offline.launch.py: box_filter -> km_detect_steps -> partial_loads ->
-mocap_odom_bridge -> gait_monitor_speed).
+mocap_odometry -> gait_monitor_speed).
 
 Por que reproducir el pipeline real en vez de reimplementarlo (a diferencia
 de gait_metrics.py, que SI reimplementa el algoritmo en Python puro): SpT/

@@ -59,6 +59,7 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from mocap_odometry import core  # noqa: E402
 from mocap_eval.bag_io import bag_topics, load_bag, load_calib, nearest, rigid_body_pose_xy_yaw  # noqa: E402
 
 DEFAULT_CALIB = (
@@ -72,27 +73,15 @@ DEFAULT_TIME_WARP = Path(__file__).resolve().parent / "odom_tuning" / "time_warp
 
 
 def load_time_warp(path=DEFAULT_TIME_WARP):
-    """{bag: {offset_s, slope, t_ref, ...}} de time_warp.yaml; {} si path es None o no existe."""
+    """{bag: {offset_s, slope, t_ref, ...}} de time_warp.yaml; {} si path es None o no existe.
+    La correccion vive en mocap_odometry (core.warp_ns / find_warp); el fichero sigue siendo el de aqui."""
     if not path or not Path(path).exists():
         return {}
-    return yaml.safe_load(open(path)) or {}
+    return core.load_time_warp(path)
 
 
-def warp_ns(t_ns, w):
-    """Sello del mocap -> sello del robot (ver time_warp.yaml): t + offset_s + slope * (t - t_ref)."""
-    t = t_ns * 1e-9
-    return int(round((t + w["offset_s"] + w["slope"] * (t - w["t_ref"])) * 1e9))
-
-
-def find_warp(name, warps):
-    """(clave, correccion) del bag cuyo nombre aparece en `name` (p.ej. odom_eval_CA_test05), o (None, None).
-    Coincidencia con limites (CA_test05 no casa con CA_test051); gana la clave mas larga."""
-    import re
-    best = None
-    for key in warps:
-        if re.search(rf"(?<![A-Za-z0-9]){re.escape(key)}(?![0-9])", name) and (best is None or len(key) > len(best)):
-            best = key
-    return (best, warps[best]) if best else (None, None)
+warp_ns = core.warp_ns
+find_warp = core.find_warp
 
 
 def stamp_ns(header):
@@ -112,25 +101,16 @@ def discover_odom_topic(bag_dir, requested=None):
 
 
 def yaw_from_quat(q):
-    return math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z))
+    return core.yaw_from_quat(q.x, q.y, q.z, q.w)
 
 
-def wrap_angle(a):
-    return (a + math.pi) % (2 * math.pi) - math.pi
+wrap_angle = core.wrap_angle
 
 
 def mocap_to_base_footprint(rb_x, rb_y, rb_yaw, calib):
-    """rigid_body[0].pose (frame map) -> pose de base_footprint (frame map),
-    aplicando el offset fijo de montaje (dx, dy, dyaw) de calibrate_mocap_to_laser.py.
-    Misma formula que la primera mitad de mocap_bag_io.project_map_to_laser,
-    sin el paso final (esa funcion sigue hasta el frame laser; aqui hace falta
-    quedarse en base_footprint, frame comun con /odom)."""
-    dx, dy, dyaw = calib
-    c, s = math.cos(rb_yaw), math.sin(rb_yaw)
-    bx = rb_x + c * dx - s * dy
-    by = rb_y + s * dx + c * dy
-    byaw = wrap_angle(rb_yaw + dyaw)
-    return bx, by, byaw
+    """rigid_body.pose (frame map) -> pose de base_footprint (frame map): offset fijo de montaje (dx, dy, dyaw).
+    Implementacion en mocap_odometry.core.apply_calibration (la misma que usa el nodo)."""
+    return core.apply_calibration(rb_x, rb_y, rb_yaw, calib)
 
 
 def load_gt_trajectory(rbs, calib, warp=None, use_header=False):

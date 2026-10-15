@@ -40,7 +40,7 @@ constant instead of real odometry) does NOT come from walker_diff_odom:
 essentially frozen (3475->3476 ticks over ~90s) -- no usable wheel odometry
 to validate against here, and fixing/validating that encoder chain is out
 of scope for this comparison (being looked at separately). Instead,
-mocap_odom_bridge.py (walker_mocap_eval/scripts/) republishes the mocap
+mocap_odometry (nodo) (walker_mocap_eval/scripts/) republishes the mocap
 ground truth of the walker's own rigid body as /odom: gait_monitor_speed
 only ever accumulates consecutive position deltas, which is frame-
 invariant, so this is a legitimate stand-in for "some correct odometry
@@ -118,7 +118,6 @@ from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from walker_replay.launch_utils import replay_actions
 
-MOCAP_ODOM_BRIDGE = "/home/mfcarmona/workspace/walker_ws/src/WalKit/walker_mocap_eval/scripts/mocap_odom_bridge.py"
 
 # What the pipeline consumes of the bag (the rest of the recording is not played).
 TOPICS = ['/left_handle', '/right_handle', '/scan', '/rigid_bodies']
@@ -223,16 +222,15 @@ def generate_launch_description():
             join(get_package_share_directory('walker_centroid_support'),
                  'launch', 'centroid_support.launch.py'))))
 
-    # /odom for gait_monitor_speed, from mocap ground truth -- see the
-    # module docstring above and mocap_odom_bridge.py for why not
-    # walker_diff_odom on these bags. Not a launch_ros Node: the global
-    # use_sim_time does not reach it, so it is passed explicitly.
-    ld.add_action(ExecuteProcess(
-        cmd=['python3', MOCAP_ODOM_BRIDGE, '--ros-args',
-             '-p', 'rigid_bodies_topic_name:=/rigid_bodies',
-             '-p', 'odom_topic_name:=/odom',
-             '-p', ['use_sim_time:=', sim_time]],
-        output='screen'))
+    # /odom for gait_monitor_speed, from mocap ground truth (mocap_odometry node: rigid body 0 -> base_footprint
+    # with the mounting calibration, twist by finite differences). gait_monitor_speed only accumulates distances
+    # between consecutive positions, so any correct odometry source is valid: walker_diff_odom is not, on these
+    # bags (no usable wheel odometry: /right_wheel has no messages, /left_wheel is frozen).
+    ld.add_action(Node(
+        package='mocap_odometry', executable='mocap_odometry', namespace='mocap_odometry',
+        name='mocap_odometry',
+        parameters=[{'rigid_bodies_topic_name': '/rigid_bodies', 'odom_topic_name': '/odom',
+                     'rigid_body_index': 0}]))
 
     # The node this whole replay is for: consumes partial_loads' /left_loads,
     # /right_loads and walker_diff_odom's /odom above.
