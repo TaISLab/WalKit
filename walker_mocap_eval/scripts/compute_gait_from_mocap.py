@@ -33,12 +33,13 @@ Que hace, por bag:
 
 Uso:
     python3 compute_gait_from_mocap.py --bags-dir $DATASETS/labeled_bags \
-        --calib ../../walker_step_detector/config/mocap_to_base_footprint.yaml \
+        --calib ../../mocap_odometry/config/mocap_to_base_footprint.yaml \
         --out /tmp/mocap_gait_results.json
 
     python3 compute_gait_from_mocap.py --bag $DATASETS/labeled_bags/CA_test01 \
-        --calib ../../walker_step_detector/config/mocap_to_base_footprint.yaml
+        --calib ../../mocap_odometry/config/mocap_to_base_footprint.yaml
 """
+from mocap_odometry.core import default_calibration_file  # noqa: E402
 import argparse
 import json
 import math
@@ -50,10 +51,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from mocap_eval import bag_io, contact_events, gait_metrics  # noqa: E402
 
-DEFAULT_CALIB = (
-    Path(__file__).resolve().parent.parent.parent
-    / "walker_step_detector" / "config" / "mocap_to_base_footprint.yaml"
-)
+DEFAULT_CALIB = default_calibration_file()
 
 
 def compute_bag(bag_dir, calib, speed_threshold, min_gap_s, max_dt_ns, use_tags=True):

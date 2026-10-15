@@ -41,6 +41,7 @@
        publica el TF del andador, de walker_description) y, para
        test_step_detector.launch.py, laser_filter.launch.py (walker_bringup) -->
   <exec_depend>walker_replay</exec_depend>
+  <exec_depend>mocap_odometry</exec_depend>
   <exec_depend>walker_bringup</exec_depend>
   <exec_depend>walker_description</exec_depend>
   <!-- test_step_detector_variants.launch.py / step_detector_s.launch.py -->

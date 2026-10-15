@@ -3,7 +3,7 @@
 walker_laser_imu_odom.launch.py -- laser CSM/PL-ICP + IMU WitMotion) contra
 el ground truth de mocap (rigid_bodies[0] = el andador), usando la misma
 calibracion rigid_body->base_footprint que walker_step_detector/scripts/
-eval_against_mocap.py (walker_step_detector/config/mocap_to_base_footprint.yaml,
+eval_against_mocap.py (mocap_odometry/config/mocap_to_base_footprint.yaml,
 fuente unica: se referencia desde aqui, no se duplica).
 
 Que hay que grabar: al menos el topic de odometria a evaluar y /rigid_bodies,
@@ -35,7 +35,7 @@ Metrica -- ATE (Absolute Trajectory Error), como en el benchmark TUM RGB-D:
 
 Correccion temporal del mocap. En algunos bags el eje de tiempo del mocap esta desplazado y escalado respecto al
 de los sensores del robot (hasta 5 s y 7 %); sin corregirlo el ATE y el rumbo salen mal por un problema de
-referencia, no de la odometria. La correccion por bag esta en odom_tuning/time_warp.yaml (la genera
+referencia, no de la odometria. La correccion por bag esta en mocap_odometry/config/time_warp.yaml (la genera
 odom_tuning/fit_time_warp.py) y este script la aplica a los sellos del mocap. La clave del yaml es el nombre del bag
 ORIGINAL (CA_test05): se deduce del nombre del directorio del eval-bag (odom_eval_CA_test05 -> CA_test05) o se da con
 --bag-name. Como el yaml esta expresado en sellos de cabecera, el emparejado odom<->mocap se hace por defecto con
@@ -47,6 +47,7 @@ Uso:
     python3 walker_mocap_eval/scripts/eval_odom_against_mocap.py \\
         --eval-bag /tmp/odom_eval_MF_test01
 """
+from mocap_odometry.core import default_calibration_file  # noqa: E402
 import argparse
 import json
 import math
@@ -62,14 +63,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from mocap_odometry import core  # noqa: E402
 from mocap_eval.bag_io import bag_topics, load_bag, load_calib, nearest, rigid_body_pose_xy_yaw  # noqa: E402
 
-DEFAULT_CALIB = (
-    Path(__file__).resolve().parent.parent.parent
-    / "walker_step_detector" / "config" / "mocap_to_base_footprint.yaml"
-)
+DEFAULT_CALIB = default_calibration_file()
 
 DEFAULT_ODOM_TOPICS = ("/odom", "/ekf_odom", "/scan_odom")
 
-DEFAULT_TIME_WARP = Path(__file__).resolve().parent / "odom_tuning" / "time_warp.yaml"
+DEFAULT_TIME_WARP = core.default_time_warp_file()
 
 
 def load_time_warp(path=DEFAULT_TIME_WARP):

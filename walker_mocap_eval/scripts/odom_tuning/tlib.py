@@ -37,7 +37,7 @@ BRINGUP_CONFIG = WALKIT / "walker_bringup" / "config"
 ALL_BAGS = sorted(Path(p).parent.name for p in glob.glob(str(BAGS_DIR / "*" / "metadata.yaml")))
 
 _Q = yaml.safe_load(open(HERE / "bag_quality.yaml"))
-WARP = ev.load_time_warp(HERE / "time_warp.yaml")
+WARP = ev.load_time_warp(ev.DEFAULT_TIME_WARP)
 SCAN_ANOM = sorted(_Q["scan_matching_anomalous"])
 MOCAP_SUSPECT = sorted(_Q.get("mocap_suspect") or {})
 IMU_ANOM = sorted(_Q.get("imu_gyro_scale") or {})
@@ -86,11 +86,9 @@ def gt_traj(bag, apply_warp=True):
     cache = WORK / "gtcache" / (f"{bag}.warp.pkl" if w else f"{bag}.pkl")
     if cache.exists():
         return pickle.load(open(cache, "rb"))
-    out = []
-    for _, m in read_topic(BAGS_DIR / bag, "/rigid_bodies"):
-        x, y, yaw = ev.rigid_body_pose_xy_yaw(m)
-        t = warp_ns(stamp_ns(m.header), w) if w else stamp_ns(m.header)
-        out.append((t,) + ev.mocap_to_base_footprint(x, y, yaw, CALIB))
+    from mocap_odometry import offline
+    rows = offline.trajectory_from_bag(BAGS_DIR / bag, 0, CALIB, w)   # misma pose calibrada y mismo warp
+    out = [r[:4] for r in rows]
     cache.parent.mkdir(parents=True, exist_ok=True)
     pickle.dump(out, open(cache, "wb"))
     return out

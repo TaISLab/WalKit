@@ -31,8 +31,9 @@ necesariamente el pie real):
 
 Uso:
     python3 eval_against_mocap.py --eval-bag /tmp/eval_out \
-        --calib ../config/mocap_to_base_footprint.yaml
+        --calib $(ros2 pkg prefix mocap_odometry)/share/mocap_odometry/config/mocap_to_base_footprint.yaml
 """
+from mocap_odometry.core import default_calibration_file  # noqa: E402
 import argparse
 import json
 import math
@@ -188,7 +189,7 @@ def evaluate_bag(eval_bag, calib, gate, max_dt_ns, quiet=False):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--eval-bag", required=True, help="bag grabado con ros2 bag record durante test_step_detector[_variants].launch.py")
-    ap.add_argument("--calib", default=str(Path(__file__).resolve().parent.parent / "config" / "mocap_to_base_footprint.yaml"))
+    ap.add_argument("--calib", default=str(default_calibration_file()))
     ap.add_argument("--gate", type=float, default=0.3, help="distancia maxima (m) para considerar una deteccion valida")
     ap.add_argument("--max-dt-ms", type=float, default=50.0, help="tolerancia de emparejado deteccion<->ground truth")
     ap.add_argument("--out", default=None, help="JSON de salida con las metricas")

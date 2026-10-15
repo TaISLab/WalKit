@@ -43,6 +43,7 @@ Uso:
     # probar con pocos bags primero
     python3 compare_gait_mocap_vs_walker.py --bags-dir ... --out-dir ... --limit 3
 """
+from mocap_odometry.core import default_calibration_file  # noqa: E402
 import argparse
 import json
 import math
@@ -71,10 +72,7 @@ WS_SETUP = str(Path.home() / "workspace" / "walker_ws" / "install" / "setup.bash
 # la vez que otra sesion/instancia de este mismo pipeline.
 ROS_DOMAIN_ID_EVAL = "92"
 DEFAULT_TEST_CONFIG = str(Path.home() / "bagsFolder" / "definitive" / "test_config.txt")
-DEFAULT_CALIB = (
-    Path(__file__).resolve().parent.parent.parent
-    / "walker_step_detector" / "config" / "mocap_to_base_footprint.yaml"
-)
+DEFAULT_CALIB = default_calibration_file()
 
 WALKER_TOPICS = ["/left_gait_stats", "/right_gait_stats", "/global_gait_stats"]
 

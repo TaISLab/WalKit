@@ -23,6 +23,7 @@ movil) y mide:
 Uso:
     python3 estimate_gait_params.py --bags-dir $DATASETS/labeled_bags --limit 15
 """
+from mocap_odometry.core import default_calibration_file  # noqa: E402
 import argparse
 import sys
 from pathlib import Path
@@ -110,7 +111,7 @@ def process_bag(bag_dir, calib):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--bags-dir", required=True)
-    ap.add_argument("--calib", default=str(Path(__file__).resolve().parent.parent / "config" / "mocap_to_base_footprint.yaml"))
+    ap.add_argument("--calib", default=str(default_calibration_file()))
     ap.add_argument("--limit", type=int, default=None)
     args = ap.parse_args()
 
