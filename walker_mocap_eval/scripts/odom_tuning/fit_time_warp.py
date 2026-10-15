@@ -149,7 +149,8 @@ def main():
     if a.json:
         json.dump({r["bag"]: r for r in res}, open(a.json, "w"), indent=1)
     if a.write:
-        path = tlib.HERE / "time_warp.yaml"
+        from mocap_odometry import core
+        path = core.writable_config_file(core.default_time_warp_file())
         header = "".join(l for l in open(path) if l.startswith("#") or not l.strip()) if path.exists() else ""
         keep = {r["bag"]: {k: r[k] for k in ("corr_before", "corr_after", "offset_s", "slope", "t_ref")}
                 for r in res if r.get("apply")}

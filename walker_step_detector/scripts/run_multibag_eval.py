@@ -23,6 +23,7 @@ Uso:
     python3 run_multibag_eval.py --bags-dir ~/bagsFolder/definitive \
         --out-dir ~/claudtemp/multibag_eval --rate 4.0 --out multibag_result.json
 """
+from mocap_odometry.core import default_calibration_file  # noqa: E402
 import argparse
 import json
 import os
@@ -188,7 +189,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--bags-dir", required=True)
     ap.add_argument("--out-dir", required=True, help="donde se guardan los bags grabados de cada corrida")
-    ap.add_argument("--calib", default=str(Path(__file__).resolve().parent.parent / "config" / "mocap_to_base_footprint.yaml"))
+    ap.add_argument("--calib", default=str(default_calibration_file()))
     ap.add_argument("--gate", type=float, default=0.3)
     ap.add_argument("--max-dt-ms", type=float, default=50.0)
     ap.add_argument("--rate", type=float, default=4.0, help="velocidad de reproduccion de cada bag")

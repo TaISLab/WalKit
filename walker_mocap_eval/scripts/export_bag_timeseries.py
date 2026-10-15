@@ -36,6 +36,7 @@ Uso:
     python3 export_bag_timeseries.py --bag ~/bagsFolder/definitive/CA_test01 --out-dir /tmp/timeseries
     python3 export_bag_timeseries.py --bags-dir ~/bagsFolder/definitive --out-dir /tmp/timeseries
 """
+from mocap_odometry.core import default_calibration_file  # noqa: E402
 import argparse
 import math
 import os
@@ -58,10 +59,7 @@ ROS_SETUP = "/opt/ros/jazzy/setup.bash"
 WS_SETUP = str(Path.home() / "workspace" / "walker_ws" / "install" / "setup.bash")
 ROS_DOMAIN_ID_EVAL = "94"
 DEFAULT_TEST_CONFIG = str(Path.home() / "bagsFolder" / "definitive" / "test_config.txt")
-DEFAULT_CALIB = (
-    Path(__file__).resolve().parent.parent.parent
-    / "walker_step_detector" / "config" / "mocap_to_base_footprint.yaml"
-)
+DEFAULT_CALIB = default_calibration_file()
 HANDLE_CALIB_YAML = (
     Path(__file__).resolve().parent.parent.parent
     / "walker_loads" / "config" / "handle_calib.yaml"

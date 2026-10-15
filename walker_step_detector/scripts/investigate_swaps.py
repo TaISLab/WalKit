@@ -22,6 +22,7 @@ Requiere bags grabados con run_multibag_eval.py --keep-bags (necesita
 Uso:
     python3 investigate_swaps.py --bags-dir /tmp/multibag_eval_swaps --examples 5
 """
+from mocap_odometry.core import default_calibration_file  # noqa: E402
 import argparse
 import math
 import sys
@@ -118,7 +119,7 @@ def process_bag(bag_dir, calib, side, examples_out, max_examples):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--bags-dir", required=True)
-    ap.add_argument("--calib", default=str(Path(__file__).resolve().parent.parent / "config" / "mocap_to_base_footprint.yaml"))
+    ap.add_argument("--calib", default=str(default_calibration_file()))
     ap.add_argument("--examples", type=int, default=8, help="cuantos ejemplos de 'piernas separadas' imprimir")
     args = ap.parse_args()
 
