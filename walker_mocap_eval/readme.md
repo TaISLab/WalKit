@@ -46,7 +46,7 @@ mocap_eval/            <- libreria importable (sin dependencia de ROS salvo bag_
 scripts/   (orden de ejecucion y ejemplos de comandos: ver scripts/README.md)
   compute_gait_from_mocap.py       CLI: bag(s) etiquetado(s) -> Step/Stride time/length, NoS, d, CAD, WV (punto 1 del plan)
   selftest_gait_metrics.py         auto-test con datos sinteticos (sin bags), valida el puerto del algoritmo
-  mocap_odom_bridge.py             nodo ROS: republica rigid_bodies[0] (mocap) como /odom (ver punto 2 mas abajo)
+  mocap_odometry (nodo)             nodo ROS: republica rigid_bodies[0] (mocap) como /odom (ver punto 2 mas abajo)
   compare_gait_mocap_vs_walker.py  punto 2: lanza el pipeline real (replay_offline.launch.py) contra cada bag,
                                     graba lo que publica gait_monitor_speed y lo compara con compute_gait_from_mocap.py
   compute_posture_from_mocap.py    CLI: bag(s) etiquetado(s) -> parametros posturales/estabilidad (punto 3)
@@ -139,7 +139,7 @@ ni la velocidad reales del test. **Corregido**: `timer_callback()` ahora usa
 
 `compare_gait_mocap_vs_walker.py` lanza `walker_loads/launch/
 replay_offline.launch.py` (box_filter -> km_detect_steps -> partial_loads ->
-mocap_odom_bridge -> gait_monitor_speed) contra cada uno de los 47 bags de
+mocap_odometry -> gait_monitor_speed) contra cada uno de los 47 bags de
 `datasets/labeled_bags`, graba el ULTIMO mensaje de `/left_gait_stats`,
 `/right_gait_stats` y `/global_gait_stats` (GaitStamped/WalkStats son
 acumulados desde el arranque del nodo, asi que el ultimo mensaje ya refleja
@@ -148,7 +148,7 @@ todo el historial) y lo compara campo a campo con `compute_gait_from_mocap.py`.
 **`/odom` real no es viable en estos bags**: `/left_wheel`/`/right_wheel`
 (walker_diff_odom) estan rotos -- comprobado en CA_test01, `/right_wheel`
 no tiene ni un mensaje y `/left_wheel` esta congelado (3475->3476 ticks en
-~90s). `mocap_odom_bridge.py` republica `rigid_bodies[0]` (mocap) como
+~90s). `mocap_odometry (nodo)` republica `rigid_bodies[0]` (mocap) como
 `/odom` en su lugar -- valido porque `self.travelled` solo acumula deltas
 de posicion consecutivos, invariante a que frame se use.
 
