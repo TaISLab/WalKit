@@ -33,7 +33,7 @@ solo se referencia por ruta relativa por defecto.
 ```
 mocap_eval/            <- libreria importable (sin dependencia de ROS salvo bag_io.py)
   bag_io.py             lectura de bags etiquetados, marcadores/rigid_bodies, proyeccion mocap->frame andador
-  contact_events.py     eventos/intervalos de apoyo por pie a partir de cinematica del tobillo (mocap no mide carga)
+  contact_events.py     reexporta mocap_step_detector.contact_events: eventos/intervalos de apoyo por pie a partir de cinematica del tobillo (mocap no mide carga)
   gait_metrics.py       puerto puro-Python de walker_loads/gait_monitor_speed.py (GaitMonitorSp)
   posture_metrics.py    inclinacion de tronco, ancho de paso, doble apoyo, margen de estabilidad lateral (punto 3)
   cog_estimation.py     centro de gravedad por modelo segmentario (De Leva 1996) + sexo/peso del usuario (punto 3)
