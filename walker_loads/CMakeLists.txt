@@ -52,4 +52,11 @@ install(DIRECTORY launch config
   DESTINATION share/${PROJECT_NAME}/
 )
 
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+  find_package(ament_cmake_pytest REQUIRED)
+  ament_add_gtest(test_stamp_sequencer test/test_stamp_sequencer.cpp)
+  ament_add_pytest_test(test_stamp_sequencer_py test/test_stamp_sequencer.py)
+endif()
+
 ament_package()
