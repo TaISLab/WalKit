@@ -42,15 +42,21 @@ obtiene con una consulta TF (`tf2`) entre el frame de la maneta
 (`header.frame_id` del mensaje de `/left_hand_loads` / `/right_hand_loads`,
 p. ej. `left_handle_id`) y el frame en el que vienen los pies (el
 `header.frame_id` del propio mensaje de step, normalmente `base_link`).
-Esa consulta se repite en **cada ciclo del timer**, sin cachear el
+Esa consulta se repite en **cada ciclo de publicación**, sin cachear el
 resultado, para reflejar siempre la altura de maneta actual (ver
 [Decisiones de diseño](#decisiones-de-diseño)).
 
 ### Ciclo de publicación
 
-Un timer (`period`, 20 Hz por defecto) evalúa si hay datos nuevos desde el
-último ciclo (`new_data_available`, marcado por cualquiera de las 4
-suscripciones de carga). Antes de publicar nada:
+El nodo no tiene timer ni lee el reloj: trabaja en **tiempo de dato** (los `header.stamp` de sus entradas; en
+las cargas de pierna, el stamp de la posición del paso). Las 4 entradas se ordenan por stamp
+(`walker_loads.stamp_sequencer.StampSequencer`: cada mensaje se procesa cuando ninguna entrada puede ya entregar
+algo más antiguo) y, sobre una rejilla fija de tiempo de dato (`period`, 50 ms por defecto), se publica el
+centroide del estado de cada tick si ha llegado algo nuevo desde el tick anterior (`new_data_available`, marcado
+por cualquiera de las 4 entradas). Así la salida depende solo de los mensajes: **el mismo bag da los mismos
+centroides, bit a bit, con cualquier carga de la máquina y a cualquier `--rate`** (comprobado a rates 1, 4 y 8), y
+sale con un retardo de hasta ~un periodo de la entrada más lenta (las manetas, ~0.5 s); si una entrada se calla,
+las demás esperan como mucho `max_wait_s`. Antes de publicar nada:
 
 1. Espera a haber recibido al menos un mensaje de cada una de las 4 fuentes
    de carga (`first_data_ready`).
@@ -101,7 +107,8 @@ infraestructura TF estándar (necesita que `walker_description`'s
 | `left_loads_topic_name`        | `/left_loads`       | Posición + carga (kg) del pie izquierdo |
 | `right_loads_topic_name`       | `/right_loads`      | Posición + carga (kg) del pie derecho |
 | `centroid_topic_name`          | `/support_centroid` | Topic de salida del centroide |
-| `period`                       | `0.05` (20 Hz)      | Periodo del timer de cálculo/publicación |
+| `period`                       | `0.05` (20 Hz)      | Periodo de la rejilla de publicación, en tiempo de dato (s) |
+| `max_wait_s`                   | `5.0`               | Tiempo de dato que se espera a una entrada callada antes de darla por perdida; debe ser mayor que el mayor desfase entre entradas |
 
 Este nodo **no** tiene parámetro de `user_desc`: no necesita el peso
 declarado del usuario, ver más abajo.
