@@ -18,7 +18,6 @@ def generate_launch_description():
             executable="gait_monitor_speed.py",
             name="gait_stats",
             parameters= [
-                 {'period': 0.05},
                  {'left_loads_topic_name': '/left_loads'},
                  {'right_loads_topic_name': '/right_loads'},
                  {'left_gait_stats_topic_name': '/left_gait_stats'},

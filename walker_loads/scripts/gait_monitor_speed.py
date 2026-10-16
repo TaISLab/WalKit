@@ -6,9 +6,12 @@ from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
 
 from walker_msgs.msg import StepStamped, GaitStamped, WalkStats
+from walker_loads.stamp_sequencer import StampSequencer, stamp_ns
 import numpy as np
 from nav_msgs.msg import Odometry
 import sys
+
+LEFT_LOADS, RIGHT_LOADS, ODOM = 0, 1, 2
 
 
 '''
@@ -27,6 +30,13 @@ gait parameters from test:
 • Cadence (CAD): 60 * NoS/Tr .
 • Average walking velocity (WV): d/Tr.
 
+All of them are differences of the stamps of the step loads (and of the odometry), so the node works
+on data time, not on the clock or a timer: loads and odometry are put in stamp order
+(StampSequencer, by the stamp of the step position for the loads) and the cumulative summary is
+published each time a new step load is registered, stamped with that step's stamp. The summaries
+therefore depend only on the messages, not on when or in which order they arrive (same bag, same
+numbers, at any replay rate), and lag the data by up to ~max_wait_s (normally less than the period
+of the slowest of the three inputs).
 '''
 
 class GaitMonitorSp(Node):
@@ -43,7 +53,10 @@ class GaitMonitorSp(Node):
                 ('global_gait_stats_topic_name', '/global_gait_stats'),
                 ('odom_topic_name', '/odom'),
                 ('global_frame_id', '/odom'),
-                ('period', 2.0),
+                # data time to wait for a silent input before giving up on it, see StampSequencer;
+                # must be longer than the largest lag between inputs (the loads trail the odometry by
+                # about a handle period, more when replaying faster than real time)
+                ('max_wait_s', 5.0),
             ])
 
         self.left_loads_topic_name = self.get_parameter('left_loads_topic_name').value
@@ -52,11 +65,10 @@ class GaitMonitorSp(Node):
         self.right_gait_stats_topic_name = self.get_parameter('right_gait_stats_topic_name').value
         self.global_gait_stats_topic_name = self.get_parameter('global_gait_stats_topic_name').value
         self.odom_topic_name = self.get_parameter('odom_topic_name').value
-        self.period = self.get_parameter('period').value
+        self.max_wait_s = self.get_parameter('max_wait_s').value
         self.global_frame_id = self.get_parameter('global_frame_id').value
         
         # stored data
-        self.start_time = self.get_clock().now()
         self.is_left_load = False
         self.left_loads = []
         self.left_stride_times = []
@@ -85,17 +97,48 @@ class GaitMonitorSp(Node):
         self.buffer = Buffer()
         self.listener = TransformListener(self.buffer, self)
 
-        self.left_gait_stats_pub   = self.create_publisher(GaitStamped, self.left_gait_stats_topic_name, 10)
-        self.right_gait_stats_pub   = self.create_publisher(GaitStamped, self.right_gait_stats_topic_name, 10)
-        self.global_gait_stats_pub   = self.create_publisher(WalkStats, self.global_gait_stats_topic_name, 10)
+        self.left_gait_stats_pub   = self.create_publisher(GaitStamped, self.left_gait_stats_topic_name, 1000)
+        self.right_gait_stats_pub   = self.create_publisher(GaitStamped, self.right_gait_stats_topic_name, 1000)
+        self.global_gait_stats_pub   = self.create_publisher(WalkStats, self.global_gait_stats_topic_name, 1000)
 
-        self.left_loads_sub = self.create_subscription(StepStamped, self.left_loads_topic_name, self.left_loads_cb, 10) 
-        self.right_loads_sub = self.create_subscription(StepStamped, self.right_loads_topic_name, self.right_loads_cb, 10) 
-        self.sub = self.create_subscription(Odometry, self.odom_topic_name, self.odom_callback, 10)
+        # the loads repeat their step's stamp while the load itself is recomputed
+        # and the odometry only feeds a running sum: if its stamps lag so far behind the loads' (another
+        # clock) that it is overtaken, it is still counted, only its place in the sequence is approximate
+        self.sequencer = StampSequencer(3, self.process, max_wait_ns=int(self.max_wait_s * 1e9),
+                                        repeating=(LEFT_LOADS, RIGHT_LOADS), late_ok=(ODOM,))
 
-        self.tmr = self.create_timer(self.period, self.timer_callback)
+        # deep queues: the inputs wait in the sequencer for the slowest one, and a replayed bag can
+        # deliver them in bursts; losing one would make the result depend on timing again
+        self.left_loads_sub = self.create_subscription(StepStamped, self.left_loads_topic_name, self.left_loads_msg, 500)
+        self.right_loads_sub = self.create_subscription(StepStamped, self.right_loads_topic_name, self.right_loads_msg, 500)
+        self.sub = self.create_subscription(Odometry, self.odom_topic_name, self.odom_msg, 500)
 
         self.get_logger().info("Speed Gait monitor started")  
+
+    def left_loads_msg(self, msg):
+        self.push(LEFT_LOADS, stamp_ns(msg.position.header.stamp), msg)
+
+    def right_loads_msg(self, msg):
+        self.push(RIGHT_LOADS, stamp_ns(msg.position.header.stamp), msg)
+
+    def odom_msg(self, msg):
+        self.push(ODOM, stamp_ns(msg.header.stamp), msg)
+
+    def push(self, stream, stamp, msg):
+        if not self.sequencer.push(stream, stamp, msg) and self.sequencer.late % 100 == 1:
+            self.get_logger().warn(
+                'Dropped %d inputs older than what was already processed (an input stayed silent '
+                'for more than max_wait_s)' % self.sequencer.late)
+        self.sequencer.release()
+
+    # Called by the sequencer, in stamp order
+    def process(self, stream, stamp, msg):
+        if stream == LEFT_LOADS:
+            self.left_loads_cb(msg)
+        elif stream == RIGHT_LOADS:
+            self.right_loads_cb(msg)
+        else:
+            self.odom_callback(msg)
 
     def odom_callback(self, msg):
         self.prev_position = self.cur_position
@@ -129,6 +172,7 @@ class GaitMonitorSp(Node):
             if not self.is_left_load:
                 self.update_stats(msg, self.left_loads, self.right_loads, 
                     self.left_stride_times, self.left_stride_lenghts, self.left_step_times, self.left_step_lenghts)
+                self.publish_stats(msg.position.header.stamp)
             self.is_left_load = True
         else:
             self.is_left_load = False
@@ -138,6 +182,7 @@ class GaitMonitorSp(Node):
             if not self.is_right_load:
                 self.update_stats(msg, self.right_loads, self.left_loads, 
                     self.right_stride_times, self.right_stride_lenghts, self.right_step_times, self.right_step_lenghts)
+                self.publish_stats(msg.position.header.stamp)
             self.is_right_load = True
         else:
             self.is_right_load = False
@@ -158,7 +203,8 @@ class GaitMonitorSp(Node):
                 step_lenght = self.get_difference(leg_loads[-1].position, opposite_loads[-1].position)
                 leg_step_lenghts.append(step_lenght)
 
-    def timer_callback(self):
+    # Cumulative summary as of the step load just registered; stamped with that step's stamp.
+    def publish_stats(self, stamp):
         if ( (len(self.left_loads)>2) and  (len(self.right_loads)>2) ):
             l_SpT = np.nanmean(self.left_step_times)
             l_SdT = np.nanmean(self.left_stride_times)
@@ -197,7 +243,7 @@ class GaitMonitorSp(Node):
             self.get_logger().debug("\t\t Step length (SpL): ["   + str(l_SpL) + "]")             
             self.get_logger().debug("\t\t Stride length (SdL): [" + str(l_SdL ) + "]")             
 
-            self.left_gait_stats_data.header.stamp = self.get_clock().now().to_msg()
+            self.left_gait_stats_data.header.stamp = stamp
             self.left_gait_stats_data.spt = l_SpT
             self.left_gait_stats_data.sdt = l_SdT
             self.left_gait_stats_data.spl = l_SpL
@@ -210,7 +256,7 @@ class GaitMonitorSp(Node):
             self.get_logger().debug("\t\t Step length (SpL): ["   + str(r_SpL) + "]")             
             self.get_logger().debug("\t\t Stride length (SdL): [" + str(r_SdL ) + "]")   
 
-            self.right_gait_stats_data.header.stamp = self.get_clock().now().to_msg()
+            self.right_gait_stats_data.header.stamp = stamp
             self.right_gait_stats_data.spt = r_SpT
             self.right_gait_stats_data.sdt = r_SdT
             self.right_gait_stats_data.spl = r_SpL
@@ -223,7 +269,7 @@ class GaitMonitorSp(Node):
             self.get_logger().debug("\t Cadence (CAD): [" + str(CAD) + "]")  
             self.get_logger().debug("\t Average walking velocity (WV): [" + str(WV) + "]")  
 
-            self.global_gait_stats_data.header.stamp = self.get_clock().now().to_msg()
+            self.global_gait_stats_data.header.stamp = stamp
             self.global_gait_stats_data.tr = Tr.to_msg()
             self.global_gait_stats_data.nos = NoS
             self.global_gait_stats_data.d = d

@@ -16,11 +16,27 @@ PartialLoads::PartialLoads() : Node("partial_loads"){
         this->declare_parameter<std::string>("right_steps_topic_name",  "/detected_step_right");
         this->declare_parameter<std::string>("user_desc_topic_name",    "/user_desc");
         this->declare_parameter<std::string>("handle_calibration_file", handle_calibration_file_);
-        this->declare_parameter<int>("ms_period",                       500);
         this->declare_parameter<double>("speed_delta",                  0.05);
         this->declare_parameter<double>("speed_delta_ratio",            0.3);
         this->declare_parameter<double>("speed_delta_max",              1.0);
+        // Period (ms) of the grid, on data time, the loads are sampled and
+        // published on: with the state as of each tick, if anything new
+        // arrived since the previous one. The gait parameters counted from
+        // them (step loads = a leg's load going from 0 to positive) depend on
+        // it: the sampling is what filters the chatter of the leg-load ramp.
+        this->declare_parameter<int>("ms_period",                       50);
+        // An input silent for longer than this (data time: the stamps of
+        // the other inputs, not the clock) is treated as no data, and the
+        // loads stop being published until it comes back.
         this->declare_parameter<double>("data_timeout_s",               1.0);
+        // How long (data time) inputs are held back waiting for a silent one
+        // before it is given up on, see StampSequencer. Messages are
+        // normally released within one handle period (~0.5 s) of arriving;
+        // this only bounds the wait when an input has stopped altogether. It
+        // must be longer than the largest lag between inputs (replaying at
+        // --rate N, N times the processing delay), or the outputs depend on
+        // timing again.
+        this->declare_parameter<double>("max_wait_s",                   5.0);
         // Plausible range for the gait angular frequency measured from
         // step-alternation timing (a zero-crossing detector on speed_diff_,
         // see update_gait_frequency()); a rollator-assisted gait cycle is
@@ -60,11 +76,12 @@ PartialLoads::PartialLoads() : Node("partial_loads"){
         this->get_parameter("right_steps_topic_name",  right_steps_topic_name_);
         this->get_parameter("user_desc_topic_name",    user_desc_topic_name_);
         this->get_parameter("handle_calibration_file", handle_calibration_file_);
-        this->get_parameter("ms_period",               ms_period_);
         this->get_parameter("speed_delta",             speed_delta_);
         this->get_parameter("speed_delta_ratio",       speed_delta_ratio_);
         this->get_parameter("speed_delta_max",         speed_delta_max_);
+        this->get_parameter("ms_period",               ms_period_);
         this->get_parameter("data_timeout_s",          data_timeout_s_);
+        this->get_parameter("max_wait_s",              max_wait_s_);
         this->get_parameter("w_estimate_min",          w_estimate_min_);
         this->get_parameter("w_estimate_max",          w_estimate_max_);
         this->get_parameter("zero_crossing_refractory_s", zero_crossing_refractory_s_);
@@ -79,41 +96,23 @@ PartialLoads::PartialLoads() : Node("partial_loads"){
         this->get_parameter("kalman_w",                kalman_w);
         this->get_parameter("kalman_theta",             kalman_theta);
 
-        double ms_period_s = ms_period_ / 1000.0;
-        if (data_timeout_s_ < 2.0 * ms_period_s){
-            RCLCPP_WARN(this->get_logger(),
-                "data_timeout_s (%.3f s) is less than 2x ms_period (%.3f s): "
-                "inputs may be flagged as stale between successive timer ticks, "
-                "consider raising data_timeout_s", data_timeout_s_, ms_period_s);
-        }
-
         //Load config files
         loadHandleCalibration();
 
         // Internal state data
-        left_handle_msg_.header.frame_id = "NONE";
-        right_handle_msg_.header.frame_id = "NONE";
-        left_step_msg_.position.header.frame_id = "NONE";
-        right_step_msg_.position.header.frame_id = "NONE";
         speed_diff_ = 0;
         weight_ = 100;
         weight_received_ = false;
-        right_hand_msg_.header.frame_id = "NONE";
-        left_hand_msg_.header.frame_id = "NONE";
         right_hand_msg_.force = 0;
         left_hand_msg_.force  = 0;
         leg_load_ = 0;
-        new_data_available_ = false;
         first_data_ready_ = false;
 
-        // no stream has been received yet: these just need to be older
-        // than data_timeout_s_ so has_data()/is_recent() report them as
-        // stale until the first message actually arrives
-        left_handle_rx_time_ = this->now() - rclcpp::Duration::from_seconds(data_timeout_s_ + 1.0);
-        right_handle_rx_time_ = left_handle_rx_time_;
-        left_step_rx_time_ = left_handle_rx_time_;
-        right_step_rx_time_ = left_handle_rx_time_;
-
+        data_timeout_ns_ = static_cast<int64_t>(data_timeout_s_ * 1e9);
+        period_ns_ = static_cast<int64_t>(ms_period_) * 1000000;
+        sequencer_ = std::make_unique<StampSequencer<Input>>(
+            N_STREAMS, static_cast<int64_t>(max_wait_s_ * 1e9), 100000,
+            [this](int stream, int64_t stamp_ns, Input &input){ process(stream, stamp_ns, input); });
 
 
         // Load kalman tracker
@@ -136,7 +135,10 @@ PartialLoads::PartialLoads() : Node("partial_loads"){
         }
 
         // ROS Comms
-        auto default_qos = rclcpp::QoS(rclcpp::SystemDefaultsQoS());
+        // Deep queue: inputs wait in the sequencer for the slowest one, and a
+        // replayed bag can deliver them in bursts; losing one would make the
+        // result depend on timing again.
+        auto default_qos = rclcpp::QoS(rclcpp::KeepLast(500));
         // user_desc is published once, latched (transient_local), same as
         // every other subscriber to this topic in the codebase (plot_loads.py,
         // gait_monitor_handles.py, walker_data_csv.py, walker_stability.py).
@@ -146,11 +148,15 @@ PartialLoads::PartialLoads() : Node("partial_loads"){
         // published would otherwise never see it.
         auto user_desc_qos = rclcpp::QoS(rclcpp::KeepLast(1)).reliable().transient_local();
 
-        // Publishers       
-        left_load_pub_  = this->create_publisher<walker_msgs::msg::StepStamped>(left_loads_topic_name_, 20);
-        right_load_pub_ = this->create_publisher<walker_msgs::msg::StepStamped>( right_loads_topic_name_, 20);
-        left_hand_load_pub_  = this->create_publisher<walker_msgs::msg::ForceStamped>(left_hand_loads_topic_name_, 20);
-        right_hand_load_pub_ = this->create_publisher<walker_msgs::msg::ForceStamped>( right_hand_loads_topic_name_, 20);
+        // Publishers. Deep queues: releasing the inputs in stamp order makes
+        // the outputs bursty (everything the slowest input was holding back
+        // comes out at once), and a reliable writer with a short history
+        // overwrites what a slower subscriber has not taken yet.
+        auto out_qos = rclcpp::QoS(rclcpp::KeepLast(1000));
+        left_load_pub_  = this->create_publisher<walker_msgs::msg::StepStamped>(left_loads_topic_name_, out_qos);
+        right_load_pub_ = this->create_publisher<walker_msgs::msg::StepStamped>( right_loads_topic_name_, out_qos);
+        left_hand_load_pub_  = this->create_publisher<walker_msgs::msg::ForceStamped>(left_hand_loads_topic_name_, out_qos);
+        right_hand_load_pub_ = this->create_publisher<walker_msgs::msg::ForceStamped>( right_hand_loads_topic_name_, out_qos);
 
         // Subscribers
         left_handle_sub_ = this->create_subscription<walker_msgs::msg::ForceStamped>( left_handle_topic_name_, default_qos, std::bind(&PartialLoads::l_handle_lc, this, std::placeholders::_1));
@@ -158,9 +164,6 @@ PartialLoads::PartialLoads() : Node("partial_loads"){
         left_steps_sub_ = this->create_subscription<walker_msgs::msg::StepStamped>( left_steps_topic_name_, default_qos, std::bind(&PartialLoads::l_steps_lc, this, std::placeholders::_1));
         right_steps_sub_ = this->create_subscription<walker_msgs::msg::StepStamped>( right_steps_topic_name_, default_qos, std::bind(&PartialLoads::r_steps_lc, this, std::placeholders::_1));
         user_desc_sub_ = this->create_subscription<walker_msgs::msg::UserDesc>( user_desc_topic_name_, user_desc_qos, std::bind(&PartialLoads::user_desc_lc, this, std::placeholders::_1));
-
-        // timers
-        timer_ = create_wall_timer( std::chrono::milliseconds(ms_period_), std::bind(&PartialLoads::timer_callback, this));
 
         RCLCPP_INFO(this->get_logger(), "CPP load detector started");
     }
@@ -224,33 +227,20 @@ PartialLoads::PartialLoads() : Node("partial_loads"){
     }
 
     void PartialLoads::handle_lc(const walker_msgs::msg::ForceStamped::SharedPtr msg, int id)  {
-        if (id == 1){
-            right_handle_msg_ = *msg;
-            right_hand_msg_ = *msg;
-            right_hand_msg_.force = fr_.interp(msg->force);
-            right_handle_rx_time_ = this->now();
-            new_data_available_ = true;
-            right_hand_load_pub_->publish(right_hand_msg_);
-        } else if (id == 0) {
-            left_handle_msg_ = *msg;
-            left_hand_msg_ = *msg;
-            left_hand_msg_.force = fl_.interp(msg->force);
-            left_handle_rx_time_ = this->now();
-            new_data_available_ = true;
-            left_hand_load_pub_->publish(left_hand_msg_);
-        } else{
+        if (id != 0 && id != 1){
             RCLCPP_ERROR(this->get_logger(), "Don't know about which handle are you talking [%d]", id);
             return;
         }
 
-        if ( has_data(left_handle_msg_.header, left_handle_rx_time_) &  has_data(right_handle_msg_.header, right_handle_rx_time_) ){
-            double force_diff = left_hand_msg_.force - right_hand_msg_.force;
-            // Kalman this!
-            double t = (this->now()).nanoseconds();
-            kalman_tracker_.add_force_measurement(force_diff, t);
-        }
-        //RCLCPP_DEBUG(this->get_logger(), "Received handle data from (%s)", msg->header.frame_id.c_str());
+        // The calibrated hand load depends on this message alone, so it goes
+        // out right away; what depends on other inputs waits in the sequencer.
+        Input input;
+        input.hand = *msg;
+        input.hand.force = (id == 1 ? fr_ : fl_).interp(msg->force);
+        (id == 1 ? right_hand_load_pub_ : left_hand_load_pub_)->publish(input.hand);
 
+        int stream = (id == 1 ? RIGHT_HANDLE : LEFT_HANDLE);
+        push_input(stream, rclcpp::Time(msg->header.stamp).nanoseconds(), std::move(input));
     }
 
     void PartialLoads::l_steps_lc(const walker_msgs::msg::StepStamped::SharedPtr msg)  {
@@ -262,30 +252,80 @@ PartialLoads::PartialLoads() : Node("partial_loads"){
     }
 
     void PartialLoads::steps_lc(const walker_msgs::msg::StepStamped::SharedPtr msg, int id){
-        if (id==1){
-            right_step_msg_ = *msg;
-            right_speed_ = right_step_msg_.speed;
-            right_step_rx_time_ = this->now();
-            new_data_available_ = true;
-        } else if (id == 0) {
-            left_step_msg_ = *msg;
-            left_speed_ = left_step_msg_.speed;
-            left_step_rx_time_ = this->now();
-            new_data_available_ = true;
-        } else {
+        if (id != 0 && id != 1){
             RCLCPP_ERROR(this->get_logger(), "Don't know about which step are you talking [%d]", id);
             return;
         }
 
-        if ( has_data(left_step_msg_.position.header, left_step_rx_time_) &  has_data(right_step_msg_.position.header, right_step_rx_time_) ){
-            speed_diff_ = left_speed_.x - right_speed_.x ;
-            // Kalman this!
-            double t = (this->now()).nanoseconds();
-            kalman_tracker_.add_speed_measurement(speed_diff_,t);
-            update_gait_frequency(t);
+        Input input;
+        input.step = *msg;
+        int stream = (id == 1 ? RIGHT_STEP : LEFT_STEP);
+        push_input(stream, rclcpp::Time(msg->position.header.stamp).nanoseconds(), std::move(input));
+    }
+
+    void PartialLoads::push_input(int stream, int64_t stamp_ns, Input input){
+        if (!sequencer_->push(stream, stamp_ns, std::move(input)) && (sequencer_->late() % 100) == 1){
+            RCLCPP_WARN(this->get_logger(),
+                "Dropped %lu inputs older than what was already processed (an input stayed silent for more than max_wait_s)",
+                static_cast<unsigned long>(sequencer_->late()));
+        }
+        release_inputs();
+    }
+
+    void PartialLoads::release_inputs(){
+        // nothing is processed before the user's weight is known: the
+        // first load must not depend on whether /user_desc beat the data
+        if (weight_received_){
+            sequencer_->release();
+        }
+    }
+
+    void PartialLoads::process(int stream, int64_t stamp_ns, Input &input){
+        // the ticks that fall before this input see the state without it
+        if (!have_tick_){
+            next_tick_ns_ = stamp_ns + period_ns_;
+            have_tick_ = true;
+        }
+        while (next_tick_ns_ < stamp_ns){
+            publish_loads(next_tick_ns_);
+            next_tick_ns_ += period_ns_;
         }
 
-        //RCLCPP_DEBUG(this->get_logger(), "Received step data from (%s)", msg->position.header.frame_id.c_str());
+        last_stamp_ns_[stream] = stamp_ns;
+        new_data_available_ = true;
+
+        switch (stream){
+            case LEFT_HANDLE:
+            case RIGHT_HANDLE:
+                if (stream == LEFT_HANDLE){
+                    left_hand_msg_ = input.hand;
+                } else {
+                    right_hand_msg_ = input.hand;
+                }
+                if (has_data(LEFT_HANDLE, stamp_ns) && has_data(RIGHT_HANDLE, stamp_ns)){
+                    double force_diff = left_hand_msg_.force - right_hand_msg_.force;
+                    // Kalman this!
+                    kalman_tracker_.add_force_measurement(force_diff, static_cast<double>(stamp_ns));
+                }
+                break;
+
+            case LEFT_STEP:
+            case RIGHT_STEP:
+                if (stream == LEFT_STEP){
+                    left_step_msg_ = input.step;
+                    left_speed_ = left_step_msg_.speed;
+                } else {
+                    right_step_msg_ = input.step;
+                    right_speed_ = right_step_msg_.speed;
+                }
+                if (has_data(LEFT_STEP, stamp_ns) && has_data(RIGHT_STEP, stamp_ns)){
+                    speed_diff_ = left_speed_.x - right_speed_.x;
+                    // Kalman this!
+                    kalman_tracker_.add_speed_measurement(speed_diff_, static_cast<double>(stamp_ns));
+                    update_gait_frequency(static_cast<double>(stamp_ns));
+                }
+                break;
+        }
     }
 
     void PartialLoads::update_gait_frequency(double t_ns){
@@ -327,19 +367,11 @@ PartialLoads::PartialLoads() : Node("partial_loads"){
         prev_speed_diff_valid_ = true;
     }
 
-    bool PartialLoads::is_recent(const rclcpp::Time &last_rx){
-        // treat a stream that stopped publishing as "no data", not as the
+    bool PartialLoads::has_data(int stream, int64_t stamp_ns){
+        // an input that stopped publishing counts as "no data", not as the
         // last value it ever sent, however old that may be
-        double age_s = (this->now() - last_rx).seconds();
-        return age_s <= data_timeout_s_;
-    }
-
-    bool PartialLoads::has_data(const std_msgs::msg::Header &header, const rclcpp::Time &last_rx){
-        bool hasData = (header.frame_id.find("NONE") == std::string::npos);
-        if (!hasData){
-            return false;
-        }
-        return is_recent(last_rx);
+        return last_stamp_ns_[stream] != kNoData &&
+               stamp_ns - last_stamp_ns_[stream] <= data_timeout_ns_;
     }
 
     void PartialLoads::user_desc_lc(const walker_msgs::msg::UserDesc::SharedPtr msg)  {
@@ -347,117 +379,98 @@ PartialLoads::PartialLoads() : Node("partial_loads"){
             RCLCPP_ERROR(this->get_logger(), "Ignoring invalid user weight in user_desc (%d)", msg->weight);
             return;
         }
-        if (msg->weight != weight_){
-            weight_ = msg->weight;
-            new_data_available_ = true;
-        }
+        weight_ = msg->weight;
         weight_received_ = true;
+        release_inputs();
     }
 
-    void PartialLoads::timer_callback(){
+    void PartialLoads::publish_loads(int64_t stamp_ns){
         double right_leg_load, left_leg_load;
         walker_msgs::msg::StepStamped msg;
 
-        bool left_step_ok    = has_data(left_step_msg_.position.header, left_step_rx_time_);
-        bool right_step_ok   = has_data(right_step_msg_.position.header, right_step_rx_time_);
-        bool left_handle_ok  = has_data(left_handle_msg_.header, left_handle_rx_time_);
-        bool right_handle_ok = has_data(right_handle_msg_.header, right_handle_rx_time_);
-
-        if (!left_step_ok){
-            RCLCPP_DEBUG(this->get_logger(), "No recent data from left step");
-        }
-        if (!right_step_ok){
-            RCLCPP_DEBUG(this->get_logger(), "No recent data from right step");
-        }
-        if (!left_handle_ok){
-            RCLCPP_DEBUG(this->get_logger(), "No recent data from left handle");
-        }
-        if (!right_handle_ok){
-            RCLCPP_DEBUG(this->get_logger(), "No recent data from right handle");
-        }
-        if (!weight_received_){
-            RCLCPP_DEBUG(this->get_logger(), "No valid weight received from user_desc yet");
-        }
-
-        if (new_data_available_){
-            new_data_available_ = false;
-
-            if (!first_data_ready_ ){
-                first_data_ready_ = ( left_step_ok & right_step_ok & left_handle_ok & right_handle_ok & weight_received_ );
-            }
-
-            // even once bootstrapped, don't compute/publish on stale
-            // handle/step inputs: a stream that stopped publishing
-            // shouldn't leave the last load frozen and reported as current
-            // forever. weight_received_ is excluded here on purpose: unlike
-            // the other four, user_desc is a one-shot latched value, not a
-            // continuous stream, so it doesn't need to keep arriving.
-            if ( first_data_ready_ && left_step_ok && right_step_ok && left_handle_ok && right_handle_ok ){
-                    // amount of weight on legs, clamped: sensor noise/out-of-range
-                    // handle readings must never produce a negative or over-100% load
-                    leg_load_ = weight_ - left_hand_msg_.force - right_hand_msg_.force;
-                    if (leg_load_ < 0.0){
-                        leg_load_ = 0.0;
-                    } else if (leg_load_ > weight_){
-                        leg_load_ = weight_;
-                    }
-
-                    double speed_diff = kalman_tracker_.get_speed_diff();
-
-                    // Assign weight to supporting leg(s). Instead of jumping
-                    // straight from 50/50 to 100/0 the instant |speed_diff|
-                    // crosses a threshold (which chatters when speed_diff is
-                    // noisy near it), ramp smoothly across a double-support
-                    // band. That band's width scales with the user's own
-                    // estimated swing-speed amplitude (v1 in the Kalman
-                    // model) instead of one fixed value for everyone: a slow
-                    // walker's speed_diff would otherwise never reach a
-                    // one-size-fits-all threshold, and a fast walker's would
-                    // blow past it immediately.
-                    //
-                    // v1 is only trustworthy once it has converged on
-                    // plausible, physically-bounded gait data; offline replay
-                    // against a real (if imperfect) labeled bag showed it can
-                    // still blow up to two orders of magnitude above any real
-                    // walking speed while walker_step_detector's own step
-                    // speed estimate is bad (tracked separately from this
-                    // package). speed_delta_max_ caps that: when v1 is
-                    // garbage, this collapses to a fixed, known-safe band
-                    // instead of propagating the garbage into the ratio.
-                    double amplitude = kalman_tracker_.get_speed_amplitude();
-                    double band = speed_delta_ratio_ * amplitude;
-                    if (band < speed_delta_){
-                        band = speed_delta_;
-                    } else if (band > speed_delta_max_){
-                        band = speed_delta_max_;
-                    }
-                    double ratio = speed_diff / band;
-                    if (ratio > 1.0){
-                        ratio = 1.0;
-                    } else if (ratio < -1.0){
-                        ratio = -1.0;
-                    }
-                    double right_fraction = 0.5 * (1.0 + ratio);
-
-                    right_leg_load = right_fraction * leg_load_;
-                    left_leg_load = (1.0 - right_fraction) * leg_load_;
-
-                    // Build msgs and publish
-                    // left
-                    msg = left_step_msg_;
-                    msg.load = left_leg_load;
-                    left_load_pub_->publish(msg);
-
-                    // right
-                    msg = right_step_msg_;
-                    msg.load = right_leg_load;
-                    right_load_pub_->publish(msg);
-                    RCLCPP_DEBUG(this->get_logger(), "Weight distribution on legs L(%3.3f) - R(%3.3f)",left_leg_load, right_leg_load);
-            }else{
-                RCLCPP_DEBUG(this->get_logger(), "Not all data received yet, or some of it went stale...");
-            }
-        } else {
+        if (!new_data_available_){
             RCLCPP_DEBUG(this->get_logger(), "No new data received yet ...");
+            return;
+        }
+        new_data_available_ = false;
+
+        bool left_step_ok    = has_data(LEFT_STEP, stamp_ns);
+        bool right_step_ok   = has_data(RIGHT_STEP, stamp_ns);
+        bool left_handle_ok  = has_data(LEFT_HANDLE, stamp_ns);
+        bool right_handle_ok = has_data(RIGHT_HANDLE, stamp_ns);
+
+        if (!first_data_ready_ ){
+            first_data_ready_ = ( left_step_ok & right_step_ok & left_handle_ok & right_handle_ok & weight_received_ );
+        }
+
+        // even once bootstrapped, don't compute/publish on stale
+        // handle/step inputs: a stream that stopped publishing
+        // shouldn't leave the last load frozen and reported as current
+        // forever. weight_received_ is excluded here on purpose: unlike
+        // the other four, user_desc is a one-shot latched value, not a
+        // continuous stream, so it doesn't need to keep arriving.
+        if ( first_data_ready_ && left_step_ok && right_step_ok && left_handle_ok && right_handle_ok ){
+                // amount of weight on legs, clamped: sensor noise/out-of-range
+                // handle readings must never produce a negative or over-100% load
+                leg_load_ = weight_ - left_hand_msg_.force - right_hand_msg_.force;
+                if (leg_load_ < 0.0){
+                    leg_load_ = 0.0;
+                } else if (leg_load_ > weight_){
+                    leg_load_ = weight_;
+                }
+
+                double speed_diff = kalman_tracker_.get_speed_diff();
+
+                // Assign weight to supporting leg(s). Instead of jumping
+                // straight from 50/50 to 100/0 the instant |speed_diff|
+                // crosses a threshold (which chatters when speed_diff is
+                // noisy near it), ramp smoothly across a double-support
+                // band. That band's width scales with the user's own
+                // estimated swing-speed amplitude (v1 in the Kalman
+                // model) instead of one fixed value for everyone: a slow
+                // walker's speed_diff would otherwise never reach a
+                // one-size-fits-all threshold, and a fast walker's would
+                // blow past it immediately.
+                //
+                // v1 is only trustworthy once it has converged on
+                // plausible, physically-bounded gait data; offline replay
+                // against a real (if imperfect) labeled bag showed it can
+                // still blow up to two orders of magnitude above any real
+                // walking speed while walker_step_detector's own step
+                // speed estimate is bad (tracked separately from this
+                // package). speed_delta_max_ caps that: when v1 is
+                // garbage, this collapses to a fixed, known-safe band
+                // instead of propagating the garbage into the ratio.
+                double amplitude = kalman_tracker_.get_speed_amplitude();
+                double band = speed_delta_ratio_ * amplitude;
+                if (band < speed_delta_){
+                    band = speed_delta_;
+                } else if (band > speed_delta_max_){
+                    band = speed_delta_max_;
+                }
+                double ratio = speed_diff / band;
+                if (ratio > 1.0){
+                    ratio = 1.0;
+                } else if (ratio < -1.0){
+                    ratio = -1.0;
+                }
+                double right_fraction = 0.5 * (1.0 + ratio);
+
+                right_leg_load = right_fraction * leg_load_;
+                left_leg_load = (1.0 - right_fraction) * leg_load_;
+
+                // Build msgs and publish
+                // left
+                msg = left_step_msg_;
+                msg.load = left_leg_load;
+                left_load_pub_->publish(msg);
+
+                // right
+                msg = right_step_msg_;
+                msg.load = right_leg_load;
+                right_load_pub_->publish(msg);
+                RCLCPP_DEBUG(this->get_logger(), "Weight distribution on legs L(%3.3f) - R(%3.3f)",left_leg_load, right_leg_load);
+        }else{
+            RCLCPP_DEBUG(this->get_logger(), "Not all data received yet, or some of it went stale...");
         }
     }
-

@@ -93,6 +93,8 @@ typedef Kalman::KalmanGain<State, SpeedMeasurement> MeasurementGain;
         private:
             void configureNoise();
             void clampFrequency();
+            // sets the time step of the next predict() from the measurement's stamp (ns)
+            void setStep(double ti);
             // Applies a speed/force measurement's correction to every state
             // except w: forces the w component of the Kalman gain to zero
             // and restores w's row/column of the covariance afterward, so
@@ -116,8 +118,9 @@ typedef Kalman::KalmanGain<State, SpeedMeasurement> MeasurementGain;
             // debug file to check kalman working
             std::ofstream debug_file_;
 
-            // last update time
+            // last update time (ns, the measurements' own stamps) and whether there has been one
             double t_;
+            bool has_t_ = false;
 
             // Extended Kalman Filter
             Kalman::ExtendedKalmanFilter<State> ekf_;

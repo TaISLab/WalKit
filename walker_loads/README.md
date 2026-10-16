@@ -44,9 +44,10 @@ retain the sample.
 
 | Parameter | Default | Meaning |
 |---|---|---|
-| `ms_period` | 500 | Period (ms) of the timer that computes and publishes the leg-load split. |
+| `ms_period` | 50 | Period (ms) of the grid, **on data time**, the leg loads are sampled and published on (see [Time](#time-the-stamps-of-the-data-not-the-clock)). The step loads counted downstream (`gait_monitor_speed`: a leg's load going from 0 to positive) depend on it, as the sampling is what filters the chatter of the leg-load ramp. |
+| `max_wait_s` | 5.0 | How long (data time) the inputs are held back waiting for a silent one before it is given up on. Must be longer than the largest lag between inputs, or the outputs depend on timing again (see [Time](#time-the-stamps-of-the-data-not-the-clock)). |
 | `debug_output` | false | Sets the logger to DEBUG and enables `DiffTracker`'s CSV dump (`diff_tracker_measurements.csv`, written to the node's working directory) — see [Debugging the Kalman tracker](#debugging-the-kalman-tracker). |
-| `data_timeout_s` | 1.0 | A stream (handle force, step) not received for longer than this is treated as **no data**, not as "the last value it ever sent" — the leg-load computation pauses rather than freezing on stale input. Must be kept above `2 * ms_period/1000`, or inputs may be flagged stale between successive timer ticks (a startup warning fires if not). Does not apply to `/user_desc`: see above. |
+| `data_timeout_s` | 1.0 | A stream (handle force, step) not received for longer than this is treated as **no data**, not as "the last value it ever sent" — the leg-load computation pauses rather than freezing on stale input. "Not received for longer" is measured in data time (against the stamp of the sample being processed). Does not apply to `/user_desc`: see above. |
 | `speed_delta` | 0.05 | Floor (m/s) for the double-support ramp half-width (see below); also the sole threshold when `speed_delta_ratio` scaling can't apply yet. |
 | `speed_delta_ratio` | 0.3 | Fraction of the estimated swing-speed amplitude (`DiffTracker::get_speed_amplitude()`) used as the double-support ramp half-width, instead of one fixed value for every user. |
 | `speed_delta_max` | 1.0 | Ceiling (m/s) on that same ramp half-width — protects against the amplitude estimate spiking on bad upstream data (see [Known limitations](#known-limitations)). |
@@ -60,6 +61,29 @@ retain the sample.
 All the `kalman_*` values and the noise covariances inside `DiffTracker` are
 physically-reasoned starting points, not values fitted against real data —
 see [Known limitations](#known-limitations).
+
+## Time: the stamps of the data, not the clock
+
+`partial_loads` has no timer and never reads the clock (so `use_sim_time` is irrelevant to it): everything it
+does is driven by the `header.stamp` of its inputs (the step position's stamp for `/detected_step_*`). A
+message is processed once no input can still deliver anything older (the smallest of the four inputs' last
+stamps has passed it, see `include/walker_loads/stamp_sequencer.h`), in stamp order; the loads are sampled and
+published on a fixed grid of data time (`ms_period`), with the state as of each tick, if anything new arrived
+since the previous one. Consequences:
+
+- **The same inputs give the same outputs, bit for bit**, whatever the DDS delivery order, the machine load or
+  the replay rate (`ros2 bag play --rate`): checked at rates 1, 2, 4 and 8. Before, the order in which the
+  topics happened to arrive and the wall-clock tick decided the Kalman updates, the loads and so the gait
+  parameters downstream.
+- **Latency**: a message waits for the slowest input, i.e. up to about one handle period (the handles publish
+  at ~2 Hz, ~0.5 s) plus the grid. `/left_hand_loads` and `/right_hand_loads` depend on one message each and go
+  out immediately. If an input stops altogether the others wait at most `max_wait_s`; what the silent input
+  delivers afterwards, if older than what was already processed, is dropped (warning).
+- The Kalman filter steps by the difference of the stamps (the first measurement starts the clock), so the
+  result does not depend on how large the stamps are (a recording's date).
+- Inputs are subscribed with a 500-deep queue and outputs published with a 1000-deep one: releasing in stamp
+  order makes the outputs bursty, and a reliable writer with a short history overwrites what a slower
+  subscriber has not yet taken.
 
 ## How the leg-load split works
 
@@ -168,6 +192,22 @@ formula by hand.
 `clampFrequency()` is kept as a cheap backstop (e.g. before the first
 frequency measurement ever arrives) even though it should now rarely, if
 ever, trigger.
+
+## Node: `gait_monitor_speed.py`
+
+Gait parameters (SpT, SdT, NoS, SpL, SdL, Tr, d, CAD, WV; definitions in the script's docstring) from the step loads
+(`/left_loads`, `/right_loads`: a *step load* is a leg's `load` going from 0 to positive) and the odometry
+(`/odom`, only for the distance). Publishes `/left_gait_stats`, `/right_gait_stats` (`GaitStamped`) and
+`/global_gait_stats` (`WalkStats`).
+
+Like `partial_loads` it works on data time: the three inputs are put in stamp order (`walker_loads.stamp_sequencer`;
+the loads by the stamp of the step position, which repeats while the load is recomputed) and the cumulative
+summary is published each time a new step load is registered, **stamped with that step's stamp** (before: with the
+clock at a timer tick, every `period`). The same inputs give the same summaries whatever the delivery order or the
+replay rate. Parameter `max_wait_s` (5 s): how long to wait for a silent input before giving up on it. The odometry only
+feeds a running sum, so if its stamps lag so far behind the loads' that it is overtaken (a mocap whose clock drifts, as in
+MF_test07) it is still counted, not dropped; only the `d` of the intermediate summaries then depends on the arrival
+order (the final one does not).
 
 ## Reproducing / testing this offline
 
