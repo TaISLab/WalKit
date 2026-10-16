@@ -201,7 +201,7 @@ report_posture_mocap.json ---------------------> compute_lean_vs_margin_correlat
 
 ## Otros scripts (no forman parte del flujo anterior)
 
-- `compare_gait_mocap_vs_walker.py`, `compare_cog_mocap_vs_walker.py`:
+- `compare_gait_mocap_vs_walker.py`: (la comparación de CoM, `compare_cog_mocap_vs_walker.py`, vive ahora en `mocap4w/mocap_centroid_support`)
   versiones más antiguas que reproducen cada bag en vivo y comparan
   directamente (una reproducción por comparación, en vez de reutilizar
   los CSV de `export_bag_timeseries.py`). Se conservan como referencia /
