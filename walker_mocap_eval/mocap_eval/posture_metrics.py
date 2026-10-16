@@ -26,6 +26,9 @@ import math
 
 import numpy as np
 
+# Movidos a mocap_loads (parametros de marcha derivados de los eventos de apoyo); se reexportan aqui.
+from mocap_loads.gait_params import _rotate_to_walker_frame, double_support_fraction, step_width_m  # noqa: F401
+
 
 def midpoint(p1, p2):
     return ((p1[0] + p2[0]) / 2.0, (p1[1] + p2[1]) / 2.0, (p1[2] + p2[2]) / 2.0)
@@ -86,72 +89,6 @@ def trunk_lean_series(l_shoulder_track, r_shoulder_track, l_hip_track, r_hip_tra
         total, sag, fro = trunk_lean_at_frame(l_sh, r_sh[1], l_hip[1], r_hip[1])
         out.append((t, total, sag, fro))
     return out
-
-
-def _rotate_to_walker_frame(dx, dy, walker_yaw):
-    """Rota un vector (dx, dy) del frame map al frame local del andador
-    (heading = walker_yaw), para que la componente Y resultante sea
-    "lateral" (izquierda/derecha del andador) y la X sea "longitudinal"
-    (avance), sin depender de como este orientada la sala."""
-    c, s = math.cos(-walker_yaw), math.sin(-walker_yaw)
-    return c * dx - s * dy, s * dx + c * dy
-
-
-def step_width_m(left_events, right_events, walker_track, max_pair_dt_ns, max_rb_dt_ns):
-    """Ancho de paso: distancia lateral (perpendicular al avance del
-    andador) entre cada evento de apoyo de un pie y el evento del pie
-    contrario mas cercano en el tiempo (misma logica de emparejado que
-    gait_metrics usa para Step length, pero mirando el eje lateral en vez
-    de la distancia total).
-
-    left_events/right_events: [(t_ns, (x,y,z))] en frame "map" (SIN
-    proyectar al frame del andador -- aqui se hace directamente con
-    walker_yaw, no hace falta la calibracion mocap->laser porque un ancho
-    de paso es una distancia relativa, no una posicion absoluta).
-    walker_track: bag_io.rigid_body_track_xy_yaw(rb_msgs) (para el yaw).
-
-    Devuelve [(t_ns, width_m)], uno por cada evento (de cualquier pie) que
-    tuviera un evento del pie contrario dentro de max_pair_dt_ns.
-    """
-    from . import bag_io
-
-    out = []
-    for own_events, opp_events in ((left_events, right_events), (right_events, left_events)):
-        for t, p in own_events:
-            opp = bag_io.nearest(opp_events, t, max_pair_dt_ns)
-            rb = bag_io.nearest(walker_track, t, max_rb_dt_ns)
-            if opp is None or rb is None:
-                continue
-            yaw = rb[1][2]
-            dx, dy = p[0] - opp[1][0], p[1] - opp[1][1]
-            _, lateral = _rotate_to_walker_frame(dx, dy, yaw)
-            out.append((t, abs(lateral)))
-    out.sort(key=lambda r: r[0])
-    return out
-
-
-def double_support_fraction(left_intervals, right_intervals):
-    """Fraccion (0-1) del tiempo total (desde el primer inicio de intervalo
-    hasta el ultimo final, de cualquier pie) en que AMBOS pies estan en
-    apoyo simultaneamente (solape entre un intervalo izquierdo y uno
-    derecho). Ver contact_events.detect_stance_intervals()."""
-    if not left_intervals or not right_intervals:
-        return float("nan")
-
-    overlap = 0
-    for ls, le in left_intervals:
-        for rs, re in right_intervals:
-            lo = max(ls, rs)
-            hi = min(le, re)
-            if hi > lo:
-                overlap += hi - lo
-
-    t_start = min(left_intervals[0][0], right_intervals[0][0])
-    t_end = max(left_intervals[-1][1], right_intervals[-1][1])
-    total = t_end - t_start
-    if total <= 0:
-        return float("nan")
-    return overlap / total
 
 
 def lateral_margin_at_event(t, hip_mid_track, l_ankle_track, r_ankle_track, walker_track,

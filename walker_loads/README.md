@@ -171,19 +171,14 @@ ever, trigger.
 
 ## Reproducing / testing this offline
 
-`launch/replay_offline.launch.py` replays a definitive rosbag (from
-`~/bagsFolder/definitive`, e.g. `MF_test05`) through `walker_replay`, which
-also provides what the bags do not carry (`/user_desc`, `/handle_height`,
-`/robot_description` and the walker's tf, from `test_config.txt` and the URDF):
+The comparison of walker_loads against the mocap (and the `replay_offline.launch.py` pipeline that replays a definitive
+bag through `partial_loads` and `gait_monitor_speed`) lives in `mocap4w/mocap_loads`, so this package knows nothing
+about mocap:
 
 ```bash
-ros2 launch walker_loads replay_offline.launch.py bag_name:=MF_test05 rate:=3.0
+ros2 launch mocap_loads replay_offline.launch.py bag_name:=MF_test05 rate:=3.0
+ros2 launch mocap_loads compare_loads.launch.py bag_name:=MF_test05 rate:=4.0 out_dir:=OUT
 ```
-
-On top of that replay it brings up `walker_step_detector` (`detect_steps`),
-`partial_loads` itself, `walker_centroid_support`, `gait_monitor_speed`, and
-plays back only the topics needed (`/left_handle`, `/right_handle`, `/scan`,
-`/rigid_bodies`). See the file's own docstring for details.
 
 ### Debugging the Kalman tracker
 
