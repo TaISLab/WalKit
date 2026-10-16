@@ -76,7 +76,10 @@ DetectSteps::DetectSteps() : Node("detect_steps"){
     processor.setForestFile(forest_file);
 
     //ROS STUFF
-    auto default_qos = rclcpp::QoS(rclcpp::SystemDefaultsQoS());
+    // Same reliability as the system default (best effort, so it still matches a laser driver publishing
+    // sensor data) but with a real history: scans can arrive in bursts a few ms apart (a hiccup of the driver,
+    // or of the recording being replayed) and each one has to be processed, not overwritten by the next.
+    auto default_qos = rclcpp::SensorDataQoS().keep_last(100);
 
     // publishers
     left_detected_step_pub_ = this->create_publisher<walker_msgs::msg::StepStamped>(detected_steps_topic_name_ + "_left", 20);
