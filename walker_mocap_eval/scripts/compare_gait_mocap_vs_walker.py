@@ -3,7 +3,7 @@
 gait_monitor_speed calculados desde mocap (compute_gait_from_mocap.py)
 contra los que PUBLICA de verdad el nodo real, reproduciendo el pipeline
 completo contra cada bag etiquetado (walker_loads/launch/
-replay_offline.launch.py: box_filter -> km_detect_steps -> partial_loads ->
+mocap_loads/launch/replay_offline.launch.py: box_filter -> km_detect_steps -> partial_loads ->
 mocap_odometry -> gait_monitor_speed).
 
 Por que reproducir el pipeline real en vez de reimplementarlo (a diferencia
@@ -25,14 +25,14 @@ Por defecto (--ignore-tags para desactivarlo), tanto el lado mocap como el
 replay real se recortan a la ventana entre los 2 mensajes /tag del bag (ver
 bag_io.read_tag_window(), mismos marcadores de inicio/fin de test que usa
 mocap_analysis/scripts/merge_rosbags.py): el replay arranca en el primer
-/tag (`start_offset` de replay_offline.launch.py) y solo se espera lo que
+/tag (`start_offset` de mocap_loads/launch/replay_offline.launch.py) y solo se espera lo que
 dura esa ventana, en vez del bag completo -- que suele incluir tiempo de
 calibracion/colocacion antes y despues, diluyendo Tr/SpT/SdT/cadencia con
 un tramo que no es marcha real.
 
 Requiere: workspace compilado (colcon build), bagsFolder/definitive/
 test_config.txt (user_desc/handle_height por bag; lo lee walker_replay, que
-reproduce el bag para replay_offline.launch.py) y walker_step_detector/config/
+reproduce el bag para mocap_loads/launch/replay_offline.launch.py) y walker_step_detector/config/
 mocap_to_base_footprint.yaml (calibracion mocap->laser, ya existente).
 
 Uso:
@@ -119,7 +119,7 @@ def stop(proc, timeout=8):
 def tag_window_offset_and_duration(bag_dir):
     """(start_offset_s, duration_s) de la ventana entre los 2 mensajes /tag
     del bag (ver bag_io.read_tag_window), en unidades que entiende
-    replay_offline.launch.py (start_offset: segundos de bag desde su propio
+    mocap_loads/launch/replay_offline.launch.py (start_offset: segundos de bag desde su propio
     inicio) y esta funcion (duration: segundos de bag, se divide por rate
     aparte). None si el bag no tiene 2 mensajes /tag -- el llamador debe
     caer de vuelta al bag completo."""
@@ -132,7 +132,7 @@ def tag_window_offset_and_duration(bag_dir):
 
 
 def run_one_bag(bag_dir, test_config_file, out_dir, rate, startup_wait, use_tags=True):
-    """Lanza replay_offline.launch.py + graba /left_gait_stats,
+    """Lanza mocap_loads/launch/replay_offline.launch.py + graba /left_gait_stats,
     /right_gait_stats, /global_gait_stats. Devuelve la ruta del bag
     grabado, o None si algo fallo (p.ej. sin fila en test_config.txt).
 
@@ -156,7 +156,7 @@ def run_one_bag(bag_dir, test_config_file, out_dir, rate, startup_wait, use_tags
             print(f"  [!] {bag_dir.name}: sin 2 mensajes /tag, usando el bag completo", file=sys.stderr)
 
     launch = sh(
-        "ros2 launch walker_loads replay_offline.launch.py "
+        "ros2 launch mocap_loads replay_offline.launch.py "
         f"{bag_io.replay_launch_args(bag_dir, test_config_file)} rate:={rate} "
         f"start_offset:={start_offset_s}"
     )

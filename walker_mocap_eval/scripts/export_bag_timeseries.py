@@ -252,7 +252,7 @@ def run_replay_and_export_walker_side(bag_dir, out_dir, test_config_file, rate, 
         shutil.rmtree(tmp_bag)
 
     launch = sh(
-        "ros2 launch walker_loads replay_offline.launch.py "
+        "ros2 launch mocap_loads replay_offline.launch.py "
         f"{bag_io.replay_launch_args(bag_dir, test_config_file)} rate:={rate} "
         f"start_offset:={start_offset_s}"
     )
