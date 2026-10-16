@@ -67,6 +67,8 @@ def generate_launch_description():
                     "para que el filtro y el detector (que carga el random "
                     "forest) ya esten suscritos y no se pierdan los primeros scans"))
     ld.add_action(DeclareLaunchArgument(
+        "shutdown_on_end", default_value="false", description="apagar todo al acabar el bag"))
+    ld.add_action(DeclareLaunchArgument(
         "sim_time", default_value="true",
         description="use_sim_time para todo lo del test (en un banco de pruebas de bags, true)"))
     ld.add_action(DeclareLaunchArgument(
@@ -84,7 +86,8 @@ def generate_launch_description():
             topics=LaunchConfiguration("topics"),
             delay=LaunchConfiguration("delay"),
             sim_time=LaunchConfiguration("sim_time"),
-            debug=LaunchConfiguration("debug")):
+            debug=LaunchConfiguration("debug"),
+            shutdown_on_end=LaunchConfiguration("shutdown_on_end")):
         ld.add_action(action)
 
     # Lo que en el robot real ya existe: el filtro que da /scan_filtered
