@@ -52,8 +52,7 @@ scripts/   (orden de ejecucion y ejemplos de comandos: ver scripts/README.md)
   compute_posture_from_mocap.py    CLI: bag(s) etiquetado(s) -> parametros posturales/estabilidad (punto 3)
   selftest_posture_metrics.py      auto-test con datos sinteticos (sin bags), valida la geometria de posture_metrics.py
   compute_cog_from_mocap.py        CLI: bag(s) etiquetado(s) -> centro de gravedad (modelo De Leva + sexo/peso, punto 3)
-  selftest_cog_estimation.py       auto-test con datos sinteticos (sin bags), valida el modelo segmentario
-  compare_cog_mocap_vs_walker.py   punto 3 (comparacion): CoM de mocap vs /support_centroid real (walker_centroid_support)
+  (compare_cog_mocap_vs_walker.py y el CoM De Leva: movidos a mocap4w/mocap_centroid_support)
   (eval_odom_against_mocap.py y odom_tuning/: movidos a mocap4w/mocap_odometry)
 ```
 
@@ -428,7 +427,7 @@ como algo mas que variacion individual de proporciones corporales hace
 falta cruzarlo con la altura real de manetas usada en cada test
 (`handle_height` de `test_config.txt`), no hecho todavia.
 
-**Comparacion contra el andador**: `compare_cog_mocap_vs_walker.py` anade
+**Comparacion contra el andador**: `compare_cog_mocap_vs_walker.py` (ahora `mocap_centroid_support/launch/compare_centroid_support.launch.py`) anade
 `walker_centroid_support` (topics por defecto, sin remapear: ya coinciden
 con lo que publica `partial_loads`) a `replay_offline.launch.py`, graba
 `/support_centroid` durante el replay real, y lo compara (media sobre toda
