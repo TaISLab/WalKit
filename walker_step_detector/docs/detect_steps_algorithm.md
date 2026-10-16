@@ -1,5 +1,7 @@
 # `detect_steps` (RF) — descripción del algoritmo
 
+> Las herramientas de evaluación contra mocap (`eval_against_mocap.py`, `run_multibag_eval.py`, `investigate_*`, `validate_*`, `estimate_gait_params.py`, `calibrate_mocap_to_laser.py`, `mocap_bag_io.py`) viven ahora en el paquete `mocap_step_detector` (`mocap4w/mocap_step_detector/scripts/`); `eval_results/` (JSON de las corridas, no versionado) sigue aquí.
+
 De las tres variantes del paquete (`detect_steps`, `km_detect_steps`,
 `detect_steps_s`), `detect_steps` (clasificador Random Forest) es la más
 fiable con margen claro — validado sobre 47 bags de
@@ -136,17 +138,17 @@ izquierda/derecha entre dos detecciones consecutivas), en orden:
 
 1. **¿Cruce físico de piernas?** No. En 47 bags, el 99.8% de los swaps
    ocurren con las piernas claramente separadas (20-45 cm), no cruzadas ni
-   juntas (`scripts/investigate_swaps.py`).
+   juntas (`mocap_step_detector/scripts/investigate_swaps.py`).
 2. **¿EKF acoplado modelando la relación mecánica entre piernas (fase
    antifase, ancho de zancada)?** Descartado antes de implementarlo: la
    velocidad de las dos piernas está débilmente **correlacionada
    positivamente** (no antifase) en 37/47 bags, y el ancho de zancada no
    es lo bastante estable como para servir de restricción fuerte
-   (`scripts/validate_leg_coupling.py`).
+   (`mocap_step_detector/scripts/validate_leg_coupling.py`).
 3. **¿Deriva de la predicción interna del EKF?** Sí, mayoritariamente: en
    el 64.3% de los swaps, la referencia interna (`l_ref`/`r_ref`, antes de
    decidir la asociación de ese ciclo) ya apuntaba hacia el tobillo
-   equivocado (`scripts/investigate_ref_drift.py`). El otro 35.7% ocurre
+   equivocado (`mocap_step_detector/scripts/investigate_ref_drift.py`). El otro 35.7% ocurre
    con la referencia todavía correcta -- probablemente un efecto emergente
    del emparejamiento exclusivo (minimiza el coste conjunto de las dos
    piernas, así que la deriva de la OTRA pista puede "robarle" una pierna
@@ -161,7 +163,7 @@ izquierda/derecha entre dos detecciones consecutivas), en orden:
    parametrización del modelo, no solo sus matrices de ruido.
 5. **¿Reinicializar `a0`/`f0` a valores reales en vez de ~0?** También
    empeora. Se midió `a0=0.15m`, `f0=0.6Hz` (medianas de amplitud/frecuencia
-   real de tobillo, 47 bags, `scripts/estimate_gait_params.py`) contra el
+   real de tobillo, 47 bags, `mocap_step_detector/scripts/estimate_gait_params.py`) contra el
    mismo baseline aislado -- `eval_results/result_2026-09-28_gait_init_isolated.json`:
    match_rate de rf cae de 93.7/93.8% a 88.9/86.7%, con mean_err/swap_rate
    casi iguales. Motivo probable: `p0` se dejó en 0.001 (fase arbitraria) --
@@ -229,7 +231,7 @@ izquierda/derecha entre dos detecciones consecutivas), en orden:
    `warmup_ti_`/`warmup_x_`/`warmup_y_`), resuelve por mínimos cuadrados
    (sistema 2x2, sin Eigen) la amplitud y fase de cada eje que mejor
    explican esas 12 medidas, con la frecuencia FIJA en 0.6Hz (la mediana
-   real medida sobre mocap, `scripts/estimate_gait_params.py` -- fijarla
+   real medida sobre mocap, `mocap_step_detector/scripts/estimate_gait_params.py` -- fijarla
    sola como `f0` ya se había probado y empeorado, punto 5; aquí solo sirve
    de ancla para resolver amplitud/fase, no se usa como parámetro fijo del
    modelo) y reinyecta esos tres valores en el EKF (`ekf.init()`, que solo
@@ -308,7 +310,7 @@ uno de velocidad constante -- aunque cada vez parece menos necesario, dado
 que el modelo periódico, bien inicializado, SÍ está aportando valor medible
 y las dos ampliaciones "fáciles" (velocidad, frecuencia) ya se han agotado
 sin éxito. Cualquier intento futuro de EKF debe medirse con
-`scripts/run_multibag_eval.py` en un `ROS_DOMAIN_ID` propio -- un proceso
+`mocap_step_detector/scripts/run_multibag_eval.py` en un `ROS_DOMAIN_ID` propio -- un proceso
 ROS ajeno compartiendo el dominio por defecto contaminó una medida anterior
 y produjo una conclusión falsa ("catastrófico") que tuvo que corregirse.
 
@@ -344,7 +346,7 @@ ground truth, que no está en el `topics` por defecto; elige un
 `--domain-id` que nadie más use):
 
 ```bash
-python3 scripts/run_multibag_eval.py --bags-dir ~/bagsFolder/definitive \
+python3 ~/workspace/walker_ws/src/mocap4w/mocap_step_detector/scripts/run_multibag_eval.py --bags-dir ~/bagsFolder/definitive \
     --out-dir ~/claudtemp/eval --rate 4.0 --domain-id <libre> \
     --launch-file test_step_detector.launch.py \
     --launch-args "topics:='/scan /labeled_markers /rigid_bodies'" \

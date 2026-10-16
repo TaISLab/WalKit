@@ -96,6 +96,12 @@ def generate_launch_description():
         description="segundos de espera antes de reproducir el bag, para que los detectores "
                     "(el random forest tarda en cargar) ya esten suscritos"))
     ld.add_action(DeclareLaunchArgument(
+        "topics", default_value="/scan",
+        description="topics del bag a reproducir, separados por espacios; la evaluacion contra el mocap "
+                    "(mocap_step_detector/scripts/run_multibag_eval.py) anade /labeled_markers /rigid_bodies"))
+    ld.add_action(DeclareLaunchArgument(
+        "shutdown_on_end", default_value="false", description="apagar todo al acabar el bag"))
+    ld.add_action(DeclareLaunchArgument(
         "sim_time", default_value="true",
         description="use_sim_time para todo lo del test (en un banco de pruebas de bags, true)"))
     ld.add_action(DeclareLaunchArgument(
@@ -111,10 +117,11 @@ def generate_launch_description():
             bag_folder=LaunchConfiguration("bag_folder"),
             bag_name=LaunchConfiguration("bag_name"),
             rate=LaunchConfiguration("rate"),
-            topics=["/scan", "/labeled_markers", "/rigid_bodies"],
+            topics=LaunchConfiguration("topics"),
             delay=LaunchConfiguration("delay"),
             sim_time=LaunchConfiguration("sim_time"),
-            debug=LaunchConfiguration("debug")):
+            debug=LaunchConfiguration("debug"),
+            shutdown_on_end=LaunchConfiguration("shutdown_on_end")):
         ld.add_action(action)
 
     # Recorta /scan (crudo) a /scan_feet -- la zona donde pueden aparecer
