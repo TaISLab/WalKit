@@ -211,15 +211,6 @@ report_posture_mocap.json ---------------------> compute_lean_vs_margin_correlat
   `/left_wheel`/`/right_wheel` reales están rotos en estos bags; lo lanza
   internamente `export_bag_timeseries.py`/`compare_*_vs_walker.py` como
   parte del pipeline de reproducción.
-- `eval_odom_against_mocap.py`: evalúa una odometría grabada (por defecto
-  `/odom` del EKF láser+IMU de `walker_bringup`) contra el mocap: ATE tras
-  alinear con Umeyama 2D, error de rumbo y deriva en % del recorrido. Es
-  la vía para validar la odometría REAL del andador, que el flujo de arriba
-  NO valida: en la reproducción de `export_bag_timeseries.py` el `/odom`
-  sale del propio mocap (`mocap_odometry (nodo)`), así que `d` y `WV` del
-  informe solo validan la aritmética de `gait_monitor_speed`. No forma
-  parte del flujo del informe; ver su docstring para qué grabar.
-  Aplica por defecto la corrección temporal del mocap de
-  `mocap_odometry/config/time_warp.yaml` (clave = nombre del bag original, deducido del
-  nombre del eval-bag o con `--bag-name`; `--time-warp none` la desactiva) y
-  empareja por sellos de cabecera (`--time-basis header`).
+- `eval_odom_against_mocap.py` y `odom_tuning/`: movidos a `mocap4w/mocap_odometry/scripts/` (todo lo que compara
+  una odometría con la del mocap). Ojo: en la reproducción de `export_bag_timeseries.py` el `/odom` sale del propio
+  mocap, así que `d` y `WV` del informe solo validan la aritmética de `gait_monitor_speed`.

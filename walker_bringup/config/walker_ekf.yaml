@@ -131,7 +131,7 @@ walker_ekf_node:
 # to be larger, which will cause the filter to trust the incoming measurement more during correction. The values are
 # ordered as x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az. Defaults to the matrix below if
 # unspecified.
-        # Tuned against mocap on bagsFolder_unified (see walker_mocap_eval, 32 clean bags, 3
+        # Tuned against mocap on bagsFolder_unified (see mocap_odometry/scripts/odom_tuning, 32 clean bags, 3
         # repetitions per candidate; evaluation noise sigma ~0.007-0.01 in J): the yaw entry
         # went from 0.06 to 0.001 so the filter integrates the (accurate) gyro between laser
         # corrections instead of re-deriving heading from each scan (0.0003 after the ICP got the

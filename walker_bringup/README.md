@@ -62,7 +62,7 @@ scan-matching-anomalous bags the gyro is right. State is published on `/odom_sup
 With the supervisor the EKF's `odom0` Mahalanobis gate is raised from 5 to 100 sigma in the launch: at 5 sigma
 the corrective laser heading is rejected once a bad gyro has pulled the filter more than ~10 deg.
 
-Fault injection on 12 clean mocap bags (`walker_mocap_eval/scripts/odom_tuning/supervisor_test.py`), EKF
+Fault injection on 12 clean mocap bags (`mocap_odometry/scripts/odom_tuning/supervisor_test.py`), EKF
 heading error without / with the supervisor: IMU drops at 25 s 3.3 -> 1.7 deg; inverted gyro sign 67 -> 6.4 deg;
 +0.05 rad/s bias 6.3 -> 2.7 deg; normal operation 1.4 -> 1.4 deg with 1 spurious switch in 33 clean bags and
 none in the 8 scan-matching-anomalous ones. Bags whose gyro integral is 5-7 % off the laser

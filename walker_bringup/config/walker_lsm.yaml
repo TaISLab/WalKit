@@ -59,7 +59,7 @@ laser_scan_matcher_node:
     # off (expensive per-scan), so this fixed estimate is what
     # robot_localization (walker_ekf.yaml, odom0) actually weights this
     # sensor by. Starting point only: re-tune from the ATE numbers produced
-    # by walker_mocap_eval/scripts/eval_odom_against_mocap.py against the
+    # by mocap_odometry/scripts/eval_odom_against_mocap.py against the
     # mocap-labeled bags in bagsFolder_unified before trusting these values
     # in the field.
     # Heading variance 0.2 rad2 (std ~26 deg): deliberately weak. Successive scan matches are chained to
