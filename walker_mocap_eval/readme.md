@@ -54,9 +54,7 @@ scripts/   (orden de ejecucion y ejemplos de comandos: ver scripts/README.md)
   compute_cog_from_mocap.py        CLI: bag(s) etiquetado(s) -> centro de gravedad (modelo De Leva + sexo/peso, punto 3)
   selftest_cog_estimation.py       auto-test con datos sinteticos (sin bags), valida el modelo segmentario
   compare_cog_mocap_vs_walker.py   punto 3 (comparacion): CoM de mocap vs /support_centroid real (walker_centroid_support)
-  eval_odom_against_mocap.py       evalua una odometria grabada (/odom del EKF laser+IMU, walker_bringup) contra el mocap:
-                                    ATE tras alinear con Umeyama 2D + deriva en % del recorrido (antes en walker_step_detector/scripts)
-                                    (aplica mocap_odometry/config/time_warp.yaml al eje de tiempo del mocap; --time-warp none la desactiva)
+  (eval_odom_against_mocap.py y odom_tuning/: movidos a mocap4w/mocap_odometry)
 ```
 
 ## Uso
@@ -606,89 +604,7 @@ bags de `labeled_bags` ni si este dataset salió de los bags anteriores o de
 los regenerados; si lo está, las duraciones de la ventana `/tag` y los
 tiempos de los resultados podrían estar distorsionados en ese bag.
 
-## Ajuste de la odometria laser-inercial (`scripts/odom_tuning/`)
+## Ajuste de la odometria laser-inercial
 
-Herramientas para ajustar y validar `walker_bringup/launch/walker_laser_imu_odom.launch.py` (scan matcher
-`ros2_laser_scan_matcher` + EKF de `robot_localization`) contra el mocap. Puntuan con las mismas funciones que
-`scripts/eval_odom_against_mocap.py` (ATE tras alineamiento 2D + error de rumbo), pero separan el error de rumbo en
-**sesgo constante** (offset de calibracion cuerpo-rigido) y **variacion** (deriva real), que es lo que importa.
+Movido a `mocap4w/mocap_odometry` (`scripts/odom_tuning/`, con su README): todo lo que compara una odometria con la del mocap vive alli.
 
-### Flujo
-
-```bash
-export ODOM_TUNE_DIR=~/odom_tuning      # grabaciones y caches (no /tmp: tardan ~25 min y /tmp se vacia al reiniciar)
-cd walker_mocap_eval/scripts/odom_tuning
-python3 stage1.py            # 1 vez por bag: scan matching real -> WORK/stage1  (~25 min, 47 bags)
-python3 build_stage2.py      # une /scan_odom con el IMU crudo del bag original -> WORK/stage2
-python3 diagnose_bags.py     # quien se equivoca en cada bag: laser, mocap o nadie (compara con bag_quality.yaml)
-python3 compare.py           # sin_imu vs la configuracion comiteada, 3 repeticiones, bags limpios
-python3 compare.py --bags scan_anom --reps 2          # ayuda la IMU donde el scan matching falla?
-python3 tune.py [--grid]     # busqueda por coordenadas (OJO al ruido, ver abajo)
-python3 validate_prod.py     # lo comiteado en walker_bringup/config, extremo a extremo con el launcher de test
-python3 gyro_check.py        # signo/escala/sesgo/desfase del IMU contra el mocap, crudo y filtrado
-python3 fit_time_warp.py     # desajuste temporal empirico mocap-gyro por bag (escribe time_warp.yaml con --write)
-```
-
-Como la salida del scan matcher no depende de los parametros del EKF, se graba una sola vez y `harness.py` repite
-solo el EKF (~1 min por configuracion para 16 bags). `harness.prod_cfg()` construye la configuracion leyendo
-`walker_ekf.yaml`, `walker_lsm.yaml` y `wt901.yaml` del repo, asi que siempre prueba lo comiteado. Requiere el workspace
-compilado (`robot_localization`, `ros2_laser_scan_matcher`, `walker_bringup`).
-
-### Calidad de los bags (`bag_quality.yaml`)
-
-Los 47 bags no valen igual para puntuar. `bag_quality.yaml` anota por que se apartan y es lo que leen todos los
-scripts (limpios = el resto, 32 bags):
-
-- **`scan_matching_anomalous` (8)**: el scan matching deriva en rumbo; gyro y mocap coinciden entre si y el laser no
-  (MF_test20, MF_test19, CA_test03, CA_test09, LA_test01, LA_test07, MF_test05, MF_test06).
-- **`mocap_suspect` (6)**: gyro y laser coinciden entre si y el mocap no (MT_test12..15, CA_test05, CA_test06). Su
-  guinada es suave pero discrepa de forma sistematica: parece que el cuerpo rigido de esas sesiones esta definido
-  con otra orientacion. Ojo: la posicion de referencia sale de la pose del cuerpo rigido + (dx, dy) girado por su
-  yaw, asi que un yaw malo tambien contamina la posicion.
-- **`no_imu` (1)**: MT_test11.
-
-`diagnose_bags.py` aplica la regla (gyro crudo como arbitro) y reproduce 43 de las 47 etiquetas; el resto son casos
-limite anotados. Si se anaden bags, pasar el diagnostico antes de puntuar con ellos.
-
-### Lo que se midio (2026-10, 47 bags)
-
-| Hallazgo | Evidencia |
-|---|---|
-| El sensor WitMotion tiene el eje z **arriba**: el xacro con `roll=180` hacia que `robot_localization` fusionara la guinada con el signo cambiado | acelerometro z = +9.8 en reposo; gyro z correlaciona +0.99 con el mocap; con roll=180 el rumbo del EKF salia 3.81 deg frente a 2.50 deg del laser solo |
-| El gyro **crudo** es excelente y el **filtrado** esta corrompido | crudo: sesgo 0.000 +-0.003 rad/s, escala 1.00, corr 0.99-1.00. `imu_complementary_filter` (`do_bias_estimation`): sesgos de hasta 0.13 rad/s, distintos en cada bag |
-| Con el scan matching sano la IMU no aporta | bags limpios: rumbo 2.48 deg con IMU frente a 2.50 deg solo laser (ATE 0.211 frente a 0.216 m) |
-| Donde el scan matching falla en rumbo, la IMU rescata parte | LA_test07 7.3 -> 1.9 deg; MF_test20 29.6 -> 27.6; CA_test03 15.4 -> 14.7; LA_test01 8.4 -> 7.9 |
-| El desfase temporal importa: el scan se sella al empezar el barrido (0.157 s) y la pose describe su mitad | `odom_time_offset_ns: 80000000` mejora el ATE ~1 % y el rumbo del propio `/scan_odom` contra el mocap |
-| La covarianza de rumbo del laser debe ser holgada (0.05, no 0.001) | los matches sucesivos van encadenados al mismo keyframe: no son medidas independientes |
-
-### Aviso sobre el ruido de la evaluacion
-
-La evaluacion tiene ruido (std ~0.007-0.01 de J entre repeticiones identicas, mas cerca de inestabilidad). Un
-candidato "J=0.93" medido una sola vez resulto ser ~1.05 al repetirlo: elegir el minimo de muchas medidas
-selecciona la suerte. `tune.py` solo acepta mejoras mayores que el ruido, y **todo cambio debe confirmarse con
-`compare.py` (varias repeticiones) antes de comitearlo**. Cualquier cifra entre dos candidatos que difiera menos
-de ~0.02 de J es indistinguible.
-
-### Gyro como estimacion inicial del ICP (implementado)
-
-Hecho en `ros2_laser_scan_matcher` (parametro `imu_topic`, ver su README) y activado en `walker_lsm.yaml`. El
-scan matcher solo pasa en los 8 bags anomalos de 13.9 a 5.9 deg de rumbo (MF_test20 de 30.0 a 4.7 deg y de 8.1 a
-1.2 % de deriva) y en los 32 limpios de 2.50 a 2.21 deg. Con el EKF encima y las covarianzas reajustadas
-(`pose_covariance` de rumbo 0.2, ruido de proceso de yaw 0.0003) `/odom` da **1.91 deg** en los limpios y 5.4 deg en los
-anomalos.
-
-Para regrabar con y sin el cambio y compararlos: `ODOM_TUNE_DIR=<dir> stage1.py --lsm-set imu_topic=/bwt901cl/imu`
-frente a `--lsm-set imu_topic=` (dos directorios de trabajo distintos).
-
-Dos lecciones que cuestan caro redescubrir:
-
-- **Comprobar la semilla contra el resultado del propio ICP no detecta un gyro mal.** Con el signo del IMU invertido
-  (TF con roll=180) el prior sembrado daba 65 deg / 2.6 m en MF_test20, peor que sin prior (30 deg / 1.25 m), y la
-  comprobacion de consistencia no saltaba porque el ICP, donde el escenario restringe poco el giro, se queda cerca de
-  la semilla. Lo que lo arregla es ejecutar tambien el ICP sin semilla y quedarse con el de menor error medio
-  (`imu_prior_arbitration_ratio`): con el signo invertido el resultado vuelve al de sin prior.
-- **El mejor candidato de una busqueda con una sola medida suele ser suerte.** Los valores de covarianza se eligieron con
-  `compare.py` (3 repeticiones por candidato); `tune.py` solo sirve para proponer.
-
-Pendiente aparte: si el gyro se pierde, el EKF actual (rumbo del laser deliberadamente debil) empeora el rumbo a ~4.5 deg
-frente a 2.2 deg del scan matcher solo; no hay conmutacion automatica de covarianzas en `robot_localization`.

@@ -27,7 +27,7 @@ Entradas que ha de proporcionar el resto del sistema (NO se lanzan aqui):
     ros2 launch walker_bringup walker_laser_imu_odom.launch.py
 
 Argumentos (los ficheros permiten ajustar parametros sin tocar los de produccion,
-ver launch/test/walker_laser_imu_odom_test.launch.py):
+ver mocap_odometry/launch/compare_odometry.launch.py):
   use_sim_time      true al reproducir un rosbag.
   lsm_params_file   parametros del scan matcher (por defecto config/walker_lsm.yaml).
   ekf_params_file   parametros del EKF (por defecto config/walker_ekf.yaml).
@@ -36,8 +36,8 @@ ver launch/test/walker_laser_imu_odom_test.launch.py):
                     alimenta entonces de /scan_odom_ekf y /imu_ekf, no de /scan_odom ni /bwt901cl/imu.
 
 Validado offline contra rosbags con ground-truth de mocap (rigid_bodies[0] =
-el andador) en bagsFolder_unified -- ver launch/test/walker_laser_imu_odom_test.launch.py
-y walker_mocap_eval/scripts/eval_odom_against_mocap.py.
+el andador) en bagsFolder_unified -- ver mocap_odometry/launch/compare_odometry.launch.py
+y mocap_odometry/scripts/eval_odom_against_mocap.py.
 """
 
 from ament_index_python.packages import get_package_share_directory
@@ -58,7 +58,7 @@ def generate_launch_description():
 
     ld.add_action(DeclareLaunchArgument(
         'use_sim_time', default_value='false',
-        description='true al reproducir un rosbag (ver launch/test/walker_laser_imu_odom_test.launch.py)'))
+        description='true al reproducir un rosbag (ver mocap_odometry/launch/compare_odometry.launch.py)'))
     ld.add_action(DeclareLaunchArgument(
         'lsm_params_file', default_value=join(bringup_dir, 'config', 'walker_lsm.yaml'),
         description='parametros de ros2_laser_scan_matcher'))
