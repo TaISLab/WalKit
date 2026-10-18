@@ -57,7 +57,10 @@ MaskFilter::MaskFilter(rclcpp::NodeOptions options=rclcpp::NodeOptions()) : Node
     RCLCPP_INFO(get_logger(), "[%s]: %d directions will be masked in frame id [%s].", get_name(), (int)masks_[frame_id_].size(),frame_id_.c_str());
     
     // ROS Comms
-    auto default_qos = rclcpp::QoS(rclcpp::SystemDefaultsQoS());
+    // Same reliability as the system default (best effort, so it still matches a laser driver publishing
+    // sensor data) but with a real history: scans can arrive in bursts a few ms apart (a hiccup of the driver,
+    // or of the recording being replayed) and each one has to be filtered, not overwritten by the next.
+    auto default_qos = rclcpp::SensorDataQoS().keep_last(100);
 
     // Publishers       
     this->out_scan_pub_  = this->create_publisher<sensor_msgs::msg::LaserScan>(out_scan_topic_name_, 20);
@@ -141,11 +144,7 @@ int main(int argc, char **argv){
 	auto node = std::make_shared<MaskFilter>();	
     RCLCPP_INFO(node->get_logger(), "Starting MaskFilter node. ");
 
-    rclcpp::WallRate loop_rate(200);
-    while (rclcpp::ok()) {
-        rclcpp::spin_some(node);
-        loop_rate.sleep();
-    }
+    rclcpp::spin(node);
 
     RCLCPP_INFO(node->get_logger(), "Shutting down MaskFilter node. ");
 	rclcpp::shutdown();
