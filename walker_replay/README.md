@@ -74,6 +74,33 @@ Los argumentos del launch del módulo no se filtran al launcher que lo llama
 Los procesos lanzados con `ExecuteProcess` (`python3 script.py --ros-args`) no
 reciben el parámetro global: pásales `-p use_sim_time:=true`.
 
+## Leer un bag sin reproducirlo (`bagio`) y lanzar sesiones (`session`)
+
+Reproducir un bag es de este paquete, y mirar dentro de uno también: las herramientas que analizan bags (comparaciones
+contra el mocap) no llevan su propio lector.
+
+```python
+from walker_replay import bagio, session
+
+bagio.topics(bag)                  # {topic: tipo}, de metadata.yaml (sin abrir el bag)
+bagio.duration_s(bag); bagio.start_ns(bag); bagio.storage_id(bag); bagio.message_counts(bag)
+bagio.find_bags(carpeta)           # carpetas con metadata.yaml
+bagio.load_messages(bag, ['/scan', '/rigid_bodies'])    # {topic: [(t_ns, msg)]}; BagError si falta alguno
+bagio.iter_messages(bag, topics)   # (topic, t_ns, msg) en orden de bag; iter_raw() sin deserializar
+bagio.read_tag_window(bag)         # (t_inicio, t_fin) entre los dos /tag, o None
+bagio.clip_series(serie, t0, t1)
+with bagio.BagWriter(salida) as w: # escribir un bag nuevo
+    w.add_topic('/odom', 'nav_msgs/msg/Odometry'); w.write('/odom', t_ns, msg)
+
+proc = session.start('ros2 launch ...', domain_id=92, log='launch.log')   # en su propio grupo de procesos
+session.stop(proc)                 # SIGINT, luego SIGTERM, luego SIGKILL, a todo el grupo
+```
+
+`bagio` no sabe qué significan los topics (eso es de quien los pide) y no necesita ROS para los metadatos; `rosbag2_py`
+se importa al leer o escribir. `session` sustituye a las seis copias de `sh()`/`stop()` que había en los scripts de
+evaluación; resetea la disposición de SIGINT (un script lanzado en segundo plano con `&` la hereda ignorada y
+`ros2 bag record` no terminaría de escribir su bag).
+
 ## Decisiones
 
 - **`clock_hz` 200**: `ros2 bag play` publica `/clock` a 40 Hz por defecto y los

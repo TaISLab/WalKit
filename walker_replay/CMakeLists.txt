@@ -4,7 +4,7 @@ project(walker_replay)
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_python REQUIRED)
 
-# Python modules (walker_replay.test_config, .bag, .launch_utils)
+# Python modules (walker_replay.test_config, .bag, .bagio, .session, .launch_utils)
 ament_python_install_package(${PROJECT_NAME})
 
 install(PROGRAMS
@@ -19,6 +19,8 @@ install(DIRECTORY launch
 if(BUILD_TESTING)
   find_package(ament_cmake_pytest REQUIRED)
   ament_add_pytest_test(test_replay test/test_replay.py)
+  ament_add_pytest_test(test_bagio test/test_bagio.py)
+  ament_add_pytest_test(test_session test/test_session.py)
 endif()
 
 ament_package()
