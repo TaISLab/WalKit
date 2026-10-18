@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 import numpy as np
 from  sensor_msgs.msg import LaserScan
@@ -77,10 +78,14 @@ def main(args=None):
 
     generator = LaserFilterGenerator(0.53, 0.20, 20, 'scan')
 
-    rclpy.spin(generator)
+    try:
+        rclpy.spin(generator)
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass
 
     generator.destroy_node()
-    rclpy.shutdown()
+    if rclpy.ok():
+        rclpy.shutdown()
 
 
 if __name__ == '__main__':

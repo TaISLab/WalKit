@@ -5,6 +5,7 @@ from operator import index
 from scipy import interpolate
 
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.qos import QoSDurabilityPolicy, QoSHistoryPolicy, QoSReliabilityPolicy
 from rclpy.qos import QoSProfile
 from rclpy.node import Node
@@ -304,10 +305,14 @@ def main(args=None):
 
     minimal_subscriber = GaitMonitorHand()
 
-    rclpy.spin(minimal_subscriber)
+    try:
+        rclpy.spin(minimal_subscriber)
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass
  
     minimal_subscriber.destroy_node()
-    rclpy.shutdown()
+    if rclpy.ok():
+        rclpy.shutdown()
 
 
 if __name__ == '__main__':

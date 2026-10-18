@@ -1,4 +1,5 @@
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 import numpy as np
 from visualization_msgs.msg import Marker
@@ -42,10 +43,14 @@ def main(args=None):
 
     minimal_subscriber = ClusterPlot()
 
-    rclpy.spin(minimal_subscriber)
+    try:
+        rclpy.spin(minimal_subscriber)
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass
  
     minimal_subscriber.destroy_node()
-    rclpy.shutdown()
+    if rclpy.ok():
+        rclpy.shutdown()
 
 
 if __name__ == '__main__':

@@ -1,4 +1,5 @@
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from visualization_msgs.msg import Marker
 from geometry_msgs.msg import Point
@@ -70,10 +71,14 @@ def main(args=None):
 
     minimal_subscriber = AreaPlotter()
 
-    rclpy.spin(minimal_subscriber)
+    try:
+        rclpy.spin(minimal_subscriber)
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass
  
     minimal_subscriber.destroy_node()
-    rclpy.shutdown()
+    if rclpy.ok():
+        rclpy.shutdown()
 
 
 if __name__ == '__main__':

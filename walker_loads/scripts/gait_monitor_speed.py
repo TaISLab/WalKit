@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
@@ -291,7 +292,7 @@ def main(args=None):
 
     try:
         rclpy.spin(myNode)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         print('User-requested stop')
     except BaseException:
         print('Exception in execution:', file=sys.stderr)
@@ -300,7 +301,8 @@ def main(args=None):
         # Destroy the node explicitly
         # (optional - Done automatically when node is garbage collected)
         myNode.destroy_node()
-        rclpy.shutdown()  
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == '__main__':

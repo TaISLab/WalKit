@@ -3,6 +3,7 @@
 from std_srvs.srv import SetBool
 
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 import os
 import subprocess
@@ -65,10 +66,14 @@ def main(args=None):
 
     minimal_service = RecordService()
 
-    rclpy.spin(minimal_service)
+    try:
+        rclpy.spin(minimal_service)
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass
     minimal_service.destroy_node()
 
-    rclpy.shutdown()
+    if rclpy.ok():
+        rclpy.shutdown()
 
 
 if __name__ == '__main__':

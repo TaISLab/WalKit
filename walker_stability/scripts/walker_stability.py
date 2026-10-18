@@ -5,6 +5,7 @@ from os.path import join
 from sys import stderr
 
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.time import Time
 from rclpy.duration import Duration
 from rclpy.node import Node
@@ -213,7 +214,7 @@ def main(args=None):
 
     try:
         rclpy.spin(myNode)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         print('User-requested stop')
     except BaseException:
         print('Exception in execution:', file=stderr)
@@ -222,7 +223,8 @@ def main(args=None):
         # Destroy the node explicitly
         # (optional - Done automatically when node is garbage collected)
         myNode.destroy_node()
-        rclpy.shutdown()  
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == '__main__':
