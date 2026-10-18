@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 import yaml
 from ament_index_python.packages import get_package_share_directory
@@ -96,11 +97,12 @@ def main(args=None):
 
     try:
       rclpy.spin(minimal_subscriber)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
       pass
 
     minimal_subscriber.destroy_node()
-    rclpy.shutdown()
+    if rclpy.ok():
+        rclpy.shutdown()
 
 
 if __name__ == '__main__':

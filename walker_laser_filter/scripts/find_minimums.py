@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 
 from  sensor_msgs.msg import LaserScan
@@ -40,10 +41,14 @@ def main(args=None):
 #    minimal_finder = FindMinimus(0.47,'scan_nav')
     minimal_finder = FindMinimus(0.53,'scan')
 
-    rclpy.spin(minimal_finder)
+    try:
+        rclpy.spin(minimal_finder)
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass
 
     minimal_finder.destroy_node()
-    rclpy.shutdown()
+    if rclpy.ok():
+        rclpy.shutdown()
 
 
 if __name__ == '__main__':

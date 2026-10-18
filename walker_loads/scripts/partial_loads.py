@@ -4,6 +4,7 @@ import numpy as np
 from scipy import interpolate
 
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import QoSDurabilityPolicy, QoSHistoryPolicy, QoSReliabilityPolicy
 from rclpy.qos import QoSProfile
@@ -217,10 +218,14 @@ def main(args=None):
 
     minimal_subscriber = PartialLoads()
 
-    rclpy.spin(minimal_subscriber)
+    try:
+        rclpy.spin(minimal_subscriber)
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass
  
     minimal_subscriber.destroy_node()
-    rclpy.shutdown()
+    if rclpy.ok():
+        rclpy.shutdown()
 
 
 if __name__ == '__main__':
