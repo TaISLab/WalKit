@@ -32,6 +32,10 @@ WalkerDiffDrive::WalkerDiffDrive() : Node("diff_tf") {
       this->declare_parameter("wheel_high_wrap", rclcpp::ParameterValue(( encoder_max_ - encoder_min_)*7/10 + encoder_min_));
       this->get_parameter("wheel_high_wrap",  encoder_high_wrap_ );
 
+      // data time to wait for a silent wheel before giving up on it
+      this->declare_parameter("max_wait_s", rclcpp::ParameterValue(1.0));
+      this->get_parameter("max_wait_s", max_wait_s_);
+
       this->declare_parameter("noise_right", rclcpp::ParameterValue(0.01) );
       this->get_parameter("noise_right", kr );
       this->declare_parameter("noise_left", rclcpp::ParameterValue(0.01) );
@@ -77,7 +81,6 @@ WalkerDiffDrive::WalkerDiffDrive() : Node("diff_tf") {
       // speeds in x/rotation
       dx_ = 0.0;  
       dr_ = 0.0;
-      then_ = this->get_clock()->now();
 
       right_buffer_ = CircularBuffer(10);
       left_buffer_ = CircularBuffer(10);
@@ -106,12 +109,18 @@ WalkerDiffDrive::WalkerDiffDrive() : Node("diff_tf") {
          tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
       }
 
-      int period_ms = 1000.0 / rate_hz_;
-      update_timer_ = this->create_wall_timer(std::chrono::milliseconds(period_ms), std::bind(&WalkerDiffDrive::update, this));
+      period_ns_ = static_cast<int64_t>(1e9 / rate_hz_);
+      // Both wheels' stamps can in principle repeat; a silent wheel is given up on after max_wait_s.
+      sequencer_ = std::make_unique<StampSequencer<walker_msgs::msg::EncoderStamped>>(
+          2, static_cast<int64_t>(max_wait_s_ * 1e9), 100000,
+          [this](int stream, int64_t stamp_ns, walker_msgs::msg::EncoderStamped &msg){ processEncoder(stream, stamp_ns, msg); },
+          std::vector<bool>{true, true});
 
-      //  inputs.
-      sub_left_  = this->create_subscription<walker_msgs::msg::EncoderStamped>(left_wheel_encoder_topic_name_, 10, std::bind(&WalkerDiffDrive::leftEncoderCallback, this, _1));
-      sub_right_ = this->create_subscription<walker_msgs::msg::EncoderStamped>(right_wheel_encoder_topic_name_, 10, std::bind(&WalkerDiffDrive::rightEncoderCallback, this, _1));
+      //  inputs. Best effort like the system default (it matches the driver's publisher), but with a deep history:
+      //  the two wheels wait for each other in the sequencer.
+      auto enc_qos = rclcpp::SensorDataQoS().keep_last(500);
+      sub_left_  = this->create_subscription<walker_msgs::msg::EncoderStamped>(left_wheel_encoder_topic_name_, enc_qos, std::bind(&WalkerDiffDrive::leftEncoderCallback, this, _1));
+      sub_right_ = this->create_subscription<walker_msgs::msg::EncoderStamped>(right_wheel_encoder_topic_name_, enc_qos, std::bind(&WalkerDiffDrive::rightEncoderCallback, this, _1));
 
       RCLCPP_DEBUG(this->get_logger(), "Init done. ");
  
@@ -122,9 +131,36 @@ WalkerDiffDrive::WalkerDiffDrive() : Node("diff_tf") {
 */
 
 
-void WalkerDiffDrive::leftEncoderCallback(const walker_msgs::msg::EncoderStamped::ConstSharedPtr left_enc_msg)  {
+void WalkerDiffDrive::leftEncoderCallback(const walker_msgs::msg::EncoderStamped::ConstSharedPtr msg)  {
+    sequencer_->push(LEFT, rclcpp::Time(msg->header.stamp).nanoseconds(), *msg);
+    sequencer_->release();
+}
+
+void WalkerDiffDrive::rightEncoderCallback(const walker_msgs::msg::EncoderStamped::ConstSharedPtr msg)  {
+    sequencer_->push(RIGHT, rclcpp::Time(msg->header.stamp).nanoseconds(), *msg);
+    sequencer_->release();
+}
+
+void WalkerDiffDrive::processEncoder(int stream, int64_t stamp_ns, const walker_msgs::msg::EncoderStamped &msg){
+    // the grid ticks that fall before this encoder reading see the state without it
+    if (!have_tick_){
+        next_tick_ns_ = stamp_ns + period_ns_;
+        have_tick_ = true;
+    }
+    while (next_tick_ns_ < stamp_ns){
+        update(next_tick_ns_);
+        next_tick_ns_ += period_ns_;
+    }
+    if (stream == LEFT){
+        leftEncoder(msg);
+    } else {
+        rightEncoder(msg);
+    }
+}
+
+void WalkerDiffDrive::leftEncoder(const walker_msgs::msg::EncoderStamped &left_enc_msg)  {
         // Left encoder
-        int enc_raw = left_enc_msg->encoder;
+        int enc_raw = left_enc_msg.encoder;
         int enc;
         bool is_new_cycle = false;
         new_left_ = true;
@@ -136,7 +172,7 @@ void WalkerDiffDrive::leftEncoderCallback(const walker_msgs::msg::EncoderStamped
             RCLCPP_ERROR(this->get_logger(), "Error on left encoder [%d]. Using prev value", enc_raw);
             enc_raw = left_buffer_.getLast();
         }
-        last_left_data_ = *left_enc_msg;      
+        last_left_data_ = left_enc_msg;
         enc = enc_raw;
 
         // check if we are in a new turn
@@ -168,9 +204,9 @@ void WalkerDiffDrive::leftEncoderCallback(const walker_msgs::msg::EncoderStamped
 
 }
 
-void WalkerDiffDrive::rightEncoderCallback(const walker_msgs::msg::EncoderStamped::ConstSharedPtr right_enc_msg)  {
-        // Left encoder
-        int enc_raw = right_enc_msg->encoder;
+void WalkerDiffDrive::rightEncoder(const walker_msgs::msg::EncoderStamped &right_enc_msg)  {
+        // Right encoder
+        int enc_raw = right_enc_msg.encoder;
         int enc;
         bool is_new_cycle = false;
         new_right_ = true;
@@ -182,7 +218,7 @@ void WalkerDiffDrive::rightEncoderCallback(const walker_msgs::msg::EncoderStampe
             RCLCPP_ERROR(this->get_logger(), "Error on right encoder [%d]. Using prev value", enc_raw);
             enc_raw = right_buffer_.getLast();
         }
-        last_right_data_ = *right_enc_msg;      
+        last_right_data_ = right_enc_msg;
         enc = enc_raw;
 
         // check if we are in a new turn
@@ -214,16 +250,19 @@ void WalkerDiffDrive::rightEncoderCallback(const walker_msgs::msg::EncoderStampe
 
     }
 
-void WalkerDiffDrive::update(){
+void WalkerDiffDrive::update(int64_t stamp_ns){
 
     if ((first_reading_) || ( new_right_) || (new_left_)) {
         new_right_ = false;
         new_left_ = false; 
 
-        now_ = this->get_clock()->now();
-        rclcpp::Duration diff = now_ - then_;
-        then_ = now_;
-        double elapsed = diff.seconds();
+        builtin_interfaces::msg::Time now_;
+        now_.sec = static_cast<int32_t>(stamp_ns / 1000000000);
+        now_.nanosec = static_cast<uint32_t>(stamp_ns % 1000000000);
+        // data time since the previous publication (the first one has none)
+        double elapsed = have_then_ ? (stamp_ns - then_ns_) * 1e-9 : 0.0;
+        then_ns_ = stamp_ns;
+        have_then_ = true;
             
         double d_left = 0;
         double d_right = 0;
@@ -259,8 +298,8 @@ void WalkerDiffDrive::update(){
         // this approximation works (in radians) for small angles
         th = (d_right - d_left ) / base_width_;
         // calculate velocities
-        dx_ = d / elapsed;
-        dr_ = th / elapsed;
+        dx_ = elapsed > 0.0 ? d / elapsed : 0.0;
+        dr_ = elapsed > 0.0 ? th / elapsed : 0.0;
 
         //RCLCPP_ERROR(this->get_logger(),"travelled dist increase [%3.4f m, %3.4f deg]",d, th*180/3.1415);
  
