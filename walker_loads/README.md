@@ -55,6 +55,7 @@ retain the sample.
 | `kalman_f0`, `kalman_fa`, `kalman_fb` | 4.0, 15.0, 0.0 (kg) | Initial force-diff state, same layout. |
 | `kalman_w` | 2.0 (rad/s) | Initial shared gait angular frequency (~3 s/cycle). |
 | `kalman_theta` | 0.20 (rad) | Initial absolute phase. |
+| `kalman_theta_sigma` | π (rad) | Uncertainty (1 sigma) of that initial phase: the gait phase is unknown when the filter starts, so it is wide and the first measurements set it. With 1 rad the filter trusted 0.20 rad and could lock on a wrong phase (MF_test07: right-leg fraction mean 0.73 instead of ~0.5, dominant-leg agreement with the mocap 59 % instead of 85 %); before the filter worked on data time this uncertainty was effectively unbounded by accident (the first prediction stepped by the absolute clock, ~1.7e9 s). |
 | `w_estimate_min`, `w_estimate_max` | 0.3, 8.0 (rad/s) | Plausible range for a gait-cycle frequency measured from step-alternation timing (~20 s down to ~0.8 s per cycle); estimates outside this range are dropped. |
 | `zero_crossing_refractory_s` | 0.2 | Minimum time between accepted zero-crossings of the L/R speed difference, so sensor noise wobbling around zero isn't mistaken for a stance/swing swap. |
 
