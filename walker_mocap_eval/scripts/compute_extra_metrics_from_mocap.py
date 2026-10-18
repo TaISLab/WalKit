@@ -22,9 +22,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from mocap_eval import bag_io, cog_estimation, contact_events, extra_metrics  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from compute_gait_from_mocap import DEFAULT_CALIB  # noqa: E402
+from mocap_odometry.core import default_calibration_file  # noqa: E402
 from compute_cog_from_mocap import read_test_config_row, DEFAULT_TEST_CONFIG  # noqa: E402
 
+DEFAULT_CALIB = default_calibration_file()
 HANDLE_CALIB_YAML = (
     Path(__file__).resolve().parent.parent.parent
     / "walker_loads" / "config" / "handle_calib.yaml"

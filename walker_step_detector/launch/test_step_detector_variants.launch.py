@@ -2,8 +2,8 @@
 
 """(Antes test_step_detector.launch.py; renombrado al convertirse ese nombre
 en el launcher de test de step_detector.launch.py.
-Este sigue siendo el que compara las variantes entre si: scripts/
-run_multibag_eval.py lo usa por defecto.)
+Este sigue siendo el que compara las variantes entre si:
+mocap4w/mocap_step_detector/scripts/run_multibag_eval.py lo usa por defecto.)
 
 Lanza las TRES variantes de deteccion de pasos (detect_steps,
 detect_steps_s, km_detect_steps) a la vez contra el mismo bag, cada una
@@ -38,13 +38,13 @@ detect_steps_fused.cpp para la calibracion de confianza de km/segmentos).
 Para evaluar contra ground truth: graba /detected_step_{rf,km,seg,fused}_*
 junto con /labeled_markers y /rigid_bodies (p.ej. `ros2 bag record -o
 eval_out /detected_step_rf_left /detected_step_rf_right ... /labeled_markers
-/rigid_bodies`, o usa scripts/run_multibag_eval.py que ya lo hace) mientras
-este launcher corre, y pasa ese bag de salida a scripts/eval_against_mocap.py
+/rigid_bodies`, o usa mocap_step_detector/scripts/run_multibag_eval.py que ya lo hace) mientras
+este launcher corre, y pasa ese bag de salida a mocap_step_detector/scripts/eval_against_mocap.py
 junto con mocap_odometry/config/mocap_to_base_footprint.yaml.
 
 kalman_model_a0/f0: se probo a subirlos de 0.001 (practicamente cero) a
 valores reales (a0=0.15m, f0=0.6Hz, medianas de 47 bags de mocap, ver
-scripts/estimate_gait_params.py) para intentar arreglar la inobservabilidad
+mocap_step_detector/scripts/estimate_gait_params.py) para intentar arreglar la inobservabilidad
 de frecuencia/fase diagnosticada en track_leg.cpp (dpos/df = 2*pi*a*cos(p)
 ~0 cuando a~0). Descartado: medido limpiamente en 47 bags (ROS_DOMAIN_ID
 aislado, eval_results/result_2026-09-28_baseline_isolated.json vs

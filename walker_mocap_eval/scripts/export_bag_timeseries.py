@@ -41,8 +41,6 @@ import argparse
 import math
 import os
 import shutil
-import signal
-import subprocess
 import sys
 import time
 from pathlib import Path
@@ -53,7 +51,8 @@ from mocap_eval import bag_io, cog_estimation, extra_metrics  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from compute_cog_from_mocap import read_test_config_row  # noqa: E402
-from compare_gait_mocap_vs_walker import tag_window_offset_and_duration  # noqa: E402
+from walker_replay import session  # noqa: E402
+from walker_replay.bagio import tag_window_offset_and_duration  # noqa: E402
 
 ROS_SETUP = "/opt/ros/jazzy/setup.bash"
 WS_SETUP = str(Path.home() / "workspace" / "walker_ws" / "install" / "setup.bash")
@@ -73,29 +72,11 @@ WALKER_TOPICS = [
 
 
 def sh(cmd):
-    full = f"source {ROS_SETUP}; source {WS_SETUP}; export ROS_DOMAIN_ID={ROS_DOMAIN_ID_EVAL}; exec {cmd}"
-    return subprocess.Popen(["bash", "-c", full], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                             preexec_fn=os.setsid)
+    return session.start(cmd, domain_id=ROS_DOMAIN_ID_EVAL, setups=(ROS_SETUP, WS_SETUP))
 
 
 def stop(proc, timeout=8):
-    if proc is None or proc.poll() is not None:
-        return
-    try:
-        os.killpg(os.getpgid(proc.pid), signal.SIGINT)
-    except ProcessLookupError:
-        return
-    try:
-        proc.wait(timeout=timeout)
-    except subprocess.TimeoutExpired:
-        try:
-            os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-        except ProcessLookupError:
-            pass
-        try:
-            proc.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            pass
+    session.stop(proc, timeout=timeout)
 
 
 def write_csv(path, header, rows):
