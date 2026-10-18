@@ -31,9 +31,9 @@ escribe un JSON con un registro por bag. Se pueden correr en cualquier
 orden / en paralelo.
 
 ```bash
-python3 scripts/compute_gait_from_mocap.py \
+python3 ~/workspace/walker_ws/src/mocap4w/mocap_loads/scripts/compute_gait_from_mocap.py \
     --bags-dir $DATASETS --out /tmp/report_gait_mocap.json
-# Punto 1: SpT/SdT/SpL/SdL por pierna, NoS, Tr, d, CAD, WV
+# Punto 1: SpT/SdT/SpL/SdL por pierna, NoS, Tr, d, CAD, WV (el script vive ahora en mocap_loads)
 
 python3 scripts/compute_posture_from_mocap.py \
     --bags-dir $DATASETS --out /tmp/report_posture_mocap.json
@@ -185,7 +185,7 @@ reproducible.
 
 ```
                  (paso 1, 4 scripts, sin reproducir bags)
-labeled_bags/ --> compute_gait_from_mocap.py       --> report_gait_mocap.json      --\
+labeled_bags/ --> (mocap_loads) compute_gait_from_mocap.py --> report_gait_mocap.json --\
              \--> compute_posture_from_mocap.py     --> report_posture_mocap.json   --\
              \--> compute_cog_from_mocap.py         --> report_cog_mocap.json       ---+--> build_master_report_data.py --> report_master.json --> generate_latex_report.py --> informe.tex --> informe.pdf
              \--> compute_extra_metrics_from_mocap.py -> report_extra_mocap.json    --/
@@ -201,8 +201,8 @@ report_posture_mocap.json ---------------------> compute_lean_vs_margin_correlat
 
 ## Otros scripts (no forman parte del flujo anterior)
 
-- `compare_gait_mocap_vs_walker.py` (la comparación de CoM, `compare_cog_mocap_vs_walker.py`, vive ahora en
-  `mocap4w/mocap_centroid_support`):
+- (`compare_gait_mocap_vs_walker.py` vive ahora en `mocap4w/mocap_loads/scripts`, y la comparación de CoM,
+  `compare_cog_mocap_vs_walker.py`, en `mocap4w/mocap_centroid_support`):
   versiones más antiguas que reproducen cada bag en vivo y comparan
   directamente (una reproducción por comparación, en vez de reutilizar
   los CSV de `export_bag_timeseries.py`). Se conservan como referencia /

@@ -17,22 +17,17 @@ del build de colcon.
 - `walker_loads` es el paquete del nodo ROS en produccion
   (`gait_monitor_speed`, `partial_loads`); no es el sitio para tooling de
   analisis offline.
-- `walker_step_detector/scripts/mocap_bag_io.py` ya hace algo parecido,
-  pero esta acoplado a las necesidades del detector de pasos (frame
-  "laser", solo tobillos/rodillas). Los estudios del plan (paso 3: postura,
-  centroide, angulos de codo...) necesitan el resto de keypoints
-  etiquetados (hombros, caderas, muñecas...), asi que se generalizo aqui en
-  vez de forzar ese acoplamiento.
+- Leer un bag es de `walker_replay.bagio` y lo que se hace con los mensajes del mocap (pistas, proyeccion al laser) es de
+  `mocap4w/mocap_compare_common` (`mocap_tracks`): `mocap_eval/bag_io.py` solo conserva los nombres antiguos. Antes habia
+  aqui y en `mocap_step_detector` dos lectores casi iguales.
 
-La calibracion mocap->base_footprint (`mocap_to_base_footprint.yaml`) SI se
-reutiliza tal cual desde `walker_step_detector/config/` (fuente unica),
-solo se referencia por ruta relativa por defecto.
+La calibracion mocap->base_footprint (`mocap_to_base_footprint.yaml`) es la de `mocap4w/mocap_odometry/config/` (fuente unica).
 
 ## Estructura
 
 ```
 mocap_eval/            <- libreria importable (sin dependencia de ROS salvo bag_io.py)
-  bag_io.py             lectura de bags etiquetados, marcadores/rigid_bodies, proyeccion mocap->frame andador
+  bag_io.py             nombres antiguos de walker_replay.bagio (lectura de bags) y mocap_compare_common.mocap_tracks (pistas, proyeccion)
   contact_events.py     reexporta mocap_step_detector.contact_events: eventos/intervalos de apoyo por pie a partir de cinematica del tobillo (mocap no mide carga)
   gait_metrics.py       puerto puro-Python de walker_loads/gait_monitor_speed.py (GaitMonitorSp)
   posture_metrics.py    inclinacion de tronco, ancho de paso, doble apoyo, margen de estabilidad lateral (punto 3)
@@ -44,11 +39,9 @@ mocap_eval/            <- libreria importable (sin dependencia de ROS salvo bag_
   correlation_utils.py  correlacion de Pearson por sujeto (CA/LA/MF/MT) + TOTAL (puntos 2 y 5 de la ampliacion)
 
 scripts/   (orden de ejecucion y ejemplos de comandos: ver scripts/README.md)
-  compute_gait_from_mocap.py       CLI: bag(s) etiquetado(s) -> Step/Stride time/length, NoS, d, CAD, WV (punto 1 del plan)
+  (compute_gait_from_mocap.py y compare_gait_mocap_vs_walker.py: movidos a mocap4w/mocap_loads/scripts)
   selftest_gait_metrics.py         auto-test con datos sinteticos (sin bags), valida el puerto del algoritmo
   mocap_odometry (nodo)             nodo ROS: republica rigid_bodies[0] (mocap) como /odom (ver punto 2 mas abajo)
-  compare_gait_mocap_vs_walker.py  punto 2: lanza el pipeline real (replay_offline.launch.py) contra cada bag,
-                                    graba lo que publica gait_monitor_speed y lo compara con compute_gait_from_mocap.py
   compute_posture_from_mocap.py    CLI: bag(s) etiquetado(s) -> parametros posturales/estabilidad (punto 3)
   selftest_posture_metrics.py      auto-test con datos sinteticos (sin bags), valida la geometria de posture_metrics.py
   compute_cog_from_mocap.py        CLI: bag(s) etiquetado(s) -> centro de gravedad (modelo De Leva + sexo/peso, punto 3)
@@ -65,12 +58,8 @@ cd WalKit/walker_mocap_eval
 # validar la logica portada (no requiere bags ni $DATASETS)
 python3 scripts/selftest_gait_metrics.py
 
-# un bag
-python3 scripts/compute_gait_from_mocap.py --bag $DATASETS/labeled_bags/CA_test01
-
-# todos los bags etiquetados
-python3 scripts/compute_gait_from_mocap.py --bags-dir $DATASETS/labeled_bags \
-    --out /tmp/mocap_gait_results.json
+# parametros de marcha del mocap y su comparacion con la cadena real: mocap4w/mocap_loads/scripts
+# (compute_gait_from_mocap.py, compare_gait_mocap_vs_walker.py)
 ```
 
 ## Recorte a la ventana `/tag` (punto 1 y 2, por defecto)
