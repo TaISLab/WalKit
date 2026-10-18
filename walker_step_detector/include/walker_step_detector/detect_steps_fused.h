@@ -28,6 +28,7 @@
 #include "walker_msgs/msg/step_stamped.hpp"
 
 #include "walker_step_detector/legs_tracker.h"
+#include "walker_stamp_utils/stamp_sequencer.h"
 
 #include <list>
 #include <memory>
@@ -48,16 +49,18 @@ private:
         bool has_data = false;
     };
 
-    void rf_callback(const walker_msgs::msg::StepArray::SharedPtr msg);
-    void km_callback(const walker_msgs::msg::StepArray::SharedPtr msg);
-    void seg_callback(const walker_msgs::msg::StepArray::SharedPtr msg);
+    // Las tres fuentes pasan por un StampSequencer (tiempo de dato): al fusionar el RF de un scan, el km y el seg de ese
+    // mismo scan ya estan, sea cual sea el orden en que lleguen los topics. En igualdad de stamp se procesa km, seg y RF.
+    enum Source {KM = 0, SEG = 1, RF = 2};
+    void push(int source, const walker_msgs::msg::StepArray::SharedPtr msg);
+    void process(int source, int64_t stamp_ns, walker_msgs::msg::StepArray & arr);
 
     // convierte un StepArray a StepStamped con una confianza fija (para
     // km/segmentos, que no traen una confianza real util) o la propia (RF)
     std::list<walker_msgs::msg::StepStamped> to_candidates(
         const walker_msgs::msg::StepArray & arr, double override_confidence, bool use_own_confidence);
 
-    void fuse_and_publish(const walker_msgs::msg::StepArray::SharedPtr rf_msg);
+    void fuse_and_publish(const walker_msgs::msg::StepArray & rf_msg);
 
     bool is_debug_;
 
@@ -74,6 +77,8 @@ private:
     int max_track_loss_frames_;
 
     CachedCandidates km_cache_, seg_cache_;
+    double max_wait_s_;
+    std::unique_ptr<StampSequencer<walker_msgs::msg::StepArray>> sequencer_;
     bool rf_seen_ = false;
 
     LegsTracker kalman_tracker_;

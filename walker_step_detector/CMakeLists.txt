@@ -21,6 +21,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rcutils REQUIRED)
 find_package(walker_msgs REQUIRED)
+find_package(walker_stamp_utils REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(tf2 REQUIRED)
@@ -145,6 +146,7 @@ ament_target_dependencies(detect_steps_fused
   rclcpp
   rcutils
   walker_msgs
+  walker_stamp_utils
   std_msgs
   tf2
   tf2_geometry_msgs

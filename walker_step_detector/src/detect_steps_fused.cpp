@@ -18,6 +18,8 @@ DetectStepsFused::DetectStepsFused() : Node("detect_steps_fused")
     this->declare_parameter<double>("km_default_confidence",  0.81);
     this->declare_parameter<double>("seg_default_confidence", 0.65);
     this->declare_parameter<double>("candidates_freshness_s", 0.3);
+    // tiempo de dato que se espera a una fuente callada antes de darla por perdida (StampSequencer)
+    this->declare_parameter<double>("max_wait_s", 1.0);
 
     this->declare_parameter<double>("detection_threshold", -1.0);
     this->declare_parameter<int>("max_detected_clusters",  -1);
@@ -37,6 +39,7 @@ DetectStepsFused::DetectStepsFused() : Node("detect_steps_fused")
     this->get_parameter("km_default_confidence",  km_default_confidence_);
     this->get_parameter("seg_default_confidence", seg_default_confidence_);
     this->get_parameter("candidates_freshness_s", candidates_freshness_s_);
+    this->get_parameter("max_wait_s", max_wait_s_);
     this->get_parameter("detection_threshold", detection_threshold_);
     this->get_parameter("max_detected_clusters", max_detected_clusters_);
     this->get_parameter("kalman_model_d0", kalman_model_d0_);
@@ -68,38 +71,46 @@ DetectStepsFused::DetectStepsFused() : Node("detect_steps_fused")
         RCLCPP_INFO(this->get_logger(), "Fused step detector loading. Set is_debug to true for debug.");
     }
 
-    auto default_qos = rclcpp::QoS(rclcpp::SystemDefaultsQoS());
+    sequencer_ = std::make_unique<StampSequencer<walker_msgs::msg::StepArray>>(
+        3, static_cast<int64_t>(max_wait_s_ * 1e9), 100000,
+        [this](int source, int64_t stamp_ns, walker_msgs::msg::StepArray & arr) { process(source, stamp_ns, arr); });
+
+    // historial profundo: las tres fuentes esperan unas a otras en el secuenciador
+    auto default_qos = rclcpp::QoS(rclcpp::KeepLast(500));
 
     left_detected_step_pub_ = this->create_publisher<walker_msgs::msg::StepStamped>(detected_steps_topic_name_ + "_left", 20);
     right_detected_step_pub_ = this->create_publisher<walker_msgs::msg::StepStamped>(detected_steps_topic_name_ + "_right", 20);
     fallback_active_pub_ = this->create_publisher<std_msgs::msg::Bool>(detected_steps_topic_name_ + "_fallback_active", 20);
 
     rf_sub_ = this->create_subscription<walker_msgs::msg::StepArray>(
-        rf_topic_, default_qos, std::bind(&DetectStepsFused::rf_callback, this, std::placeholders::_1));
+        rf_topic_, default_qos, [this](const walker_msgs::msg::StepArray::SharedPtr msg) { push(RF, msg); });
     km_sub_ = this->create_subscription<walker_msgs::msg::StepArray>(
-        km_topic_, default_qos, std::bind(&DetectStepsFused::km_callback, this, std::placeholders::_1));
+        km_topic_, default_qos, [this](const walker_msgs::msg::StepArray::SharedPtr msg) { push(KM, msg); });
     seg_sub_ = this->create_subscription<walker_msgs::msg::StepArray>(
-        seg_topic_, default_qos, std::bind(&DetectStepsFused::seg_callback, this, std::placeholders::_1));
+        seg_topic_, default_qos, [this](const walker_msgs::msg::StepArray::SharedPtr msg) { push(SEG, msg); });
 }
 
-void DetectStepsFused::km_callback(const walker_msgs::msg::StepArray::SharedPtr msg)
+void DetectStepsFused::push(int source, const walker_msgs::msg::StepArray::SharedPtr msg)
 {
-    km_cache_.msg = *msg;
-    km_cache_.stamp = this->now();
-    km_cache_.has_data = true;
+    sequencer_->push(source, rclcpp::Time(msg->header.stamp).nanoseconds(), *msg);
+    sequencer_->release();
 }
 
-void DetectStepsFused::seg_callback(const walker_msgs::msg::StepArray::SharedPtr msg)
+void DetectStepsFused::process(int source, int64_t stamp_ns, walker_msgs::msg::StepArray & arr)
 {
-    seg_cache_.msg = *msg;
-    seg_cache_.stamp = this->now();
-    seg_cache_.has_data = true;
-}
-
-void DetectStepsFused::rf_callback(const walker_msgs::msg::StepArray::SharedPtr msg)
-{
-    rf_seen_ = true;
-    fuse_and_publish(msg);
+    // la frescura y el tiempo del tracker son tiempo de dato (el stamp del scan), no el reloj
+    if (source == KM) {
+        km_cache_.msg = arr;
+        km_cache_.stamp = rclcpp::Time(stamp_ns, RCL_ROS_TIME);
+        km_cache_.has_data = true;
+    } else if (source == SEG) {
+        seg_cache_.msg = arr;
+        seg_cache_.stamp = rclcpp::Time(stamp_ns, RCL_ROS_TIME);
+        seg_cache_.has_data = true;
+    } else {
+        rf_seen_ = true;
+        fuse_and_publish(arr);
+    }
 }
 
 std::list<walker_msgs::msg::StepStamped> DetectStepsFused::to_candidates(
@@ -119,9 +130,9 @@ std::list<walker_msgs::msg::StepStamped> DetectStepsFused::to_candidates(
     return out;
 }
 
-void DetectStepsFused::fuse_and_publish(const walker_msgs::msg::StepArray::SharedPtr rf_msg)
+void DetectStepsFused::fuse_and_publish(const walker_msgs::msg::StepArray & rf_msg)
 {
-    std::list<walker_msgs::msg::StepStamped> points = to_candidates(*rf_msg, 0.0, true);
+    std::list<walker_msgs::msg::StepStamped> points = to_candidates(rf_msg, 0.0, true);
 
     // RF primero: solo se recurre a km/segmentos como RESPALDO, cuando RF no
     // dio suficientes candidatos utiles este ciclo (huecos por oclusion o
@@ -138,7 +149,7 @@ void DetectStepsFused::fuse_and_publish(const walker_msgs::msg::StepArray::Share
 
     bool fallback_active = (rf_usable < 2);
     if (fallback_active) {
-        rclcpp::Time now = this->now();
+        rclcpp::Time now(rf_msg.header.stamp);
         if (km_cache_.has_data && (now - km_cache_.stamp).seconds() <= candidates_freshness_s_) {
             auto km_points = to_candidates(km_cache_.msg, km_default_confidence_, false);
             points.splice(points.end(), km_points);
@@ -172,7 +183,7 @@ void DetectStepsFused::fuse_and_publish(const walker_msgs::msg::StepArray::Share
     kalman_tracker_.add_detections(points);
 
     walker_msgs::msg::StepStamped step_r, step_l;
-    double t = this->now().nanoseconds();
+    double t = rclcpp::Time(rf_msg.header.stamp).nanoseconds();
     kalman_tracker_.get_steps(&step_r, &step_l, t);
 
     if (kalman_tracker_.is_init) {

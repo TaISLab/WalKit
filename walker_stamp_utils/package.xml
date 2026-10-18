@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>walker_stamp_utils</name>
+  <version>0.0.1</version>
+  <description>
+    Header-only C++ helper for nodes that must give the same result whatever order their input topics
+    arrive in: StampSequencer hands the messages of several streams to a handler in stamp (data time) order.
+    The python twin is walker_loads/stamp_sequencer.py.
+  </description>
+
+  <maintainer email="manolofc@gmail.com">Manuel Fernandez Carmona</maintainer>
+  <license>Creative Commons</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <test_depend>ament_cmake_gtest</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

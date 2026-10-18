@@ -1,5 +1,5 @@
-#ifndef WALKER_LOADS_STAMP_SEQUENCER_H_
-#define WALKER_LOADS_STAMP_SEQUENCER_H_
+#ifndef WALKER_STAMP_UTILS_STAMP_SEQUENCER_H_
+#define WALKER_STAMP_UTILS_STAMP_SEQUENCER_H_
 
 #include <algorithm>
 #include <cstdint>
@@ -120,4 +120,4 @@ class StampSequencer {
     Handler handler_;
 };
 
-#endif  // WALKER_LOADS_STAMP_SEQUENCER_H_
+#endif  // WALKER_STAMP_UTILS_STAMP_SEQUENCER_H_
