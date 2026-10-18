@@ -52,7 +52,7 @@
 
     void DiffTracker::init(rclcpp::Node *node, std::string name, double v0, double va, double vb,
                            double f0, double fa, double fb, double w, double theta,
-                           double w_min, double w_max){
+                           double w_min, double w_max, double theta_sigma){
 
         if (!is_init_){
             is_init_=true;
@@ -76,6 +76,9 @@
             ekf_.init(ekf_state_);
 
             configureNoise();
+            Kalman::Covariance<State> P = ekf_.getCovariance();
+            P(State::THETA, State::THETA) = theta_sigma * theta_sigma;
+            ekf_.setCovariance(P);
         }
 
     }

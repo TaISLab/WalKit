@@ -63,6 +63,13 @@ PartialLoads::PartialLoads() : Node("partial_loads"){
         this->declare_parameter<double>("kalman_fb",                    0.0);   // kg
         this->declare_parameter<double>("kalman_w",                     2.0);   // rad/s
         this->declare_parameter<double>("kalman_theta",                 0.20);  // rad
+        // Uncertainty (1 sigma) of that initial phase. The gait phase is simply unknown when the filter starts, so it
+        // is wide (half a turn) and the first measurements set it. With the covariance P0 alone (1 rad) the filter
+        // trusts the 0.20 rad prior and can lock on a wrong phase (MF_test07: right-leg load fraction mean 0.73
+        // instead of ~0.5, dominant leg agreeing with the mocap 59 % instead of 85 %). Before the filter stepped by
+        // data time, its first prediction stepped by the absolute clock (~1.7e9 s), which inflated this covariance
+        // to ~1e19 as a side effect: the phase was effectively free, and the results depended on that accident.
+        this->declare_parameter<double>("kalman_theta_sigma",           M_PI);  // rad
 
         //Get ROS parameters
         this->get_parameter("scan_topic",              scan_topic);
@@ -95,6 +102,8 @@ PartialLoads::PartialLoads() : Node("partial_loads"){
         this->get_parameter("kalman_fb",               kalman_fb);
         this->get_parameter("kalman_w",                kalman_w);
         this->get_parameter("kalman_theta",             kalman_theta);
+        double kalman_theta_sigma;
+        this->get_parameter("kalman_theta_sigma",       kalman_theta_sigma);
 
         //Load config files
         loadHandleCalibration();
@@ -118,7 +127,7 @@ PartialLoads::PartialLoads() : Node("partial_loads"){
         // Load kalman tracker
         kalman_tracker_.init(this, "diff_tracker", kalman_v0, kalman_va, kalman_vb,
                               kalman_f0, kalman_fa, kalman_fb, kalman_w, kalman_theta,
-                              w_estimate_min_, w_estimate_max_);
+                              w_estimate_min_, w_estimate_max_, kalman_theta_sigma);
 
         // Set debug output
         if (debug_output_){

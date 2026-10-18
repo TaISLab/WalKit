@@ -55,7 +55,9 @@ typedef Kalman::KalmanGain<State, SpeedMeasurement> MeasurementGain;
             // v0/f0: DC offsets. (va,vb)/(fa,fb): Cartesian in-phase/quadrature
             // components of the speed-diff and force-diff oscillations (see
             // kalman/DiffSystemModel.hpp for why Cartesian, not amplitude+phase).
-            // w: shared angular frequency. theta: initial absolute phase.
+            // w: shared angular frequency. theta: initial absolute phase, theta_sigma its uncertainty (rad): the
+            // gait phase is unknown when the filter starts, so it has to be wide enough for the first measurements
+            // to set it (see partial_loads' kalman_theta_sigma).
             // w_min/w_max: physical bounds enforced on w after every predict+
             // update (see clampFrequency()) -- the speed/force measurements
             // still nudge w through weak, indirect coupling via theta between
@@ -64,7 +66,7 @@ typedef Kalman::KalmanGain<State, SpeedMeasurement> MeasurementGain;
             // stall theta's rotation entirely.
             void init(rclcpp::Node *node, std::string name, double v0, double va, double vb,
                       double f0, double fa, double fb, double w, double theta,
-                      double w_min, double w_max);
+                      double w_min, double w_max, double theta_sigma);
 
             void add_speed_measurement( double speed, double ti);
 
