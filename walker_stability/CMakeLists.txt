@@ -14,7 +14,7 @@ ament_python_install_package(${PROJECT_NAME})
 
 # Install Python executables
 install(PROGRAMS
-  scripts/walker_stability.py
+  scripts/user_stability.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -22,5 +22,10 @@ install(PROGRAMS
 install(DIRECTORY launch config
   DESTINATION share/${PROJECT_NAME}/
 )
+
+if(BUILD_TESTING)
+  find_package(ament_cmake_pytest REQUIRED)
+  ament_add_pytest_test(test_bos test/test_bos.py)
+endif()
 
 ament_package()
