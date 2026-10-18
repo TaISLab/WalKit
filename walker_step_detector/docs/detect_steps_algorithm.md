@@ -1,12 +1,12 @@
 # `detect_steps` (RF) — descripción del algoritmo
 
-> Las herramientas de evaluación contra mocap (`eval_against_mocap.py`, `run_multibag_eval.py`, `investigate_*`, `validate_*`, `estimate_gait_params.py`, `calibrate_mocap_to_laser.py`, `mocap_bag_io.py`) viven ahora en el paquete `mocap_step_detector` (`mocap4w/mocap_step_detector/scripts/`); `eval_results/` (JSON de las corridas, no versionado) sigue aquí.
+> Las herramientas de evaluación contra mocap (`eval_against_mocap.py`, `run_multibag_eval.py`, `investigate_*`, `validate_*`, `estimate_gait_params.py`, `calibrate_mocap_to_laser.py`, `mocap_bag_io.py`) viven ahora en el paquete `mocap_step_detector` (`mocap4w/mocap_step_detector/scripts/`); `mocap_step_detector/eval_results/` (JSON de las corridas, no versionado) sigue aquí.
 
 De las tres variantes del paquete (`detect_steps`, `km_detect_steps`,
 `detect_steps_s`), `detect_steps` (clasificador Random Forest) es la más
 fiable con margen claro — validado sobre 47 bags de
 `soma13kp/datasets/labeled_bags` (~14.000 detecciones por lado) contra
-ground truth de mocap. Ver `eval_results/` para los datos crudos de cada
+ground truth de mocap. Ver `mocap_step_detector/eval_results/` para los datos crudos de cada
 corrida. Pipeline completo, de `/scan` a `/detected_step_{left,right}`.
 
 ## 1. Segmentación del scan (`laser_processor.cpp`)
@@ -129,7 +129,7 @@ residual" más abajo, punto 8 -- antes ~93.7-93.8%), error medio de posición
 fusión con las otras dos variantes (`detect_steps_fused`) no la mejora —
 verificado con tres métodos distintos (fusión ingenua, fusión con
 prioridad RF, y análisis quirúrgico aislando solo los ciclos donde el
-respaldo se activa). Ver `eval_results/` para los JSON de cada corrida.
+respaldo se activa). Ver `mocap_step_detector/eval_results/` para los JSON de cada corrida.
 
 ## Investigación del swap_rate residual (~10%)
 
@@ -155,7 +155,7 @@ izquierda/derecha entre dos detecciones consecutivas), en orden:
    a esta aunque su propia referencia sea buena).
 4. **¿Ajustar Q/R (ruido de proceso/medida) del EKF?** Empeora, no mejora
    -- ver el comentario en `TrackLeg::init()` (`src/track_leg.cpp`) y
-   `eval_results/result_2026-09-28_baseline_isolated.json` vs
+   `mocap_step_detector/eval_results/result_2026-09-28_baseline_isolated.json` vs
    `result_2026-09-28_qr_tuned_isolated.json`. La causa de la deriva no es
    un Q/R mal calibrado en sí, sino que el modelo de amplitud/frecuencia
    es casi inobservable desde la inicialización casi nula (`a0=f0=p0=0.001`)
@@ -164,7 +164,7 @@ izquierda/derecha entre dos detecciones consecutivas), en orden:
 5. **¿Reinicializar `a0`/`f0` a valores reales en vez de ~0?** También
    empeora. Se midió `a0=0.15m`, `f0=0.6Hz` (medianas de amplitud/frecuencia
    real de tobillo, 47 bags, `mocap_step_detector/scripts/estimate_gait_params.py`) contra el
-   mismo baseline aislado -- `eval_results/result_2026-09-28_gait_init_isolated.json`:
+   mismo baseline aislado -- `mocap_step_detector/eval_results/result_2026-09-28_gait_init_isolated.json`:
    match_rate de rf cae de 93.7/93.8% a 88.9/86.7%, con mean_err/swap_rate
    casi iguales. Motivo probable: `p0` se dejó en 0.001 (fase arbitraria) --
    con amplitud/frecuencia ya realistas, el término periódico SÍ oscila
@@ -182,7 +182,7 @@ izquierda/derecha entre dos detecciones consecutivas), en orden:
    como referencia. Se cambió a `TrackLeg::assoc_ref()`, que devuelve la
    última medida real ACEPTADA por el gate (cruda, sin pasar por el EKF),
    sin tocar el filtro ni sus parámetros en absoluto. Medido en 47 bags
-   (aislado) -- `eval_results/result_2026-09-28_baseline_isolated.json` vs
+   (aislado) -- `mocap_step_detector/eval_results/result_2026-09-28_baseline_isolated.json` vs
    `result_2026-09-29_assoc_ref_deadreckon_isolated.json`:
 
    | | match_rate | mean_err | swap_rate/100 |
@@ -333,7 +333,7 @@ y produjo una conclusión falsa ("catastrófico") que tuvo que corregirse.
 - **`launch/test_step_detector_variants.launch.py`** -- el de antes (se
   llamaba `test_step_detector.launch.py`): las cuatro variantes juntas
   (rf/km/seg/fused) sobre el mismo bag. Es el que usaron todas las
-  evaluaciones de `eval_results/` anteriores a 2026-10. Mismos argumentos
+  evaluaciones de `mocap_step_detector/eval_results/` anteriores a 2026-10. Mismos argumentos
   (`rate` por defecto 0.3); reproduce `/scan`, `/labeled_markers` y
   `/rigid_bodies`.
 
@@ -362,7 +362,7 @@ después) se pierde los primeros **14.7 s** (cubre el 83%); el launcher nuevo
 con `--replay-delay 8` se pierde **7.4 s** (cubre el 92%), es decir ~1.9 s
 de reloj de pared hasta que el grabador engancha el ground truth, que a rate
 4 son 7.4 s de bag (a rate 1 serían ~1.9 s). Las cifras históricas de
-`eval_results/` excluyen ese tramo inicial, y por eso no son estrictamente
+`mocap_step_detector/eval_results/` excluyen ese tramo inicial, y por eso no son estrictamente
 comparables con las del launcher nuevo, que cubre algo más.
 
 ## Verificación del reenganche tras perder la pista
@@ -456,7 +456,7 @@ antes de calcular `u.dt()` -- la primerísima predicción usa `dt=0` en vez
 de "tiempo desde el epoch". Confirmado en vivo: `CA_test09` con
 `kalman_enabled=true` pasa de y=407m a un máximo de ~1m, con o sin el
 filtro de confianza. Validado además en 47 bags completos (aislado) --
-`eval_results/result_2026-09-30_km_confidence_and_t0fix_isolated.json` vs
+`mocap_step_detector/eval_results/result_2026-09-30_km_confidence_and_t0fix_isolated.json` vs
 `result_2026-09-29_warmup_phase_isolated.json`: cambios pequeños y dentro
 del ruido normal de una corrida a otra en match_rate/mean_err/swap_rate de
 las cuatro variantes (ninguna regresión relevante) -- esperable, ya que

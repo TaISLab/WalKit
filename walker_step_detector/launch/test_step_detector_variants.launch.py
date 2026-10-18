@@ -47,7 +47,7 @@ valores reales (a0=0.15m, f0=0.6Hz, medianas de 47 bags de mocap, ver
 mocap_step_detector/scripts/estimate_gait_params.py) para intentar arreglar la inobservabilidad
 de frecuencia/fase diagnosticada en track_leg.cpp (dpos/df = 2*pi*a*cos(p)
 ~0 cuando a~0). Descartado: medido limpiamente en 47 bags (ROS_DOMAIN_ID
-aislado, eval_results/result_2026-09-28_baseline_isolated.json vs
+aislado, mocap_step_detector/eval_results/result_2026-09-28_baseline_isolated.json vs
 result_2026-09-28_gait_init_isolated.json), match_rate de rf EMPEORA
 (93.7/93.8% -> 88.9/86.7%) mientras mean_err/swap_rate quedan casi iguales.
 Motivo probable: p0 se dejo en 0.001 (fase arbitraria) -- con a0/f0 ya

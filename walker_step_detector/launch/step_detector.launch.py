@@ -15,7 +15,7 @@ def generate_launch_description():
     ld = LaunchDescription()
 
     # Parametros validados contra mocap sobre 47 bags (docs/
-    # detect_steps_algorithm.md, eval_results/). Los de antes no estaban
+    # detect_steps_algorithm.md, mocap_step_detector/eval_results/). Los de antes no estaban
     # validados, y varios de los que se pasaban (fixed_frame,
     # detect_distance_frame_id, use_scan_header_stamp_for_tfs, plot_*,
     # fixed_frame_active_area_*) no los declara detect_steps.cpp: se
