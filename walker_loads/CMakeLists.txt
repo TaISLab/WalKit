@@ -17,6 +17,7 @@ find_package(ament_index_cpp REQUIRED)
 find_package(eigen3_cmake_module REQUIRED)
 find_package(Eigen3)
 find_package(walker_msgs REQUIRED)
+find_package(walker_stamp_utils REQUIRED)
 
 # Include Cpp "include" directory
 include_directories(include)
@@ -24,7 +25,7 @@ include_directories(include)
 
 # Create Cpp executable
 add_executable(partial_loads src/partial_loads_node.cpp src/spline.cpp src/partial_loads.cpp src/diff_tracker.cpp)
-ament_target_dependencies(partial_loads rclcpp ament_index_cpp Eigen3 walker_msgs)
+ament_target_dependencies(partial_loads rclcpp ament_index_cpp Eigen3 walker_msgs walker_stamp_utils)
 
 ament_export_dependencies(eigen3_cmake_module)
 ament_export_dependencies(Eigen3)
@@ -53,9 +54,7 @@ install(DIRECTORY launch config
 )
 
 if(BUILD_TESTING)
-  find_package(ament_cmake_gtest REQUIRED)
   find_package(ament_cmake_pytest REQUIRED)
-  ament_add_gtest(test_stamp_sequencer test/test_stamp_sequencer.cpp)
   ament_add_pytest_test(test_stamp_sequencer_py test/test_stamp_sequencer.py)
 endif()
 

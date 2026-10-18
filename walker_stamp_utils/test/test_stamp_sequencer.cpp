@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "walker_loads/stamp_sequencer.h"
+#include "walker_stamp_utils/stamp_sequencer.h"
 
 namespace {
 

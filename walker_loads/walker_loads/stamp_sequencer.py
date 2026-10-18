@@ -27,7 +27,7 @@ allowed to lag the newest stamp seen by more than max_wait_ns: after that the st
 given up on, and whatever it delivers later, if older than what was already released, is dropped
 (and counted in `late`). With max_wait_ns <= 0 the wait is unbounded.
 
-Same semantics as walker_loads/stamp_sequencer.h (used by partial_loads).
+Same semantics as walker_stamp_utils/stamp_sequencer.h (used by partial_loads).
 """
 import heapq
 import itertools

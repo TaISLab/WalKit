@@ -25,7 +25,7 @@
 #include "walker_loads/spline.h"
 
 #include "walker_loads/diff_tracker.h"
-#include "walker_loads/stamp_sequencer.h"
+#include "walker_stamp_utils/stamp_sequencer.h"
 
 using std::placeholders::_1;
 using namespace std::chrono_literals;

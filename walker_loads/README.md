@@ -68,7 +68,7 @@ see [Known limitations](#known-limitations).
 `partial_loads` has no timer and never reads the clock (so `use_sim_time` is irrelevant to it): everything it
 does is driven by the `header.stamp` of its inputs (the step position's stamp for `/detected_step_*`). A
 message is processed once no input can still deliver anything older (the smallest of the four inputs' last
-stamps has passed it, see `include/walker_loads/stamp_sequencer.h`), in stamp order; the loads are sampled and
+stamps has passed it, see `walker_stamp_utils/stamp_sequencer.h`), in stamp order; the loads are sampled and
 published on a fixed grid of data time (`ms_period`), with the state as of each tick, if anything new arrived
 since the previous one. Consequences:
 
