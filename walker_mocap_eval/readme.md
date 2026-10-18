@@ -549,6 +549,11 @@ ventana `/tag`):**
 
 ### Punto 3 bloqueado: `walker_stability.py`
 
+> **Actualización (tarea 6):** el nodo ya funciona (ahora `user_stability.py`; ver `walker_stability/README.md`): se corrigieron
+> estos dos bloqueos y otros cinco defectos, y el `/tf_static` de los bags definitivos lleva los frames de las manetas
+> (`walker_replay`). Queda abierta la decisión sobre el modelo (el índice es casi siempre 0). El texto de abajo es el
+> estado de entonces.
+
 Dos bloqueos, verificados contra el codigo y contra el contenido de los bags:
 1. **Bug de aridad**: `centroid_callback()` llamaba a `get_bos_x()` con 5
    argumentos y el metodo acepta 4 (`TypeError` en cada mensaje de

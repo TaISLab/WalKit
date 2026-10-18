@@ -1,46 +1,35 @@
 #!/usr/bin/python3
 
-from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.substitutions import PathJoinSubstitution
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
-import launch
-import os
+from launch_ros.parameter_descriptions import ParameterValue
 
-walker_loads_path = get_package_share_directory('walker_loads')
-handle_calibration_file_path = os.path.join( walker_loads_path, "config", "handle_calib.yaml")
 
 def generate_launch_description():
+    """User stability index (/user_stability) from /support_centroid and /user_desc.
 
-    ld = LaunchDescription()
+    Arguments: sim_time (false: use_sim_time, true when replaying a bag), debug (false: DEBUG log level)."""
+    ld = LaunchDescription([
+        DeclareLaunchArgument('sim_time', default_value='false', description='use_sim_time'),
+        DeclareLaunchArgument('debug', default_value='false', description='DEBUG log level'),
+    ])
 
-    # Launching walker_loads node
-    walker_loads_node = Node(
-            package="walker_loads",
-            executable="partial_loads",
-            name="partial_loads",
-            parameters= [
-                 {'handle_calibration_file': handle_calibration_file_path},
-                 {'left_handle_topic_name': '/left_handle'},
-                 {'right_handle_topic_name': '/right_handle'},
-                 {'user_desc_topic_name': '/user_desc'},
-                 {'period': 0.05},
-                 {'speed_delta': 0.05},
-                 {'left_steps_topic_name': '/detected_step_left'},
-                 {'right_steps_topic_name': '/detected_step_right'},
-                 {'left_loads_topic_name': '/left_loads'},
-                 {'debug_output': False},
-                 {'right_loads_topic_name': '/right_loads'}                 
-            ],
-            # Cheap way to reuse node with recorded rosbags
-#            remappings=[ ("detected_step_left", "new_detected_step_left"),
-#                         ("detected_step_right", "new_detected_step_right"),
-#                         ("left_loads", "new_left_loads"),
-#                         ("right_loads", "new_right_loads")]
-    )
-
-    ld.add_action(walker_loads_node)
-    
-    return ld 
- 
-
+    ld.add_action(Node(
+        package='walker_stability',
+        executable='user_stability.py',
+        name='user_stability',
+        parameters=[
+            {'use_sim_time': ParameterValue(LaunchConfiguration('sim_time'), value_type=bool)},
+            {'centroid_topic_name': '/support_centroid'},
+            {'user_desc_topic_name': '/user_desc'},
+            {'stability_topic_name': '/user_stability'},
+            {'base_footprint_frame': 'base_footprint'},
+            {'left_handle_frame': 'left_handle_id'},
+            {'right_handle_frame': 'right_handle_id'},
+        ],
+        arguments=['--ros-args', '--log-level',
+                   PythonExpression(["'debug' if '", LaunchConfiguration('debug'), "' == 'true' else 'info'"])],
+    ))
+    return ld
