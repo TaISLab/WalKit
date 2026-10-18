@@ -1,4 +1,6 @@
 
+#include <algorithm>
+
 #include <walker_loads/diff_tracker.h>
     
 
@@ -56,6 +58,7 @@
             is_init_=true;
             node_ = node;
             t_ = 0;
+            has_t_ = false;
             name_ = name;
 
             ekf_state_.v0()    = v0;      // meters/s
@@ -197,11 +200,19 @@
             debug_file_.close();
     }
 
+    void DiffTracker::setStep(double ti){
+        // Time step of the next predict(), from the stamps of the measurements (ns). The first one has
+        // no earlier measurement to step from -- it starts the clock -- so the filter does not depend
+        // on how large the stamps are (they are a recording's date); and stamps are processed in
+        // order, a negative step could only come from a stray late measurement.
+        u_.dt() = has_t_ ? std::max(0.0, (ti - t_) * 1e-9) : 0.0;
+    }
+
     void DiffTracker::add_speed_measurement( double speed, double ti){
   
         if (is_init_){
             // Predict state for current time-step using the filters
-            u_.dt() = (ti-t_)*1e-9;
+            setStep(ti);
             ekf_state_ = ekf_.predict(sys_, u_);
             
             // Update EKF using measurement, without letting it move w (see
@@ -215,6 +226,7 @@
 
             // store last prediction time
             t_ = ti;
+            has_t_ = true;
 
             // save for further analysis
             if (is_debug_){
@@ -241,7 +253,7 @@
         if (is_init_){
             if (force>f_threshold_){
                 // Predict state for current time-step using the filters
-                u_.dt() = (ti-t_)*1e-9;
+                setStep(ti);
                 ekf_state_ = ekf_.predict(sys_, u_);
                 
                 // Update EKF using measurement, without letting it move w
@@ -253,6 +265,7 @@
 
                 // store last prediction time
                 t_ = ti;
+            has_t_ = true;
 
                 // save for further analysis
                 if (is_debug_){
@@ -282,7 +295,7 @@
 
         if (is_init_){
             // Predict state for current time-step using the filters
-            u_.dt() = (ti-t_)*1e-9;
+            setStep(ti);
             ekf_state_ = ekf_.predict(sys_, u_);
 
             // Update EKF using measurement
@@ -292,6 +305,7 @@
 
             // store last prediction time
             t_ = ti;
+            has_t_ = true;
 
             // save for further analysis
             if (is_debug_){

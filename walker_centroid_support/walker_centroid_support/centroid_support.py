@@ -10,9 +10,23 @@ from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
 
 from walker_msgs.msg import ForceStamped, StepStamped
+from walker_loads.stamp_sequencer import StampSequencer, Ticks, stamp_ns
+
+LEFT_HAND, RIGHT_HAND, LEFT_LOAD, RIGHT_LOAD = 0, 1, 2, 3
+
 
 
 class CentroidSupport(Node):
+    """Weighted centroid of the four contact points (two feet, two handles).
+
+    Works on data time, not on the clock or a timer: the four inputs are put in stamp order
+    (StampSequencer; the handle loads by their header stamp, the leg loads by the stamp of the step
+    position) and, on a fixed grid of data time (`period`), the centroid of the state as of each tick
+    is published, if anything new arrived since the previous tick, stamped with the stamp of the step
+    position. The centroids therefore depend only on the messages, not on when or in which order they
+    arrive (same bag, same centroids, at any replay rate), and lag the data by up to ~max_wait_s
+    (normally less than the period of the slowest input, the handles).
+    """
 
     def __init__(self):
         super().__init__('centroid_support')
@@ -23,7 +37,12 @@ class CentroidSupport(Node):
                 ('right_loads_topic_name', '/right_loads'),
                 ('left_hand_loads_topic_name', '/left_hand_loads'),
                 ('right_hand_loads_topic_name', '/right_hand_loads'),
+                # period of the output grid, in data time (s)
                 ('period', 0.05),
+                # data time to wait for a silent input before giving up on it, see StampSequencer;
+                # must be longer than the largest lag between inputs (the loads trail the odometry by
+                # about a handle period, more when replaying faster than real time)
+                ('max_wait_s', 5.0),
                 ('centroid_topic_name', '/support_centroid'),
             ]
         )
@@ -34,6 +53,7 @@ class CentroidSupport(Node):
         self.right_hand_loads_topic_name = self.get_parameter('right_hand_loads_topic_name').value
         self.centroid_topic_name = self.get_parameter('centroid_topic_name').value
         self.period = self.get_parameter('period').value
+        self.max_wait_s = self.get_parameter('max_wait_s').value
 
         # stored data
         self.left_handle_msg = None
@@ -48,61 +68,73 @@ class CentroidSupport(Node):
         self.buffer = Buffer()
         self.listener = TransformListener(self.buffer, self)
 
-        self.new_data_available = False
         self.first_data_ready = False
+        self.new_data_available = False
+        self.ticks = Ticks(int(self.period * 1e9))
+        # the leg loads repeat their step's stamp while the load itself is recomputed
+        self.sequencer = StampSequencer(4, self.process, max_wait_ns=int(self.max_wait_s * 1e9),
+                                        repeating=(LEFT_LOAD, RIGHT_LOAD))
 
-        self.centroid_pub = self.create_publisher(PointStamped, self.centroid_topic_name, 10)
+        self.centroid_pub = self.create_publisher(PointStamped, self.centroid_topic_name, 1000)
 
+        # Deep queues: the inputs wait in the sequencer for the slowest one, and a replayed bag can
+        # deliver them in bursts; losing one would make the result depend on timing again.
         # Already-calibrated (kg) hand loads, published by walker_loads/partial_loads
         self.left_handle_sub = self.create_subscription(
-            ForceStamped, self.left_hand_loads_topic_name, self.left_hand_load_callback, 10)
+            ForceStamped, self.left_hand_loads_topic_name, self.left_hand_load_msg, 500)
         self.right_handle_sub = self.create_subscription(
-            ForceStamped, self.right_hand_loads_topic_name, self.right_hand_load_callback, 10)
+            ForceStamped, self.right_hand_loads_topic_name, self.right_hand_load_msg, 500)
 
         self.left_load_sub = self.create_subscription(
-            StepStamped, self.left_loads_topic_name, self.left_load_callback, 10)
+            StepStamped, self.left_loads_topic_name, self.left_load_msg, 500)
         self.right_load_sub = self.create_subscription(
-            StepStamped, self.right_loads_topic_name, self.right_load_callback, 10)
-
-        self.tmr = self.create_timer(self.period, self.timer_callback)
+            StepStamped, self.right_loads_topic_name, self.right_load_msg, 500)
 
         self.get_logger().info('centroid support started')
 
-    def left_hand_load_callback(self, msg):
-        # msg.force already holds the calibrated weight (kg), as computed
-        # and published by walker_loads/partial_loads from the raw handle readings.
-        self.left_handle_msg = msg
-        self.left_handle_weight = msg.force
+    def left_hand_load_msg(self, msg):
+        self.push(LEFT_HAND, stamp_ns(msg.header.stamp), msg)
+
+    def right_hand_load_msg(self, msg):
+        self.push(RIGHT_HAND, stamp_ns(msg.header.stamp), msg)
+
+    def left_load_msg(self, msg):
+        self.push(LEFT_LOAD, stamp_ns(msg.position.header.stamp), msg)
+
+    def right_load_msg(self, msg):
+        self.push(RIGHT_LOAD, stamp_ns(msg.position.header.stamp), msg)
+
+    def push(self, stream, stamp, msg):
+        if not self.sequencer.push(stream, stamp, msg) and self.sequencer.late % 100 == 1:
+            self.get_logger().warn(
+                'Dropped %d inputs older than what was already processed (an input stayed silent '
+                'for more than max_wait_s)' % self.sequencer.late)
+        self.sequencer.release()
+
+    # Called by the sequencer, in stamp order
+    def process(self, stream, stamp, msg):
+        # the ticks that fall before this input see the state without it
+        for _ in self.ticks.until(stamp):
+            self.publish_centroid()
         self.new_data_available = True
-
-    def right_hand_load_callback(self, msg):
-        self.right_handle_msg = msg
-        self.right_handle_weight = msg.force
-        self.new_data_available = True
-
-    def left_load_callback(self, msg):
-        self.load_callback(msg, 0)
-
-    def right_load_callback(self, msg):
-        self.load_callback(msg, 1)
-
-    def load_callback(self, msg, leg_id):
-        if leg_id == 1:
-            self.right_step_msg = msg
-            self.right_leg_load = self.right_step_msg.load
-            self.right_speed = self.right_step_msg.speed
-            self.new_data_available = True
-        elif leg_id == 0:
+        if stream == LEFT_HAND:
+            # msg.force already holds the calibrated weight (kg), as computed
+            # and published by walker_loads/partial_loads from the raw handle readings.
+            self.left_handle_msg = msg
+            self.left_handle_weight = msg.force
+        elif stream == RIGHT_HAND:
+            self.right_handle_msg = msg
+            self.right_handle_weight = msg.force
+        elif stream == LEFT_LOAD:
             self.left_step_msg = msg
-            self.left_leg_load = self.left_step_msg.load
-            self.left_speed = self.left_step_msg.speed
-            self.new_data_available = True
+            self.left_leg_load = msg.load
+            self.left_speed = msg.speed
         else:
-            self.get_logger().error(
-                "Don't know about which step are you talking [" + str(leg_id) + ']')
-            return
+            self.right_step_msg = msg
+            self.right_leg_load = msg.load
+            self.right_speed = msg.speed
 
-    def timer_callback(self):
+    def publish_centroid(self):
         if not self.new_data_available:
             return
         self.new_data_available = False
