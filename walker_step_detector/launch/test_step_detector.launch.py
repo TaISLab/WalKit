@@ -24,7 +24,7 @@ default de `topics`:
     ros2 launch walker_step_detector test_step_detector.launch.py \\
         bag_name:=CA_test01 rate:=4.0 \\
         topics:='/scan /labeled_markers /rigid_bodies'
-scripts/run_multibag_eval.py --launch-file test_step_detector.launch.py ...
+mocap4w/mocap_step_detector/scripts/run_multibag_eval.py --launch-file test_step_detector.launch.py ...
 lo hace sobre todos los bags (ver docs/detect_steps_algorithm.md).
 
 Argumentos: bag_folder / bag_name (bag definitivo), rate, topics, delay
