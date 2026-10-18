@@ -1,6 +1,5 @@
 
 .claude/
-walker_step_detector/eval_results/*.json
 
 ####################
 ## PYTHON RELATED ##
