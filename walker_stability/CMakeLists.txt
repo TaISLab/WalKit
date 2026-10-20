@@ -19,13 +19,14 @@ install(PROGRAMS
 )
 
 # Install additional resources
-install(DIRECTORY launch config
+install(DIRECTORY launch
   DESTINATION share/${PROJECT_NAME}/
 )
 
 if(BUILD_TESTING)
   find_package(ament_cmake_pytest REQUIRED)
-  ament_add_pytest_test(test_bos test/test_bos.py)
+  ament_add_pytest_test(test_support_polygon test/test_support_polygon.py)
+  ament_add_pytest_test(test_stability_model test/test_stability_model.py)
 endif()
 
 ament_package()
