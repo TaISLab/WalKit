@@ -10,6 +10,9 @@ HANDLES = {LEFT: (0.0, 0.24), RIGHT: (0.0, -0.24)}
 
 
 def model(**kw):
+    kw.setdefault('foot_heel_m', 0.1)             # a symmetric sole: the centre of pressure is at the tracked point
+    kw.setdefault('foot_toe_m', 0.1)
+    kw.setdefault('com_moment_kgm', 0.0)
     m = StabilityModel(**kw)
     for side, (x, y) in HANDLES.items():
         m.set_handle(side, x, y, 5.0)
@@ -96,3 +99,31 @@ def test_same_stamps_give_same_numbers_and_a_repeated_stamp_does_not_move_the_fi
     m.set_foot(LEFT, -0.6, 0.1, 60.0)
     b = m.evaluate(1.0)
     assert b.com == a.com
+
+
+def two_feet(m, load=30.0):
+    m.set_foot(LEFT, -0.6, 0.1, load)
+    m.set_foot(RIGHT, -0.6, -0.1, load)
+
+
+def test_a_loaded_foot_pushes_at_the_centre_of_its_sole_not_at_the_tracked_point():
+    plain, forward = model(), model(foot_heel_m=0.08, foot_toe_m=0.18)
+    two_feet(plain)
+    two_feet(forward)
+    a, b = plain.evaluate(0.0).cop, forward.evaluate(0.0).cop
+    shift = 0.05 * 60.0 / 70.0                       # 5 cm for the feet's share (60 of 70 kg) of the pressure
+    assert b[0] - a[0] == pytest.approx(shift) and b[1] == pytest.approx(a[1])
+
+
+def test_the_moment_correction_moves_the_centre_of_mass_forward_by_moment_over_weight():
+    m = model(com_moment_kgm=6.0, com_tau_s=0.0)
+    two_feet(m)
+    without = m.evaluate(0.0)
+    assert without.com == without.cop                 # no weight known: no correction
+    m.set_weight(60)
+    with_weight = m.evaluate(0.1)
+    assert with_weight.com[0] - with_weight.cop[0] == pytest.approx(0.1)
+    assert with_weight.com[1] == pytest.approx(with_weight.cop[1])
+    assert with_weight.assessment.margin != without.assessment.margin
+    m.set_weight(0)                                   # an invalid weight switches it off again
+    assert m.evaluate(0.2).com == m.evaluate(0.2).cop
