@@ -54,11 +54,12 @@ class UserStability(Node):
             ('foot_heel_m', 0.08),
             ('foot_toe_m', 0.18),
             ('foot_half_width_m', 0.05),
+            ('com_moment_kgm', 6.0),
         ])
         p = lambda name: self.get_parameter(name).value  # noqa: E731
         self.stability_topic_name = p('stability_topic_name')
         self.model = StabilityModel(p('min_foot_load_kg'), p('com_tau_s'), p('margin_ref_m'), p('foot_heel_m'),
-                                    p('foot_toe_m'), p('foot_half_width_m'))
+                                    p('foot_toe_m'), p('foot_half_width_m'), p('com_moment_kgm'))
         self.user = None
         self.step_header = None            # header of the latest step position: frame of the output
         self.handle_msgs = {}              # latest message of each handle, until its frame is resolved
@@ -91,6 +92,7 @@ class UserStability(Node):
     def user_desc_callback(self, msg):
         self.get_logger().info('Valid user data received.')
         self.user = msg
+        self.model.set_weight(msg.weight)
 
     def push(self, stream, stamp, msg):
         if not self.sequencer.push(stream, stamp, msg) and self.sequencer.late % 100 == 1:
