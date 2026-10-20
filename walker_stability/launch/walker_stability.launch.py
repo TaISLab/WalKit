@@ -8,9 +8,11 @@ from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description():
-    """User stability index (/user_stability) from /support_centroid and /user_desc.
+    """User stability (/user_stability): margin of the user's centre of mass in the support polygon of the feet and
+    handles, from the leg and handle loads (walker_loads).
 
-    Arguments: sim_time (false: use_sim_time, true when replaying a bag), debug (false: DEBUG log level)."""
+    Arguments: sim_time (false: use_sim_time, true when replaying a bag), debug (false: DEBUG log level).
+    The model's parameters (min_foot_load_kg, com_tau_s, margin_ref_m, foot_*_m) are documented in the README."""
     ld = LaunchDescription([
         DeclareLaunchArgument('sim_time', default_value='false', description='use_sim_time'),
         DeclareLaunchArgument('debug', default_value='false', description='DEBUG log level'),
@@ -22,12 +24,12 @@ def generate_launch_description():
         name='user_stability',
         parameters=[
             {'use_sim_time': ParameterValue(LaunchConfiguration('sim_time'), value_type=bool)},
-            {'centroid_topic_name': '/support_centroid'},
+            {'left_loads_topic_name': '/left_loads'},
+            {'right_loads_topic_name': '/right_loads'},
+            {'left_hand_loads_topic_name': '/left_hand_loads'},
+            {'right_hand_loads_topic_name': '/right_hand_loads'},
             {'user_desc_topic_name': '/user_desc'},
             {'stability_topic_name': '/user_stability'},
-            {'base_footprint_frame': 'base_footprint'},
-            {'left_handle_frame': 'left_handle_id'},
-            {'right_handle_frame': 'right_handle_id'},
         ],
         arguments=['--ros-args', '--log-level',
                    PythonExpression(["'debug' if '", LaunchConfiguration('debug'), "' == 'true' else 'info'"])],
