@@ -94,3 +94,7 @@ Why that and not more, measured on the 47 definitive bags (between the two `/tag
   distance is several degrees. The users keep the elbows flexed 41 to 65 degrees (interior angle 115 to 139), not the 20 to 30 the old
   reach model assumed, which is also why that model's window was 4 to 5 cm.
 
+Measured with the walker's own centre of mass (`/arm_posture` against `/mocap_arm_posture`, 47 bags, between the two `/tag` messages): reach 7.4 cm
+against 7.8 cm of the mocap (bias -0.4 cm, mean absolute error 4.8 cm). Across bags the mean reach is reproduced very well (correlation 0.94);
+within a bag it is not followed instant by instant (correlation 0.33 on average, above 0.5 in 26 % of the bags). The per-user bias is
+-0.4 (CA), -3.8 (LA), +1.8 (MF) and -2.2 cm (MT). See the README of `mocap_stability`.
