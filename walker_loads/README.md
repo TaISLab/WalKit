@@ -253,6 +253,11 @@ flickers back within it is the same stance. Data time like the other nodes (`Sta
 any replay rate. `ros2 launch walker_loads gait_quality.launch.py` (`sim_time`, `debug`, `window_s`, `min_step_interval_s`,
 `stance_load_fraction`). The comparison against the mocap is in `mocap4w/mocap_loads` (`compare_gait_quality.launch.py`).
 
+Against the mocap (47 definitive bags, between the two `/tag` messages, bag means compared across bags): the **step width** orders the bags as
+the mocap does (correlation 0.87, slope 0.62; 16.2 against 24.9 cm); the other four agree little (double support 56 % against 27 %, correlation
+0.39; step time 0.75 against 0.82 s, 0.50; symmetry index 0.00; coefficient of variation 0.32) and the walker counts ~17 % more steps (28 against
+24 per window). Only the step width is a usable measure for now; the table and the reading are in the README of `mocap_loads`.
+
 ## Reproducing / testing this offline
 
 The comparison of walker_loads against the mocap (and the `replay_offline.launch.py` pipeline that replays a definitive
