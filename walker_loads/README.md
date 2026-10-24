@@ -201,19 +201,30 @@ Gait parameters (SpT, SdT, NoS, SpL, SdL, Tr, d, CAD, WV; definitions in the scr
 (`/odom`, only for the distance). Publishes `/left_gait_stats`, `/right_gait_stats` (`GaitStamped`) and
 `/global_gait_stats` (`WalkStats`).
 
-**Refractory period per leg** (`min_step_interval_s`, 0.35 s of data time; 0 counts every transition). Near 0 the load of a leg
+**Refractory period per leg** (`min_step_interval_s`, 0.8 s of data time; 0 counts every transition). Near 0 the load of a leg
 flickers (0, 0.4, 0, 0.6 kg in 100 ms) and every flicker was a step; the false ones are short "steps" that inflate any
 variability or symmetry index. After a leg registers a step its next step loads are ignored for that long (`step_onsets.py`,
 tested). It runs from the last *registered* step, so a long flicker cannot extend it, and it is per leg: the other leg's step may
-follow closely (double support). The mocap side already had one: `contact_events.detect_stance_events` drops an event within
-0.3 s of the previous one, so the two counts are now like for like.
+follow closely (double support). The interval between two steps of the SAME leg is a stride, and no adult's is under ~0.9 s (the users
+of the definitive bags walk with strides of 1.2 to 2 s), so 0.8 s cannot cut a real step.
 
-Measured over 12 definitive bags (CA 3, LA 2, MF 4, MT 3) against the mocap's stance events between the two `/tag` messages:
-the mean signed error of NoS (walker − mocap) goes from +17.7 steps without the refractory to +1.5 with 0.35 s (+14.6 at 0.2 s,
-+4.3 at 0.3 s, −5.4 at 0.4 s, −13.6 at 0.6 s), the mean absolute error from 25.3 to 19.3 and the largest from 91 to 56, and the
-"steps" shorter than 0.15 s from 237 to 170. It removes the systematic over-count, not the per-bag error: LA_test01 still has 116
-against 60, and some bags under-count (MF_test07 44 against 63, MT_test15 73 against 111); that comes from how the load is
-split between the legs (`partial_loads`), not from the flicker.
+It was 0.35 s at first (WalKit#23), judged against the old mocap stance detector, which had flicker of its own (it counted 75 steps in
+CA_test01 where the corrected detector of `mocap_loads/gait_quality.py` finds 51 with gaps of 1.4 to 2.2 s between a leg's steps). Against the
+corrected mocap onsets (12 definitive bags: CA 3, LA 2, MF 4, MT 3, between the two `/tag` messages), with the same interval on both sides:
+
+| `min_step_interval_s` | steps walker / mocap (mean per bag) | mean abs difference |
+|---|---|---|
+| 0 | 117 / 68 | 52 |
+| 0.35 | 100 / 61 | 39 |
+| 0.5 | 90 / 61 | 30 |
+| 0.7 | 77 / 60 | 22 |
+| 0.9 | 71 / 60 | 20 |
+| 1.1 | 62 / 53 | 12 |
+
+The count keeps coming down towards the mocap's until the interval passes a stride, so the false onsets are not only flicker within a third of a
+second. 0.8 s is the floor that cannot cut real steps; what is left (the walker still counts ~20 % more than the mocap) comes from the split of
+the load between the legs (`partial_loads`: the swinging leg's load ramps up at times), not from the filter. The mean step time that the
+walker gets is 0.6 s where the mocap's is 0.83 s.
 
 Like `partial_loads` it works on data time: the three inputs are put in stamp order (`walker_loads.stamp_sequencer`;
 the loads by the stamp of the step position, which repeats while the load is recomputed) and the cumulative

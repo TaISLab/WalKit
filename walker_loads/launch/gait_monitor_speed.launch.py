@@ -26,7 +26,7 @@ def generate_launch_description():
                  {'odom_topic_name': '/odom'},
                  {'global_frame_id': '/odom'},
                  # a leg does not step twice within this time (data time, s); 0 counts every 0 -> >0 load transition
-                 {'min_step_interval_s': 0.35}
+                 {'min_step_interval_s': 0.8}
             ],
     )
 

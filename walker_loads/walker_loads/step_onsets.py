@@ -1,8 +1,9 @@
 """Step loads of one leg: the instants at which its load goes from 0 to above 0, with a refractory period.
 
 Near 0 the load of a leg flickers (0, 0.4, 0, 0.6 kg in 100 ms) and every 0 -> >0 transition would count as a step.
-A leg does not step twice in a third of a second (at 100-120 steps/min each leg steps about once a second), so after
-a step is registered the leg's next transitions are ignored for `min_interval_ns`. The period runs from the last
+A leg does not step twice in less than a stride: even a fast adult's is about 0.9 s, and the users of the definitive bags walk
+with strides of 1.2 to 2 s. So after a step is registered the leg's next transitions are ignored for `min_interval_ns`
+(0.8 s: the physical floor with a margin; 0.35 s, the first value, left half of the false steps, see walker_loads/README.md). The period runs from the last
 *registered* step, not from the last transition, so a long flicker cannot keep extending it. The two legs have one
 instance each: the other leg's step may follow closely (double support).
 """
@@ -10,7 +11,7 @@ instance each: the other leg's step may follow closely (double support).
 
 class StepOnsets:
 
-    def __init__(self, min_interval_ns=350_000_000):
+    def __init__(self, min_interval_ns=800_000_000):
         self.min_interval_ns = min_interval_ns
         self._loaded = False
         self._last_ns = None
