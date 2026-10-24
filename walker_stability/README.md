@@ -77,3 +77,20 @@ in `mocap_stability` for its numbers to be comparable.
 
 `mocap_stability` (mocap4w, private repo `MFernandezCarmona/mocap_stability`) computes the same quantity from the motion capture (centre of mass of the De Leva model, feet
 in stance, the same polygon) and compares it with this node's, offline and online. The agreement is partial: see its README.
+
+## Arm reach (`arm_posture.py`, `/arm_posture`)
+
+`ros2 launch walker_stability arm_posture.launch.py` publishes `/arm_posture` (`walker_msgs/ArmPosture`) for every `/user_stability`:
+`handle_distance`, the horizontal distance from the estimate of the user's centre of mass to the handles, and `reach = handle_distance −
+0.108 m`, the estimate of the horizontal distance from the shoulders to the hands (`arm_reach_offset_m`). `elbow` is NaN.
+
+Why that and not more, measured on the 47 definitive bags (between the two `/tag` messages) with the mocap's centre of mass, the best case:
+- The handle distance follows the shoulder-to-wrist reach with a correlation of 0.82 (0.70 CA, 0.92 LA, 0.83 MF, 0.84 MT) and, with one
+  constant (0.108 m; 0.08 to 0.14 per user), a mean absolute error of 4.1 cm. The walker's own centre of mass is noisier than the mocap's
+  (correlation 0.5 in x), so its reach will agree less: the comparison is in `mocap_stability` (`arm_posture:=true`).
+- The elbow angle cannot be predicted from it. With the measured reach, the arm segments from the anthropometric regressions (shoulder
+  height, arm and forearm lengths within 2 to 4 cm of the markers) and the handle height, the law of cosines gives the angle with a mean
+  absolute error of 17 degrees and no correlation within a bag: the arm is nearly straight and a centimetre in the shoulder-to-wrist
+  distance is several degrees. The users keep the elbows flexed 41 to 65 degrees (interior angle 115 to 139), not the 20 to 30 the old
+  reach model assumed, which is also why that model's window was 4 to 5 cm.
+

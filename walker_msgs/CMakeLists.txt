@@ -9,6 +9,7 @@ find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/GaitStamped.msg"
+  "msg/ArmPosture.msg"
   "msg/WalkStats.msg"
   "msg/EncoderStamped.msg"
   "msg/ForceStamped.msg"
