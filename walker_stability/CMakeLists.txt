@@ -15,6 +15,7 @@ ament_python_install_package(${PROJECT_NAME})
 # Install Python executables
 install(PROGRAMS
   scripts/user_stability.py
+  scripts/arm_posture.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -27,6 +28,7 @@ if(BUILD_TESTING)
   find_package(ament_cmake_pytest REQUIRED)
   ament_add_pytest_test(test_support_polygon test/test_support_polygon.py)
   ament_add_pytest_test(test_stability_model test/test_stability_model.py)
+  ament_add_pytest_test(test_arm_posture test/test_arm_posture.py)
 endif()
 
 ament_package()
