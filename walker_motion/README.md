@@ -19,3 +19,8 @@ gravity that a tilt of the chassis puts on x and y does not matter. The vertical
 user's trunk: the values do not compare with the norms of the literature, only the walker against the mocap.
 
 Data time: the clock is never read; the output carries the stamp of the tick.
+
+Against the mocap (`mocap_motion`, 46 definitive bags, between the two `/tag` messages, bag means compared across bags): the yaw rate and the
+fraction of turning agree completely (correlation 1.00), the stride time follows it (0.89, 1.44 against 1.49 s), the regularities and harmonic
+ratios order the bags (0.77 to 0.88) with a compressed scale, and the RMS of the acceleration agrees least (0.55 AP, 0.63 ML; the IMU reads more:
+0.33 against 0.25 m/s² in AP). Table in the README of `mocap_motion`.
