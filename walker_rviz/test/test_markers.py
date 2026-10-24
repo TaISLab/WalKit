@@ -130,3 +130,20 @@ def test_boxes_are_read_from_the_filters_own_yaml(tmp_path):
     other = tmp_path / 'none.yaml'
     other.write_text('node:\n  ros__parameters:\n    a: 1\n')
     assert boxes_from_yaml(str(other)) == []
+
+
+def test_handle_calibration_interpolates_the_table_and_goes_on_beyond_its_ends(tmp_path):
+    from walker_rviz.handle_calibration import HandleCalibration
+    cal = HandleCalibration([0.0, 10.0, 20.0], [0.0, 100.0, 300.0], [10.0, 110.0, 310.0])
+    assert cal.kg('left', 0.0) == 0.0 and cal.kg('left', 100.0) == 10.0 and cal.kg('left', 300.0) == 20.0
+    assert cal.kg('left', 200.0) == pytest.approx(15.0) and cal.kg('right', 60.0) == pytest.approx(5.0)
+    assert cal.kg('left', -10.0) == pytest.approx(-1.0)               # extrapolated, like the chain's spline: a little below 0
+    assert cal.kg('left', 400.0) == pytest.approx(25.0)
+    with pytest.raises(ValueError):
+        HandleCalibration([0.0, 1.0], [5.0, 5.0], [0.0, 1.0])
+    f = tmp_path / 'c.yaml'
+    f.write_text('partial_loads:\n  ros__parameters:\n    weight_points: [0.0, 2.0]\n    left_handle_points: [1.0, 3.0]\n    right_handle_points: [0.0, 4.0]\n')
+    assert HandleCalibration.from_yaml(str(f)).kg('right', 2.0) == pytest.approx(1.0)
+    real = os.path.join(os.path.dirname(__file__), '..', '..', 'walker_loads', 'config', 'handle_calib.yaml')
+    if os.path.exists(real):
+        assert 0.0 < HandleCalibration.from_yaml(real).kg('left', 255.0) < 9.0

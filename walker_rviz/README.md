@@ -20,7 +20,7 @@ picture follows the data: a bag replayed at any rate looks the same, and each th
 
 | Layer (topic) | From | Draws |
 |---|---|---|
-| `handles` | `/left_hand_loads`, `/right_hand_loads` (calibrated kg, `walker_loads`) | an arrow down onto each handle, as long and as red as the load, and the kg as text. (`plot_forces` drew the *raw* sensor value, not kg.) |
+| `handles` | `/left_hand_loads`, `/right_hand_loads` (calibrated kg, `walker_loads`); or, with `handles_raw:=true`, the sensors' own `/left_handle`, `/right_handle` turned into kg with `walker_loads`' calibration table (for a bag viewed on its own, with no loads chain; linear interpolation, `partial_loads` uses a spline) | an arrow down onto each handle, as long and as red as the load, and the kg as text. (`plot_forces` drew the *raw* sensor value, not kg.) |
 | `steps` | `/left_loads`, `/right_loads` (`walker_loads`) | each leg's tracked foot on the floor (sphere = left, cube = right), coloured by the share of the user's weight it carries (`/user_desc`), transparent as the detection's confidence, with its label and kg |
 | `detected_steps` (off) | `<detected_steps_topic_name>_left/_right` (a step detector) | the same shapes in a fixed colour per leg, for detectors that have no load |
 | `centroid` | `/support_centroid` (`walker_centroid_support`) | a sphere on the floor |

@@ -22,9 +22,18 @@ from walker_msgs.msg import ForceStamped, StabilityStamped, StepStamped, UserDes
 
 from walker_rviz import markers
 from walker_rviz.active_area import boxes_from_yaml
+from walker_rviz.handle_calibration import HandleCalibration
 
 LATCHED = QoSProfile(history=QoSHistoryPolicy.KEEP_LAST, depth=1, reliability=QoSReliabilityPolicy.RELIABLE,
                      durability=QoSDurabilityPolicy.TRANSIENT_LOCAL)
+
+
+def default_calibration_file():
+    # soft dependency: walker_loads depends (through walker_step_detector) on this package's launchers, so this one cannot declare it
+    try:
+        return os.path.join(get_package_share_directory('walker_loads'), 'config', 'handle_calib.yaml')
+    except PackageNotFoundError:
+        return ''
 
 
 def default_area_files():
@@ -51,10 +60,18 @@ class WalkerMarkers(Node):
         self.pubs = {}
 
         if self.layers['handles']:
-            self.layer('handles', ForceStamped, p('left_hand_loads_topic_name', '/left_hand_loads'),
-                       lambda m: markers.handle_markers(m, markers.LEFT, self.handle_max_kg, self.lifetime_s))
-            self.layer('handles', ForceStamped, p('right_hand_loads_topic_name', '/right_hand_loads'),
-                       lambda m: markers.handle_markers(m, markers.RIGHT, self.handle_max_kg, self.lifetime_s))
+            raw = bool(p('handles_raw', False))
+            calibration_file = p('handle_calibration_file', default_calibration_file())
+            calibration = HandleCalibration.from_yaml(calibration_file) if raw else None
+            for side, topic in ((markers.LEFT, p('left_hand_loads_topic_name', '/left_hand_loads')),
+                                (markers.RIGHT, p('right_hand_loads_topic_name', '/right_hand_loads'))):
+                if raw:
+                    # the sensors' own readings (/left_handle, /right_handle), turned into kg with the calibration table:
+                    # for a bag viewed on its own, with no walker_loads chain
+                    topic = p(side + '_handle_topic_name', '/%s_handle' % side)
+                self.layer('handles', ForceStamped, topic,
+                           lambda m, side=side: markers.handle_markers(
+                               self.in_kg(m, side, calibration), side, self.handle_max_kg, self.lifetime_s))
         if self.layers['steps']:
             self.layer('steps', StepStamped, p('left_loads_topic_name', '/left_loads'),
                        lambda m: markers.step_markers(m, markers.LEFT, self.weight_kg, self.step_size_m, self.lifetime_s))
@@ -94,6 +111,15 @@ class WalkerMarkers(Node):
                 pub.publish(MarkerArray(markers=out))
 
         self.create_subscription(msg_type, topic, callback, 10)
+
+    @staticmethod
+    def in_kg(msg, side, calibration):
+        if calibration is None:
+            return msg
+        out = ForceStamped()
+        out.header = msg.header
+        out.force = float(calibration.kg(side, msg.force))
+        return out
 
     def on_user_desc(self, msg):
         if msg.weight > 0:
