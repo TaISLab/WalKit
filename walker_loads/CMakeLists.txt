@@ -56,6 +56,7 @@ install(DIRECTORY launch config
 if(BUILD_TESTING)
   find_package(ament_cmake_pytest REQUIRED)
   ament_add_pytest_test(test_stamp_sequencer_py test/test_stamp_sequencer.py)
+  ament_add_pytest_test(test_step_onsets_py test/test_step_onsets.py)
 endif()
 
 ament_package()
