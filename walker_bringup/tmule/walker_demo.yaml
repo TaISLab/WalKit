@@ -35,6 +35,4 @@ windows:
   - name: visualization
     tags: ['core']
     panes:
-      - ros2 launch walker_step_detector plot_steps.launch.py
-      - ros2 run walker_plot plot_forces
-      - ros2 run walker_loads plot_loads.py
+      - ros2 launch walker_rviz walker_markers.launch.py

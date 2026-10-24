@@ -42,13 +42,12 @@ windows:
       - ros2 launch walker_loads partial_loads.launch.py
       - ros2 launch walker_centroid_support centroid_support.launch.py
       - ros2 launch walker_stability walker_stability.launch.py
-  # TODO: commented until we do a full reworking of the whole visualization.
+  # The visualization was reworked into walker_rviz (handles, feet, centroid, stability, gait as markers; the views are
+  # `ros2 launch walker_rviz walker_view.launch.py`). Uncomment to draw them on the walker:
   # - name: visualization
   #   tags: ['core']
   #   panes:
-  #     - ros2 launch walker_step_detector plot_steps.launch.py
-  #     - ros2 run walker_plot plot_forces         # should add params and launch file ...
-  #     - ros2 run walker_loads plot_loads.py      # should add params and launch file ...
+  #     - ros2 launch walker_rviz walker_markers.launch.py
   # TODO: this needs work: a pipeline for map generation and proper test of localization accuracy.
   # - name: localisation
   #   tags: ['localisation']

@@ -160,17 +160,6 @@ detect_steps_fused
   DESTINATION lib/${PROJECT_NAME}
 )
 
-# plot_steps executable
-add_executable (plot_steps
-                src/plot_steps.cpp
-                )
-ament_target_dependencies(plot_steps rclcpp walker_msgs visualization_msgs) 
-  
-install (TARGETS
-plot_steps
-  DESTINATION lib/${PROJECT_NAME}
-)
-
 # Install launchers and configs
 install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
 install(DIRECTORY config DESTINATION share/${PROJECT_NAME})

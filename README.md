@@ -18,8 +18,7 @@ WalKit is an open hardware project created to monitor the elderly. It is modular
     - walker_loads: reports partial supports on each leg.
     - walker_msgs: custom handle and wheel encoder msgs.
     - walker_navigation2: nav2 configuration for walker (TODO). 
-    - walker_plot: Publishes Arrow marker based on handle force readings.  
-    - walker_py_cluster: (TODO)
+    - walker_rviz: draws what the walker measures in rviz (handle loads, feet, support centroid, stability, gait) and holds the rviz views.
     - walker_simulation: roller simulation in gazebo.
     - walker_slam: (TODO)
     - walker_step_detector: reports step position.
