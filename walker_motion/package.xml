@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>walker_motion</name>
+  <version>0.0.1</version>
+  <description>How the walker chassis moves, from its IMU: RMS, harmonic ratio, regularity and turning, with the pure functions the mocap counterpart (mocap_motion) shares.</description>
+  <maintainer email="manolofc@gmail.com">Manuel Fernandez-Carmona</maintainer>
+  <license>Creative Commons</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <depend>rclpy</depend>
+  <depend>sensor_msgs</depend>
+  <depend>walker_msgs</depend>
+  <depend>tf2_ros_py</depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
