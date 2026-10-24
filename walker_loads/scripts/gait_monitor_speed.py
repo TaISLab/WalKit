@@ -63,7 +63,7 @@ class GaitMonitorSp(Node):
                 # about a handle period, more when replaying faster than real time)
                 ('max_wait_s', 5.0),
                 # refractory period of each leg's step loads, in data time (s); 0 counts every 0 -> >0 transition
-                ('min_step_interval_s', 0.35),
+                ('min_step_interval_s', 0.8),
             ])
 
         self.left_loads_topic_name = self.get_parameter('left_loads_topic_name').value

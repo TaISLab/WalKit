@@ -43,6 +43,7 @@ ament_python_install_package(${PROJECT_NAME})
 install(PROGRAMS
   scripts/gait_monitor_handles.py
   scripts/gait_monitor_speed.py
+  scripts/gait_quality.py
   scripts/partial_loads.py
   DESTINATION lib/${PROJECT_NAME}
 )
@@ -56,6 +57,7 @@ if(BUILD_TESTING)
   find_package(ament_cmake_pytest REQUIRED)
   ament_add_pytest_test(test_stamp_sequencer_py test/test_stamp_sequencer.py)
   ament_add_pytest_test(test_step_onsets_py test/test_step_onsets.py)
+  ament_add_pytest_test(test_gait_quality_py test/test_gait_quality.py)
 endif()
 
 ament_package()
