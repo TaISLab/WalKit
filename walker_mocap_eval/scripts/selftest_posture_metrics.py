@@ -5,7 +5,7 @@ espiritu que selftest_gait_metrics.py: valida la geometria antes de fiarse
 de ella sobre datos de mocap reales.
 
 Uso (necesita el entorno ROS sourceado, por el import de bag_io dentro de
-step_width_m/lateral_margin_at_event):
+step_width_m):
     source /opt/ros/jazzy/setup.bash
     python3 selftest_posture_metrics.py
 """
@@ -70,28 +70,9 @@ def test_step_width_yaw_invariant():
     print("test_step_width_yaw_invariant: OK")
 
 
-def test_lateral_margin_centered_and_edge():
-    ns = int(1e9)
-    walker_track = [(0, (0.0, 0.0, 0.0))]
-    la_track = [(0, (1.0, 0.2, 0.0))]
-    ra_track = [(0, (1.0, -0.2, 0.0))]
-
-    hip_centered = [(0, (1.0, 0.0, 0.9))]
-    m = posture_metrics.lateral_margin_at_event(
-        0, hip_centered, la_track, ra_track, walker_track, int(0.1 * ns), int(0.1 * ns))
-    assert approx(m, 0.5), m
-
-    hip_at_left_ankle = [(0, (1.0, 0.2, 0.9))]
-    m_edge = posture_metrics.lateral_margin_at_event(
-        0, hip_at_left_ankle, la_track, ra_track, walker_track, int(0.1 * ns), int(0.1 * ns))
-    assert approx(m_edge, 1.0), m_edge
-    print("test_lateral_margin_centered_and_edge: OK")
-
-
 if __name__ == "__main__":
     test_trunk_lean_upright_is_zero()
     test_trunk_lean_forward_30deg()
     test_double_support_fraction()
     test_step_width_yaw_invariant()
-    test_lateral_margin_centered_and_edge()
     print("\nTodos los selftests OK")

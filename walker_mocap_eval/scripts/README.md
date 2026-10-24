@@ -37,7 +37,7 @@ python3 ~/workspace/walker_ws/src/mocap4w/mocap_loads/scripts/compute_gait_from_
 
 python3 scripts/compute_posture_from_mocap.py \
     --bags-dir $DATASETS --out /tmp/report_posture_mocap.json
-# Inclinación de tronco, ancho de paso, doble apoyo, margen de estabilidad lateral
+# Inclinación de tronco, ancho de paso, doble apoyo, margen de apoyo del CoM (mocap_stability)
 
 python3 scripts/compute_cog_from_mocap.py \
     --bags-dir $DATASETS --out /tmp/report_cog_mocap.json

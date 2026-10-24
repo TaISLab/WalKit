@@ -2,9 +2,10 @@
 """Calcula, desde el mocap etiquetado, los parametros posturales/de
 estabilidad del paso 3 del plan de validacion (ver walker_mocap_eval/
 readme.md): inclinacion de tronco, ancho de paso, tiempo de doble apoyo y
-margen de estabilidad lateral real -- pensados para, mas adelante, buscar
-correlacion con datos del andador (reparto de carga manetas/pies, centroide
-de soporte, StabilityStamped) sobre los mismos bags.
+margen de apoyo del CoM en el poligono de pies y manetas (mocap_stability)
+-- pensados para, mas adelante, buscar correlacion con datos del andador
+(reparto de carga manetas/pies, centroide de soporte, StabilityStamped) sobre
+los mismos bags.
 
 A diferencia de compute_gait_from_mocap.py (que recalcula algo que YA
 publica un nodo del andador, para comparar 1:1), estos parametros no tienen
@@ -27,6 +28,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from mocap_eval import bag_io, contact_events, posture_metrics  # noqa: E402
+from mocap_odometry import core as odometry  # noqa: E402
+from mocap_stability import core as stability_core, offline as stability_offline  # noqa: E402
+from mocap_step_detector import core as step_core  # noqa: E402
+from walker_replay.test_config import read_bag_config  # noqa: E402
 
 LEAN_KEYS = ("l_shoulder", "r_shoulder", "l_hip", "r_hip")
 
@@ -38,6 +43,26 @@ def _mean_std(values):
     if len(vals) == 1:
         return vals[0], float("nan")
     return statistics.mean(vals), statistics.stdev(vals)
+
+
+def support_margin_stats(bag_dir, mk_msgs, walker_track):
+    """Margen del CoM en el poligono de apoyo (pies en apoyo + manetas) que calcula mocap_stability, sobre los mismos
+    mensajes (ya recortados a /tag): (media, desviacion, fraccion con MoS < 0). Sexo y agujero de las manetas salen de
+    <carpeta>/test_config.txt; sin el, NaN."""
+    nan = (float("nan"), float("nan"), float("nan"))
+    try:
+        cfg = read_bag_config(Path(bag_dir).parent, Path(bag_dir).name)
+    except Exception as e:  # noqa: BLE001
+        print(f"  [!] {Path(bag_dir).name}: sin test_config.txt utilizable ({e}); margen de apoyo = NaN", file=sys.stderr)
+        return nan
+    marks = [(t, step_core.markers_dict(m)) for t, m in mk_msgs]
+    frames = stability_offline.stability_series(
+        marks, walker_track, cfg.gender, odometry.load_calibration(None), stability_core.handles_in_laser(cfg.handle_height),
+        rate_hz=20.0)
+    if not frames:
+        return nan
+    m_mean, m_std = _mean_std([f.margin for _, f in frames])
+    return m_mean, m_std, sum(f.mos < 0 for _, f in frames) / len(frames)
 
 
 def compute_bag(bag_dir, speed_threshold, min_gap_s, max_dt_ns, use_tags=True):
@@ -85,20 +110,8 @@ def compute_bag(bag_dir, speed_threshold, min_gap_s, max_dt_ns, use_tags=True):
     # --- Doble apoyo ---
     dsp = posture_metrics.double_support_fraction(l_intervals, r_intervals)
 
-    # --- Margen de estabilidad lateral, en cada evento de apoyo ---
-    hip_mid_track = []
-    for t, l_hip in tracks["l_hip"]:
-        r_hip = bag_io.nearest(tracks["r_hip"], t, max_dt_ns)
-        if r_hip is not None:
-            hip_mid_track.append((t, posture_metrics.midpoint(l_hip, r_hip[1])))
-
-    all_events = sorted(l_events + r_events, key=lambda r: r[0])
-    margins = [
-        posture_metrics.lateral_margin_at_event(
-            t, hip_mid_track, tracks["l_ankle"], tracks["r_ankle"], walker_track, max_dt_ns, max_dt_ns)
-        for t, _ in all_events
-    ]
-    margin_mean, margin_std = _mean_std(margins)
+    # --- Margen de apoyo del CoM (mocap_stability), en toda la ventana ---
+    margin_mean, margin_std, mos_negative = support_margin_stats(bag_dir, mk_msgs, walker_track)
 
     return {
         "trunk_lean_total_deg_mean": lean_total_mean, "trunk_lean_total_deg_std": lean_total_std,
@@ -106,7 +119,8 @@ def compute_bag(bag_dir, speed_threshold, min_gap_s, max_dt_ns, use_tags=True):
         "trunk_lean_frontal_deg_mean": lean_fro_mean, "trunk_lean_frontal_deg_std": lean_fro_std,
         "step_width_m_mean": width_mean, "step_width_m_std": width_std,
         "double_support_fraction": dsp,
-        "lateral_stability_margin_mean": margin_mean, "lateral_stability_margin_std": margin_std,
+        "support_margin_m_mean": margin_mean, "support_margin_m_std": margin_std,
+        "mos_negative_fraction": mos_negative,
         "n_left_steps": len(l_events), "n_right_steps": len(r_events),
     }
 
@@ -118,7 +132,7 @@ def fmt(v, nd=3):
 
 
 def print_table(results):
-    cols = ["bag", "lean_deg", "lean_sag", "lean_fro", "step_w_m", "dsp_%", "lat_margin", "n_steps"]
+    cols = ["bag", "lean_deg", "lean_sag", "lean_fro", "step_w_m", "dsp_%", "margin_m", "n_steps"]
     rows = []
     for bag_name, r in results.items():
         if r is None:
@@ -127,7 +141,7 @@ def print_table(results):
         rows.append([
             bag_name, fmt(r["trunk_lean_total_deg_mean"], 1), fmt(r["trunk_lean_sagittal_deg_mean"], 1),
             fmt(r["trunk_lean_frontal_deg_mean"], 1), fmt(r["step_width_m_mean"]),
-            fmt(100 * r["double_support_fraction"], 1), fmt(r["lateral_stability_margin_mean"]),
+            fmt(100 * r["double_support_fraction"], 1), fmt(r["support_margin_m_mean"]),
             r["n_left_steps"] + r["n_right_steps"],
         ])
     widths = [max(len(str(row[i])) for row in ([cols] + rows)) for i in range(len(cols))]

@@ -18,9 +18,12 @@ Parametros implementados aqui (ver la tabla del plan para el resto):
   - Tiempo de doble apoyo (% del ciclo): idem, derivable de gait_monitor_
     speed.py sin sensorica nueva (is_left_load/is_right_load ya existen
     ahi, solo no se publican).
-  - Margen de estabilidad lateral real (CoM real vs BoS real de tobillos):
-    validacion directa de walker_stability.py, que hoy estima el BoS con
-    tablas antropometricas en vez de medirlo.
+  (El margen de estabilidad -- CoM real frente al poligono de apoyo real de
+  los pies en apoyo y las manetas -- ya no esta aqui: lo calcula
+  mocap_stability, el par mocap de walker_stability, y
+  compute_posture_from_mocap.py lo usa. La funcion que habia aqui,
+  lateral_margin_at_event, validaba la rampa lateral del modelo antiguo de
+  walker_stability, que ya no existe.)
 """
 import math
 
@@ -89,39 +92,3 @@ def trunk_lean_series(l_shoulder_track, r_shoulder_track, l_hip_track, r_hip_tra
         total, sag, fro = trunk_lean_at_frame(l_sh, r_sh[1], l_hip[1], r_hip[1])
         out.append((t, total, sag, fro))
     return out
-
-
-def lateral_margin_at_event(t, hip_mid_track, l_ankle_track, r_ankle_track, walker_track,
-                             max_dt_ns, max_rb_dt_ns):
-    """Margen de estabilidad lateral REAL (0-1) en el instante t: posicion
-    del punto medio de caderas (proxy de CoM) proyectada sobre el eje
-    lateral del andador, normalizada entre las posiciones de los dos
-    tobillos en ese mismo eje -- 0 en el borde de un pie o mas alla
-    (inestable), 1 en el centro exacto entre ambos pies. Misma formula que
-    walker_stability.py::centroid_callback() usa para su "y_sta", pero con
-    el BoS REAL (tobillos del mocap) en vez de la anchura de manetas
-    estimada por tablas antropometricas -- pensado para validar esa
-    formula, no para sustituirla.
-
-    Devuelve nan si falta algun marcador dentro de la tolerancia temporal."""
-    from . import bag_io
-
-    hip = bag_io.nearest(hip_mid_track, t, max_dt_ns)
-    la = bag_io.nearest(l_ankle_track, t, max_dt_ns)
-    ra = bag_io.nearest(r_ankle_track, t, max_dt_ns)
-    rb = bag_io.nearest(walker_track, t, max_rb_dt_ns)
-    if hip is None or la is None or ra is None or rb is None:
-        return float("nan")
-
-    yaw = rb[1][2]
-    hip_p, la_p, ra_p = hip[1], la[1], ra[1]
-
-    _, hip_lat = _rotate_to_walker_frame(hip_p[0], hip_p[1], yaw)
-    _, la_lat = _rotate_to_walker_frame(la_p[0], la_p[1], yaw)
-    _, ra_lat = _rotate_to_walker_frame(ra_p[0], ra_p[1], yaw)
-
-    lo, hi = min(la_lat, ra_lat), max(la_lat, ra_lat)
-    if hi - lo <= 0:
-        return float("nan")
-    margin = (hip_lat - lo) / (hi - lo)
-    return float(np.clip(margin, 0.0, 1.0))
