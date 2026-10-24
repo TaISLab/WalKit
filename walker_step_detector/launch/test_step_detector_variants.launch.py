@@ -76,7 +76,7 @@ step_detector_path = get_package_share_directory('walker_step_detector')
 forest_file_path = join(step_detector_path, "config", "trained_step_detector_res_0.33.yaml")
 segmentation_cfg_eval = join(step_detector_path, "config", "laser_segmentation_eval.yml")
 box_filter_cfg_eval = join(step_detector_path, "config", "box_filter_eval.yaml")
-rviz2_config_path = join(step_detector_path, "config", "test_step_detector.rviz")
+rviz2_config_path = join(get_package_share_directory("walker_rviz"), "rviz", "step_detector.rviz")
 
 
 
@@ -208,5 +208,12 @@ def generate_launch_description():
         output='screen',
         condition=IfCondition(LaunchConfiguration('use_rviz')))
     ld.add_action(rviz_cmd)
+
+    # y los marcadores que esa vista dibuja (pasos detectados por la variante fusionada)
+    ld.add_action(IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(join(get_package_share_directory("walker_rviz"), "launch", "walker_markers.launch.py")),
+        launch_arguments={"sim_time": LaunchConfiguration("sim_time"), "show_detected_steps": "true",
+                          "detected_steps_topic_name": "/detected_step_fused"}.items(),
+        condition=IfCondition(LaunchConfiguration("use_rviz"))))
 
     return ld

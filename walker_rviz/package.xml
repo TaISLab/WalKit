@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>walker_rviz</name>
+  <version>0.0.1</version>
+  <description>What the walker measures, drawn in rviz: handle loads, feet, support centroid, stability, gait; and the rviz views of the whole walker.</description>
+  <maintainer email="manolofc@gmail.com">Manuel Fernandez-Carmona</maintainer>
+  <license>Creative Commons</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <depend>rclpy</depend>
+  <depend>geometry_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>builtin_interfaces</depend>
+  <depend>visualization_msgs</depend>
+  <depend>walker_msgs</depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+  <!-- the active-area layer reads the boxes of the laser filters from their configuration files -->
+  <exec_depend>walker_laser_filter</exec_depend>
+
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

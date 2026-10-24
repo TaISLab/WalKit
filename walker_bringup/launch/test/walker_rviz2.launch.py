@@ -16,8 +16,8 @@ def generate_launch_description():
     
     declare_params_file_cmd = DeclareLaunchArgument(
         'params_file',
-        default_value=os.path.join(get_package_share_directory("walker_bringup"),
-                                   'config', 'demo_view.rviz'),
+        default_value=os.path.join(get_package_share_directory("walker_rviz"),
+                                   'rviz', 'bringup_demo.rviz'),
         description='Full path to the ROS2 parameters file to use for the slam_toolbox node')
 
     rviz_cmd = ExecuteProcess(

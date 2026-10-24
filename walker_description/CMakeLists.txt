@@ -15,7 +15,7 @@ find_package(realsense2_description  REQUIRED)
 find_package(ament_cmake_python REQUIRED)
 find_package(rclpy REQUIRED)
 
-install(DIRECTORY urdf rviz2 models launch config
+install(DIRECTORY urdf models launch config
   DESTINATION share/${PROJECT_NAME}/
 )
 
