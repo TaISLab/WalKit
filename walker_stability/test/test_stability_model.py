@@ -127,3 +127,15 @@ def test_the_moment_correction_moves_the_centre_of_mass_forward_by_moment_over_w
     assert with_weight.assessment.margin != without.assessment.margin
     m.set_weight(0)                                   # an invalid weight switches it off again
     assert m.evaluate(0.2).com == m.evaluate(0.2).cop
+
+
+def test_the_polygon_is_the_hull_of_the_loaded_soles_and_both_handles():
+    m = model(com_tau_s=0.0)
+    m.set_foot(LEFT, -0.6, 0.1, 55.0)
+    m.set_foot(RIGHT, -0.3, -0.1, 0.0)                # a swing foot is not in it
+    polygon = m.evaluate(0.0).polygon
+    assert len(polygon) >= 3
+    xs = [x for x, _ in polygon]
+    assert min(xs) == pytest.approx(-0.7) and max(xs) == pytest.approx(0.0)       # from the left sole (heel 0.1) to the handles
+    assert (0.0, 0.24) in polygon and (0.0, -0.24) in polygon
+    assert -0.3 not in xs

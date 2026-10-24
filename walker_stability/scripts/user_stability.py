@@ -16,7 +16,7 @@ import signal
 import sys
 
 import rclpy
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import Point32, PolygonStamped, PoseStamped
 from rclpy.duration import Duration
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
@@ -43,6 +43,7 @@ class UserStability(Node):
             ('right_hand_loads_topic_name', '/right_hand_loads'),
             ('user_desc_topic_name', '/user_desc'),
             ('stability_topic_name', '/user_stability'),
+            ('polygon_topic_name', '/support_polygon'),
             # period of the output grid, in data time (s)
             ('period', 0.05),
             # data time to wait for a silent input before giving up on it, see StampSequencer
@@ -73,6 +74,8 @@ class UserStability(Node):
                                         repeating=(LEFT_LOAD, RIGHT_LOAD))
 
         self.stability_pub = self.create_publisher(StabilityStamped, self.stability_topic_name, 1000)
+        # the support polygon the margin is measured in, for rviz (and anything else that wants to see it)
+        self.polygon_pub = self.create_publisher(PolygonStamped, p('polygon_topic_name'), 1000)
         # Deep queues: the inputs wait in the sequencer for the slowest one, and a replayed bag can deliver them in
         # bursts; losing one would make the result depend on timing again.
         self.create_subscription(ForceStamped, p('left_hand_loads_topic_name'),
@@ -155,6 +158,10 @@ class UserStability(Node):
         out.pose.pose.position.x, out.pose.pose.position.y = result.com
         out.pose.pose.orientation.w = 1.0
         self.stability_pub.publish(out)
+        polygon = PolygonStamped()
+        polygon.header = out.pose.header
+        polygon.polygon.points = [Point32(x=float(x), y=float(y)) for x, y in result.polygon]
+        self.polygon_pub.publish(polygon)
 
 
 def main(args=None):

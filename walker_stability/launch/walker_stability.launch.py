@@ -30,6 +30,7 @@ def generate_launch_description():
             {'right_hand_loads_topic_name': '/right_hand_loads'},
             {'user_desc_topic_name': '/user_desc'},
             {'stability_topic_name': '/user_stability'},
+            {'polygon_topic_name': '/support_polygon'},
         ],
         arguments=['--ros-args', '--log-level',
                    PythonExpression(["'debug' if '", LaunchConfiguration('debug'), "' == 'true' else 'info'"])],
