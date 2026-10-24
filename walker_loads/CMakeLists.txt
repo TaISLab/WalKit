@@ -44,7 +44,6 @@ install(PROGRAMS
   scripts/gait_monitor_handles.py
   scripts/gait_monitor_speed.py
   scripts/partial_loads.py
-  scripts/plot_loads.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

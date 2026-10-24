@@ -4,7 +4,7 @@ project(walker_navigation2)
 find_package(ament_cmake REQUIRED)
 
 install(
-  DIRECTORY launch map param rviz2
+  DIRECTORY launch map param
   DESTINATION share/${PROJECT_NAME}
 )
 

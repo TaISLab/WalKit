@@ -21,8 +21,8 @@ from ament_index_python import get_package_share_directory
 def generate_launch_description():
 
     # Default filenames and where to find them
-    description_dir = get_package_share_directory('walker_description')
-    default_walker_rviz2_file = os.path.join( description_dir, 'rviz2', 'walker.rviz')
+    rviz_dir = get_package_share_directory('walker_rviz')
+    default_walker_rviz2_file = os.path.join( rviz_dir, 'rviz', 'robot.rviz')
     
 
     ld = LaunchDescription()
