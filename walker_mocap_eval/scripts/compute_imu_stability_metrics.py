@@ -14,6 +14,9 @@ numerica de una posicion -- dificiles de alinear con sentido); se comparan
 los INDICES resumen (RMS/HR/Ad1/Ad2) calculados independientemente por cada
 fuente sobre la misma ventana /tag de cada bag.
 
+NOTA (2026-10): las mismas metricas, online y offline, y con el recuento de pasos fuera de la ecuacion, estan en el par
+`walker_motion` (IMU) + `mocap_motion` (mocap); este script se conserva para el informe.
+
 Uso:
     python3 compute_imu_stability_metrics.py --bags-dir $DATASETS \\
         --gait-json /tmp/report_gait_mocap.json --out /tmp/report_imu_mocap.json

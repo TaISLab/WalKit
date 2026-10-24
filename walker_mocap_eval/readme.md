@@ -490,6 +490,26 @@ cuantificada la variabilidad entre repeticiones. Lo calculado solo desde
 mocap o sensores grabados (marcha mocap, postura, IMU, simetría) sí es
 reproducible.
 
+## Donde estan ahora los pares walker / mocap
+
+Cada metrica que se calcula por los dos lados vive en un par de paquetes con las mismas definiciones (el lado mocap usa las funciones puras del
+lado walker), un nodo de comparacion y herramientas online y offline. Este paquete conserva los scripts del informe.
+
+| Familia | Lado walker (WalKit) | Lado mocap (mocap4w) |
+|---|---|---|
+| Odometria | `walker_diff_odom` | `mocap_odometry` |
+| Posicion de los pies | `walker_step_detector` | `mocap_step_detector` |
+| Parametros de marcha (tiempo y longitud de paso y zancada, cadencia, velocidad) | `walker_loads/gait_monitor_speed` | `mocap_loads` (`gait_metrics`) |
+| Cargas por pierna y inclinacion del tronco | `walker_loads/partial_loads` | `mocap_loads` |
+| Centroide de apoyo | `walker_centroid_support` | `mocap_centroid_support` |
+| Estabilidad (margen del CoM en el poligono de apoyo) | `walker_stability` | `mocap_stability` |
+| Calidad de marcha (ancho de paso, doble apoyo, simetria y variabilidad del tiempo de paso) | `walker_loads/gait_quality` | `mocap_loads` (`gait_quality`) |
+| Alcance de brazos a las manetas | `walker_stability/arm_posture` | `mocap_stability` (`arm_posture`) |
+| Movimiento del chasis (RMS, razon armonica, regularidad, giro) | `walker_motion` | `mocap_motion` |
+
+Lo que sigue sin par porque el mocap no puede medirlo: la fuerza en las manetas (simetria y reparto de peso; `extra_metrics.py`), solo del andador.
+El angulo de codo solo lo mide el mocap (`mocap_stability`, `arm_posture`): no se puede predecir desde el andador (error medio de 17 grados).
+
 ## Ampliacion: parametros nuevos con los sensores actuales del andador
 
 Candidatos de la literatura que usan sensores que el andador YA lleva y

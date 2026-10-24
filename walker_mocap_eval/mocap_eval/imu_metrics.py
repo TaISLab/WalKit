@@ -18,6 +18,11 @@ se documenta como aproximacion: el chasis oscila con el patron de marcha
 transmitido a traves del propio andador, no es una medida directa del
 tronco. No hay componente vertical mocap fiable (el rigid body del andador
 apenas se desplaza en z); la V de mocap se devuelve como NaN.
+
+NOTA (2026-10): superado por el par walker/mocap `walker_motion` (WalKit, con la IMU) + `mocap_motion` (mocap4w, con el rigid body), que
+usan las mismas funciones puras (`walker_motion/chassis_motion.py`: RMS, razon armonica, regularidad, giro; el tiempo de zancada se halla en
+las propias senales) y comparan online y offline. Una diferencia: `walker_accel_ap_ml` de aqui no descarta los extremos de la media movil, donde
+la ventana se encoge y la segunda derivada da picos de decenas de m/s2 (mocap_motion si). Este modulo se conserva para el informe.
 """
 import math
 import statistics
