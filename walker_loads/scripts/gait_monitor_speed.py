@@ -8,6 +8,7 @@ from tf2_ros.transform_listener import TransformListener
 
 from walker_msgs.msg import StepStamped, GaitStamped, WalkStats
 from walker_loads.stamp_sequencer import StampSequencer, stamp_ns
+from walker_loads.step_onsets import StepOnsets
 import numpy as np
 from nav_msgs.msg import Odometry
 import sys
@@ -20,6 +21,9 @@ gait parameters from step load and time:
 • Step time (SpT): Average time between consecutive step loads in alternate legs in seconds. 
 • Stride time (SdT): Average time between consecutive step loads on the same leg in seconds. 
 • Number of Step (NoS): Numbers of step loads of each leg.
+
+A step load is the load of a leg going from 0 to above 0. Near 0 the load flickers and every flicker would count
+as a step, so a leg's next step loads are ignored for min_step_interval_s after one is registered (walker_loads/step_onsets.py).
 
 gait parameters from step load and absolute step position:
 • Step length (SpL): Average position difference (different legs) between consecutive step loads on alternate leg in meters.
@@ -58,6 +62,8 @@ class GaitMonitorSp(Node):
                 # must be longer than the largest lag between inputs (the loads trail the odometry by
                 # about a handle period, more when replaying faster than real time)
                 ('max_wait_s', 5.0),
+                # refractory period of each leg's step loads, in data time (s); 0 counts every 0 -> >0 transition
+                ('min_step_interval_s', 0.35),
             ])
 
         self.left_loads_topic_name = self.get_parameter('left_loads_topic_name').value
@@ -67,17 +73,18 @@ class GaitMonitorSp(Node):
         self.global_gait_stats_topic_name = self.get_parameter('global_gait_stats_topic_name').value
         self.odom_topic_name = self.get_parameter('odom_topic_name').value
         self.max_wait_s = self.get_parameter('max_wait_s').value
+        min_step_interval_ns = int(self.get_parameter('min_step_interval_s').value * 1e9)
+        self.left_onsets = StepOnsets(min_step_interval_ns)
+        self.right_onsets = StepOnsets(min_step_interval_ns)
         self.global_frame_id = self.get_parameter('global_frame_id').value
         
         # stored data
-        self.is_left_load = False
         self.left_loads = []
         self.left_stride_times = []
         self.left_step_times = []
         self.left_stride_lenghts = []
         self.left_step_lenghts = []
 
-        self.is_right_load = False
         self.right_loads = []
         self.right_stride_times = []
         self.right_step_times = []
@@ -169,24 +176,16 @@ class GaitMonitorSp(Node):
         return d
 
     def left_loads_cb(self, msg):
-        if (msg.load>0):
-            if not self.is_left_load:
-                self.update_stats(msg, self.left_loads, self.right_loads, 
-                    self.left_stride_times, self.left_stride_lenghts, self.left_step_times, self.left_step_lenghts)
-                self.publish_stats(msg.position.header.stamp)
-            self.is_left_load = True
-        else:
-            self.is_left_load = False
+        if self.left_onsets.update(msg.load, stamp_ns(msg.position.header.stamp)):
+            self.update_stats(msg, self.left_loads, self.right_loads, 
+                self.left_stride_times, self.left_stride_lenghts, self.left_step_times, self.left_step_lenghts)
+            self.publish_stats(msg.position.header.stamp)
 
     def right_loads_cb(self, msg):
-        if (msg.load>0):
-            if not self.is_right_load:
-                self.update_stats(msg, self.right_loads, self.left_loads, 
-                    self.right_stride_times, self.right_stride_lenghts, self.right_step_times, self.right_step_lenghts)
-                self.publish_stats(msg.position.header.stamp)
-            self.is_right_load = True
-        else:
-            self.is_right_load = False
+        if self.right_onsets.update(msg.load, stamp_ns(msg.position.header.stamp)):
+            self.update_stats(msg, self.right_loads, self.left_loads, 
+                self.right_stride_times, self.right_stride_lenghts, self.right_step_times, self.right_step_lenghts)
+            self.publish_stats(msg.position.header.stamp)
 
     # mfc: note to self: as all parameters are lists, it will modify its content after return.
     def update_stats(self, msg, leg_loads, opposite_loads, leg_stride_times, leg_stride_lenghts, leg_step_times, leg_step_lenghts):

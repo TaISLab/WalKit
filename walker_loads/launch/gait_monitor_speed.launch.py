@@ -24,7 +24,9 @@ def generate_launch_description():
                  {'right_gait_stats_topic_name': '/right_gait_stats'},
                  {'global_gait_stats_topic_name': '/global_gait_stats'},
                  {'odom_topic_name': '/odom'},
-                 {'global_frame_id': '/odom'}
+                 {'global_frame_id': '/odom'},
+                 # a leg does not step twice within this time (data time, s); 0 counts every 0 -> >0 load transition
+                 {'min_step_interval_s': 0.35}
             ],
     )
 

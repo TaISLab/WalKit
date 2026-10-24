@@ -201,6 +201,20 @@ Gait parameters (SpT, SdT, NoS, SpL, SdL, Tr, d, CAD, WV; definitions in the scr
 (`/odom`, only for the distance). Publishes `/left_gait_stats`, `/right_gait_stats` (`GaitStamped`) and
 `/global_gait_stats` (`WalkStats`).
 
+**Refractory period per leg** (`min_step_interval_s`, 0.35 s of data time; 0 counts every transition). Near 0 the load of a leg
+flickers (0, 0.4, 0, 0.6 kg in 100 ms) and every flicker was a step; the false ones are short "steps" that inflate any
+variability or symmetry index. After a leg registers a step its next step loads are ignored for that long (`step_onsets.py`,
+tested). It runs from the last *registered* step, so a long flicker cannot extend it, and it is per leg: the other leg's step may
+follow closely (double support). The mocap side already had one: `contact_events.detect_stance_events` drops an event within
+0.3 s of the previous one, so the two counts are now like for like.
+
+Measured over 12 definitive bags (CA 3, LA 2, MF 4, MT 3) against the mocap's stance events between the two `/tag` messages:
+the mean signed error of NoS (walker − mocap) goes from +17.7 steps without the refractory to +1.5 with 0.35 s (+14.6 at 0.2 s,
++4.3 at 0.3 s, −5.4 at 0.4 s, −13.6 at 0.6 s), the mean absolute error from 25.3 to 19.3 and the largest from 91 to 56, and the
+"steps" shorter than 0.15 s from 237 to 170. It removes the systematic over-count, not the per-bag error: LA_test01 still has 116
+against 60, and some bags under-count (MF_test07 44 against 63, MT_test15 73 against 111); that comes from how the load is
+split between the legs (`partial_loads`), not from the flicker.
+
 Like `partial_loads` it works on data time: the three inputs are put in stamp order (`walker_loads.stamp_sequencer`;
 the loads by the stamp of the step position, which repeats while the load is recomputed) and the cumulative
 summary is published each time a new step load is registered, **stamped with that step's stamp** (before: with the
