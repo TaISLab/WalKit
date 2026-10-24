@@ -30,7 +30,7 @@ mocap_eval/            <- libreria importable (sin dependencia de ROS salvo bag_
   bag_io.py             nombres antiguos de walker_replay.bagio (lectura de bags) y mocap_compare_common.mocap_tracks (pistas, proyeccion)
   contact_events.py     reexporta mocap_step_detector.contact_events: eventos/intervalos de apoyo por pie a partir de cinematica del tobillo (mocap no mide carga)
   gait_metrics.py       puerto puro-Python de walker_loads/gait_monitor_speed.py (GaitMonitorSp)
-  posture_metrics.py    inclinacion de tronco, ancho de paso, doble apoyo, margen de estabilidad lateral (punto 3)
+  posture_metrics.py    inclinacion de tronco, ancho de paso, doble apoyo (punto 3); el margen de estabilidad lo calcula mocap_stability
   cog_estimation.py     centro de gravedad por modelo segmentario (De Leva 1996) + sexo/peso del usuario (punto 3)
   extra_metrics.py      codo, muñeca, reparto de peso en manetas, yaw/curvatura, oscilacion vertical del CoM, indice de
                         inestabilidad, Symmetry Index (puntos 3-elbow/4/5/8/9/11 del plan + punto 2 de la ampliacion)
@@ -343,7 +343,7 @@ andador para calcularse, solo mocap) sobre la misma base que el punto 1
 | Inclinacion de tronco (total, sagital, frontal) | Angulo entre el vector cadera_media->hombro_medio y la vertical, en cada frame donde esten los 4 marcadores (`l/r_shoulder`, `l/r_hip`) | Reparto de carga manetas/pies (`partial_loads`), centroide de soporte (`walker_centroid_support`) |
 | Ancho de paso | Distancia lateral (proyectada al eje del andador via `rigid_bodies[0]` yaw) entre cada evento de apoyo y el del pie contrario mas cercano en tiempo -- reutiliza `contact_events.detect_stance_events()` del punto 1 | No publicado hoy; derivable de las mismas posiciones que ya usa el detector de pasos |
 | Tiempo de doble apoyo (%) | Solape entre `contact_events.detect_stance_intervals()` de ambos pies, sobre el total | `is_left_load`/`is_right_load` de `gait_monitor_speed.py` ya existen internamente, no se publican |
-| Margen de estabilidad lateral | Punto medio de caderas (proxy de CoM) proyectado sobre el eje lateral del andador, normalizado entre los DOS TOBILLOS reales (0=borde, 1=centro) -- misma formula que `walker_stability.py::y_sta`, pero con BoS real en vez de estimado por tablas antropometricas | **Validacion directa** de `StabilityStamped.sta` |
+| Margen de apoyo del CoM | Distancia con signo de la proyeccion del CoM de De Leva al borde del poligono de apoyo (plantas de los pies en apoyo + las dos manetas), calculada por `mocap_stability` (par mocap de `walker_stability`, mismos parametros de planta). Sustituye al margen lateral entre tobillos (`lateral_margin_at_event`), que validaba la rampa lateral del modelo antiguo de `walker_stability` | **Validacion directa** de `StabilityStamped.margin` (comparacion online y offline en `mocap_stability`) |
 
 `indexed_nearest()` en `bag_io.py`: la primera version de `trunk_lean_series()`
 usaba `nearest()` (escaneo lineal) contra 3 tracks por cada muestra de otro
@@ -361,7 +361,7 @@ un rango mucho mas realista de **3-56%** una vez restringido a la ventana
 activa -- p.ej. `CA_test01` 44.8% -> 11.6%, `CA_test02` 56.8% -> 9.9%. El
 resto de parametros cambia menos: inclinacion de tronco 3.9-35.7 (similar
 rango, algo mas alta en general al quitar los tramos de pie quieto/recto),
-ancho de paso 0.08-0.42 m, margen lateral 0.26-0.85.
+ancho de paso 0.08-0.42 m (el margen se sustituyo despues por el de apoyo del CoM, mas abajo).
 
 **Correlacion "maneta baja -> mas inclinacion" mas clara con el recorte**:
 CA (postura inclinada, `handle_height=0`, test07/08) 24.2 grados de media
@@ -504,7 +504,7 @@ alimenta la velocidad angular del EKF; `imu_filtered` ya no se genera: se dejo d
 |---|---|---|---|---|
 | 1 | RMS, Harmonic Ratio (Moe-Nilssen 1998), regularidad de paso/zancada Ad1/Ad2 (Moe-Nilssen & Helbostad 2004) | IMU del chasis (`/bwt901cl/imu`) | 2a derivada de `rigid_bodies[0]` | `imu_metrics.py`, `compute_imu_stability_metrics.py` |
 | 2 | Symmetry Index (Robinson 1987) de fuerza en manetas vs asimetria cinematica de paso | `/left_handle`, `/right_handle` calibrados | SpT/SdT/SpL/SdL izq-dcha de `compute_gait_from_mocap.py` | `extra_metrics.symmetry_index`, `compute_handle_symmetry_vs_gait.py` |
-| 5 | Correlacion inclinacion sagital de tronco vs margen de estabilidad lateral | (ninguno nuevo) | dos parametros ya calculados | `compute_lean_vs_margin_correlation.py` |
+| 5 | Correlacion inclinacion sagital de tronco vs margen de apoyo del CoM (`mocap_stability`) | (ninguno nuevo) | dos parametros ya calculados | `compute_lean_vs_margin_correlation.py` |
 | 3 | Validacion de `walker_stability.py` (`/user_stability`) vs margen mocap | -- | -- | **bloqueado**, ver abajo |
 
 (El candidato 4, auditar los encoders de rueda crudos, se descarto por
@@ -542,17 +542,18 @@ ventana `/tag`):**
   debil (|r| < 0.62 por sujeto, |r| < 0.16 en TOTAL): son manifestaciones
   parcialmente independientes de la asimetria; resultado honesto, no un
   fallo del metodo.
-- Inclinacion vs margen lateral: r = -0.475 (CA), -0.298 (LA), -0.240
-  (MF), +0.002 (MT), TOTAL -0.033. Ojo: la literatura (andadores
-  instrumentados) habla del margen ANTERO-POSTERIOR, no del lateral que
-  calcula `posture_metrics`; es una prueba indirecta de la hipotesis.
+- Inclinacion vs margen de apoyo del CoM (`mocap_stability`, 47 bags, recorte a `/tag`): r = -0.072 (CA), -0.609 (LA),
+  -0.002 (MF), -0.217 (MT), TOTAL -0.215; margen medio por bag de 2 a 14 cm. Negativa donde existe (mas inclinacion
+  hacia delante, menos margen), pero debil y dependiente del sujeto. (Con el margen lateral entre tobillos que habia
+  antes, TOTAL -0.033.)
 
 ### Punto 3 bloqueado: `walker_stability.py`
 
 > **Actualización (tarea 6):** el nodo ya funciona (ahora `user_stability.py`; ver `walker_stability/README.md`): se corrigieron
 > estos dos bloqueos y otros cinco defectos, y el `/tf_static` de los bags definitivos lleva los frames de las manetas
-> (`walker_replay`). Queda abierta la decisión sobre el modelo (el índice es casi siempre 0). El texto de abajo es el
-> estado de entonces.
+> (`walker_replay`). El modelo se sustituyó por el margen del CoM en el polígono de apoyo de los pies y las manetas, y su
+> validación contra el mismo cálculo con el mocap es `mocap_stability` (47 bags, entre los dos `/tag`: margen medio 10.8 cm el
+> andador y 9.2 cm el mocap, error absoluto medio 5.0 cm, correlación bag a bag 0.10). El texto de abajo es el estado de entonces.
 
 Dos bloqueos, verificados contra el codigo y contra el contenido de los bags:
 1. **Bug de aridad**: `centroid_callback()` llamaba a `get_bos_x()` con 5

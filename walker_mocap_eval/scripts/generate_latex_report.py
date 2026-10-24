@@ -276,10 +276,10 @@ def build_posture_tables(master, bags):
                      ("Sagital (\\textdegree)", "r"), ("$\\sigma$ Sagital", "r"),
                      ("Frontal (\\textdegree)", "r"), ("$\\sigma$ Frontal", "r")])
     nds_stab = [3, 3, 1, 3, 3]
-    t_stab = Table("Puntos 6, 7 y 10 del plan: ancho de paso, doble apoyo y margen de estabilidad lateral",
+    t_stab = Table("Puntos 6, 7 y 10 del plan: ancho de paso, doble apoyo y margen de apoyo del CoM",
                     "tab:stab",
                     [("Bag", "l"), ("Ancho paso (m)", "r"), ("$\\sigma$", "r"),
-                     ("Doble apoyo (\\%)", "r"), ("Margen lateral", "r"), ("$\\sigma$", "r")])
+                     ("Doble apoyo (\\%)", "r"), ("Margen de apoyo (m)", "r"), ("$\\sigma$", "r")])
     raw_lean, raw_stab = {}, {}
     for b in bags:
         p = master[b]["posture_mocap"]
@@ -287,7 +287,7 @@ def build_posture_tables(master, bags):
         raw_lean[b] = v_lean
         t_lean.add_row([esc(b)] + [fmt(v, nd) for v, nd in zip(v_lean, nds_lean)])
         v_stab = [p["step_width_m_mean"], p["step_width_m_std"], p["double_support_fraction"] * 100,
-                  p["lateral_stability_margin_mean"], p["lateral_stability_margin_std"]]
+                  p["support_margin_m_mean"], p["support_margin_m_std"]]
         raw_stab[b] = v_stab
         t_stab.add_row([esc(b)] + [fmt(v, nd) for v, nd in zip(v_stab, nds_stab)])
     return (t_lean.render(build_group_agg_rows(bags, raw_lean, len(cols_lean), nds_lean)),
@@ -455,14 +455,14 @@ def build_handle_symmetry_tables(master, bags):
 
 def build_lean_margin_table(master, bags):
     nds = [2, 3]
-    t = Table("Ampliacion, punto 5: inclinacion sagital de tronco vs margen de estabilidad lateral",
+    t = Table("Ampliacion, punto 5: inclinacion sagital de tronco vs margen de apoyo del CoM",
                "tab:lean_margin",
-               [("Bag", "l"), ("Lean sagital (\\textdegree)", "r"), ("Margen lateral", "r")])
+               [("Bag", "l"), ("Lean sagital (\\textdegree)", "r"), ("Margen de apoyo (m)", "r")])
     raw = {}
     for b in bags:
         lm = master[b].get("lean_vs_margin")
         vals = ([float("nan")] * 2 if lm is None else
-                [lm["trunk_lean_sagittal_deg_mean"], lm["lateral_stability_margin_mean"]])
+                [lm["trunk_lean_sagittal_deg_mean"], lm["support_margin_m_mean"]])
         raw[b] = vals
         t.add_row([esc(b)] + [fmt(v, nd) for v, nd in zip(vals, nds)])
     t_main = t.render(build_group_agg_rows(bags, raw, len(nds), nds))
@@ -475,7 +475,7 @@ def build_lean_margin_table(master, bags):
         label = esc(g) if g != "TOTAL" else r"\textbf{TOTAL}"
         rows.append([label, f"{fmt(r, 3)} (n={n})"])
     t_corr = _small_table(
-        "Ampliacion, punto 5: correlacion de Pearson (lean sagital vs margen lateral), por sujeto",
+        "Ampliacion, punto 5: correlacion de Pearson (lean sagital vs margen de apoyo), por sujeto",
         "tab:lean_margin_corr",
         [("Sujeto", "l"), ("r", "r")], rows)
     return t_main, t_corr
@@ -549,7 +549,7 @@ par\'ametros de marcha ya publicados por el nodo real
   \item \textbf{Puntos 3--11}: inclinaci\'on de tronco, \'angulo de codo,
     altura/distancia de mu\~neca, reparto de peso en manetas, ancho de
     paso, doble apoyo, curvatura/yaw de trayectoria, oscilaci\'on vertical
-    del centro de masas (CoM), margen de estabilidad lateral / CoM vs
+    del centro de masas (CoM), margen de apoyo del CoM / CoM vs
     centroide de soporte, e \'indice compuesto de inestabilidad
     (exploratorio).
 \end{itemize}
@@ -650,11 +650,14 @@ Dos precisiones que condicionan la lectura de los resultados:
     $R>50$~m, como ``sin curvatura definida'').
   \item \textbf{Oscilaci\'on vertical del CoM}: $\sigma_z$, rango y media
     de $z_{CoM}(t)$ (ver estimaci\'on de CoM abajo).
-  \item \textbf{Margen de estabilidad lateral}: punto medio de caderas
-    (proxy de CoM) proyectado sobre el eje lateral del andador,
-    normalizado entre los dos tobillos reales ($0$=borde, $1$=centro) --
-    misma f\'ormula que \texttt{walker\_stability.py::y\_sta} pero con base
-    de soporte (BoS) real en vez de estimada por tablas antropom\'etricas.
+  \item \textbf{Margen de apoyo del CoM}: distancia, con signo (positiva dentro),
+    de la proyecci\'on al suelo del CoM de De Leva al borde m\'as cercano del
+    pol\'igono de apoyo, el casco convexo de las plantas de los pies en
+    apoyo (tobillo a menos de 0.25~m/s) y de las dos manetas. Lo calcula
+    \texttt{mocap\_stability}, el par mocap de \texttt{walker\_stability}
+    (misma geometr\'ia, mismos par\'ametros de planta); sustituye al margen
+    lateral entre tobillos que hab\'ia aqu\'i, que validaba una rampa del
+    modelo antiguo de \texttt{walker\_stability} que ya no existe.
   \item \textbf{\'Indice compuesto de inestabilidad} (exploratorio, sin
     ground truth Tinetti disponible en este dataset): combinaci\'on
     normalizada 0--100 de la desviaci\'on t\'ipica del sway frontal, el
@@ -730,10 +733,10 @@ contra el c\'odigo -- 4 candidatos, implementados en ese orden:
     grabado en todos los bags) vs. su equivalente estimado por mocap.
   \item \'Indice de simetr\'ia de marcha por fuerza en manetas (sensor real) vs. asimetr\'ia
     cinem\'atica de paso (mocap).
-  \item Correlaci\'on inclinaci\'on de tronco vs. margen de estabilidad lateral (sin sensor
+  \item Correlaci\'on inclinaci\'on de tronco vs. margen de apoyo del CoM (sin sensor
     nuevo, dos par\'ametros ya calculados).
-  \item Validaci\'on de \texttt{walker\_stability.py} (\texttt{/user\_stability}) -- bloqueada,
-    ver \S\ref{sec:walker_stability}.
+  \item Validaci\'on de \texttt{walker\_stability.py} (\texttt{/user\_stability}) -- bloqueada
+    entonces, resuelta despu\'es, ver \S\ref{sec:walker_stability}.
 \end{enumerate}
 """
 
@@ -829,33 +832,41 @@ mecanismos parcialmente independientes.
 """
 
 AMPLIACION_LEAN_MARGIN = r"""
-\subsection{Punto 5: inclinaci\'on de tronco vs. margen de estabilidad lateral}
+\subsection{Punto 5: inclinaci\'on de tronco vs. margen de apoyo del CoM}
 \label{sec:ampliacion_lean}
 Sin sensor nuevo: correlaci\'on de Pearson entre dos par\'ametros ya
 calculados (\S\ref{sec:cog_mocap} y antes), inclinaci\'on sagital de tronco
-(\texttt{trunk\_lean\_sagittal\_deg\_mean}) y margen de estabilidad lateral
-(\texttt{lateral\_stability\_margin\_mean}). La literatura de andadores
-instrumentados documenta que inclinarse hacia delante aumenta la
-estabilidad \textbf{est\'atica} pero reduce la capacidad de respuesta ante
-perturbaciones (\S\ref{sec:literatura}); \textbf{nota importante}: esa
-literatura se refiere al margen \textbf{antero-posterior} (hacia delante),
-mientras que \texttt{lateral\_stability\_margin} de este informe mide el
-margen \textbf{lateral} (izquierda-derecha) -- esta correlaci\'on es, por
-tanto, una prueba INDIRECTA/exploratoria de la hip\'otesis general, no una
-validaci\'on directa sobre el mismo eje.
+(\texttt{trunk\_lean\_sagittal\_deg\_mean}) y margen de apoyo del CoM
+(\texttt{support\_margin\_m\_mean}, de \texttt{mocap\_stability}). La literatura
+de andadores instrumentados documenta que inclinarse hacia delante aumenta
+la estabilidad \textbf{est\'atica} pero reduce la capacidad de respuesta ante
+perturbaciones (\S\ref{sec:literatura}). El margen de este informe es la
+distancia al borde m\'as cercano del pol\'igono en cualquier direcci\'on (no
+solo la lateral, como el que usaba la versi\'on anterior de este punto), as\'i
+que mide mejor la estabilidad est\'atica que invoca la literatura, aunque
+sigue sin medir respuesta a perturbaciones, que no est\'a en este dataset.
 
-Resultados (Tablas~\ref{tab:lean_margin}, \ref{tab:lean_margin_corr}):
-correlaci\'on d\'ebil y de signo variable seg\'un sujeto (CA $r=-0.475$, LA
-$r=-0.298$, MF $r=-0.240$, MT $r\approx 0$; TOTAL $r=-0.033$) -- no se
-observa una relaci\'on clara entre inclinaci\'on sagital y margen LATERAL
-en este dataset, consistente con que son ejes mec\'anicamente distintos;
-una prueba directa de la hip\'otesis de la literatura requerir\'ia un
-margen de estabilidad antero-posterior, no calculado en este informe.
+Resultados (Tablas~\ref{tab:lean_margin}, \ref{tab:lean_margin_corr};
+47 bags, entre los dos \texttt{/tag}): correlaci\'on d\'ebil o nula salvo en LA
+(CA $r=-0.072$, LA $r=-0.609$, MF $r=-0.002$, MT $r=-0.217$; TOTAL
+$r=-0.215$), con un margen medio por bag de 2 a 14~cm. La relaci\'on es
+negativa donde existe (m\'as inclinaci\'on hacia delante, menos margen), pero
+la evidencia es d\'ebil y depende del sujeto.
 """
 
 AMPLIACION_WALKER_STABILITY = r"""
-\subsection{Punto 3: validaci\'on de \texttt{walker\_stability.py} -- bloqueada}
+\subsection{Punto 3: validaci\'on de \texttt{walker\_stability.py} -- bloqueada (resuelta despu\'es)}
 \label{sec:walker_stability}
+\textbf{Actualizaci\'on (octubre de 2026).} Los dos bloqueos de abajo, y otros cinco
+defectos del nodo, se corrigieron; el nodo (ahora \texttt{user\_stability.py})
+calcula el margen del CoM en el pol\'igono de apoyo de los pies y las manetas, y su
+validaci\'on contra el mismo c\'alculo hecho con el mocap est\'a en
+\texttt{mocap\_stability} (47 bags, entre los dos \texttt{/tag}): el margen medio
+coincide (10.8 cm el andador, 9.2 cm el mocap), el error absoluto medio es de 5.0~cm,
+y la correlaci\'on bag a bag es casi nula (media 0.10), as\'i que el nivel
+coincide pero no la evoluci\'on en el tiempo. El texto que sigue es el estado de
+entonces.
+
 Se intent\'o a\~nadir \texttt{walker\_stability} (nodo real, publica
 \texttt{/user\_stability}, \texttt{StabilityStamped.sta} $\in[0,1]$) a la
 reproducci\'on para comparar su salida real contra el margen de
@@ -890,9 +901,9 @@ forzado una reimplementaci\'on con TFs inventados para rellenar este
 punto}: habr\'ia introducido supuestos no verificables sobre la geometr\'ia
 real de las manetas, debilitando la fiabilidad del resto del informe. El
 sustituto m\'as honesto disponible con los datos actuales es el margen de
-estabilidad lateral ya calculado desde mocap
+apoyo del CoM ya calculado desde mocap
 (Tabla~\ref{tab:stab}, \S\ref{sec:ampliacion_lean}) -- que adem\'as usa una
-base de soporte MEDIDA directamente (tobillos reales en mocap) en vez de
+base de soporte MEDIDA directamente (pies en apoyo reales en mocap) en vez de
 estimada por tablas antropom\'etricas como hace
 \texttt{walker\_stability.py::get\_bos\_x()}, por lo que es, si acaso, una
 referencia m\'as fiable que lo que el nodo real producir\'ia incluso si
@@ -1101,9 +1112,9 @@ texto.
     documenta que inclinarse hacia delante aumenta la estabilidad
     est\'atica pero reduce la capacidad de respuesta ante
     perturbaciones\footnote{\url{https://www.ati-ia.com/Library/documents/walker_forces.pdf}}
-    -- sobre el margen ANTERO-POSTERIOR, no el lateral calculado aqu\'i
-    (\S\ref{sec:ampliacion_lean}), de ah\'i la correlaci\'on d\'ebil
-    observada.
+    -- y sin que este dataset permita medir la respuesta a perturbaciones,
+    solo el margen est\'atico calculado aqu\'i (\S\ref{sec:ampliacion_lean}),
+    de ah\'i la correlaci\'on d\'ebil observada.
 \end{itemize}
 
 \textbf{Conclusi\'on de la comparaci\'on}: los par\'ametros que dependen de
