@@ -26,6 +26,9 @@ rate (checked at rates 1 and 4), at the price of the sequencer's latency (up to 
 | **`sta`** | `margin / margin_ref_m` clipped to 0..1 (`margin_ref_m` = 0.10 m is the margin that counts as fully stable: a scale, not a validated threshold). |
 | **`contacts`** | feet carrying load plus the two handles (2 to 4). |
 
+The support polygon is also published, as a `geometry_msgs/PolygonStamped` on `/support_polygon` (`polygon_topic_name`), stamped like
+`/user_stability`, for rviz (`walker_rviz` draws it) and for anything else that wants to see what the margin is measured in.
+
 The frame of `pose` is that of the step positions (`laser`). Everything depends on the stamps only, not on the clock: the
 filter advances with the stamps of the ticks it is evaluated at.
 

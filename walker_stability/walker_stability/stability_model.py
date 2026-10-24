@@ -35,6 +35,7 @@ class Evaluation(NamedTuple):
     com: tuple                  # (x, y) estimate of the centre of mass (cop low-passed)
     contacts: int               # contacts in the polygon: feet carrying load, plus the two handles
     assessment: sp.Assessment   # the polygon's area, the margin of `com` in it and the index
+    polygon: list               # the support polygon: (x, y) vertices of the hull, counter-clockwise
 
 
 class StabilityModel:
@@ -88,4 +89,4 @@ class StabilityModel:
                   for p in sp.footprint(c.x, c.y, *self.sole)]
         points += [(c.x, c.y) for c in self._handles.values()]
         stood_on = sum(c.load >= self.min_foot_load_kg for c in self._feet.values())
-        return Evaluation(cop, com, stood_on + len(self._handles), sp.assess(points, com, self.margin_ref_m))
+        return Evaluation(cop, com, stood_on + len(self._handles), sp.assess(points, com, self.margin_ref_m), sp.convex_hull(points))
