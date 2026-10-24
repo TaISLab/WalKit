@@ -235,6 +235,24 @@ feeds a running sum, so if its stamps lag so far behind the loads' that it is ov
 MF_test07) it is still counted, not dropped; only the `d` of the intermediate summaries then depends on the arrival
 order (the final one does not).
 
+## Node: `gait_quality.py`
+
+Gait quality from the leg loads, published as `/gait_quality` (`walker_msgs/GaitQuality`) at every stance onset, over the last
+`window_s` (20) seconds of data time (0 = since the first onset):
+
+| Field | Definition (`walker_loads/gait_quality.py`, shared with the mocap counterpart in `mocap_loads`) |
+|---|---|
+| `step_width` | mean lateral gap (m) between the feet at the onsets: `\|y\|` of an onset against the opposite leg's nearest onset (within 1 s), in the walker's frame |
+| `double_support` | fraction of the window with both legs in stance |
+| `step_time`, `step_time_si`, `step_time_cv` | step time (from the opposite leg's onset to this one's, 0.2 to 2 s), its symmetry index (Robinson 1987, needs 2 steps per leg) and its coefficient of variation (needs 4 steps); `NaN` until then |
+
+A leg is **in stance** when it carries at least `stance_load_fraction` (0.15) of the user's weight (`/user_desc`). It is not "load above 0" as
+in `gait_monitor_speed`: the swinging leg's load ramps with the relative speed of the feet and hardly ever reaches 0, so both legs
+would be in stance almost always. The onsets have the refractory period `min_step_interval_s` of `gait_monitor_speed`, and a load that
+flickers back within it is the same stance. Data time like the other nodes (`StampSequencer`); the same bag gives the same numbers at
+any replay rate. `ros2 launch walker_loads gait_quality.launch.py` (`sim_time`, `debug`, `window_s`, `min_step_interval_s`,
+`stance_load_fraction`). The comparison against the mocap is in `mocap4w/mocap_loads` (`compare_gait_quality.launch.py`).
+
 ## Reproducing / testing this offline
 
 The comparison of walker_loads against the mocap (and the `replay_offline.launch.py` pipeline that replays a definitive
