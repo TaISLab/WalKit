@@ -58,6 +58,8 @@ class WalkerMarkers(Node):
             ('handles', True), ('steps', True), ('detected_steps', False), ('centroid', True), ('stability', True),
             ('gait', True), ('active_area', True))}
         self.pubs = {}
+        self.held_load = {}                  # side -> the last load (kg) /left_loads or /right_loads gave, for the steps layer
+        detected_prefix = p('detected_steps_topic_name', '/detected_step')
 
         if self.layers['handles']:
             raw = bool(p('handles_raw', False))
@@ -73,14 +75,21 @@ class WalkerMarkers(Node):
                            lambda m, side=side: markers.handle_markers(
                                self.in_kg(m, side, calibration), side, self.handle_max_kg, self.lifetime_s))
         if self.layers['steps']:
-            self.layer('steps', StepStamped, p('left_loads_topic_name', '/left_loads'),
-                       lambda m: markers.step_markers(m, markers.LEFT, self.weight_kg, self.step_size_m, self.lifetime_s))
-            self.layer('steps', StepStamped, p('right_loads_topic_name', '/right_loads'),
-                       lambda m: markers.step_markers(m, markers.RIGHT, self.weight_kg, self.step_size_m, self.lifetime_s))
+            # Where the loads' own message puts the foot is ~0.7 s old when it comes out (the loads wait for the handles), so the feet
+            # trail the scan. With steps_at_detected the foot is drawn where the detected step is (about as old as the scan) and
+            # coloured with the last load known, which changes slowly; no foot is drawn until its first load has arrived.
+            at_detected = bool(p('steps_at_detected', True))
+            for side, loads_topic in ((markers.LEFT, p('left_loads_topic_name', '/left_loads')),
+                                      (markers.RIGHT, p('right_loads_topic_name', '/right_loads'))):
+                if at_detected:
+                    self.create_subscription(StepStamped, loads_topic, lambda m, side=side: self.hold_load(side, m), 10)
+                    self.layer('steps', StepStamped, detected_prefix + '_' + side, lambda m, side=side: self.step_at_detected(side, m))
+                else:
+                    self.layer('steps', StepStamped, loads_topic,
+                               lambda m, side=side: markers.step_markers(m, side, self.weight_kg, self.step_size_m, self.lifetime_s))
             self.create_subscription(UserDesc, p('user_desc_topic_name', '/user_desc'), self.on_user_desc, LATCHED)
         if self.layers['detected_steps']:
             min_confidence = float(p('min_confidence', 0.0))
-            detected_prefix = p('detected_steps_topic_name', '/detected_step')
             for side in (markers.LEFT, markers.RIGHT):
                 self.layer('detected_steps', StepStamped, detected_prefix + '_' + side,
                            lambda m, side=side: markers.detected_step_markers(m, side, 0.05, self.lifetime_s)
@@ -121,6 +130,14 @@ class WalkerMarkers(Node):
         out.header = msg.header
         out.force = float(calibration.kg(side, msg.force))
         return out
+
+    def hold_load(self, side, msg):
+        self.held_load[side] = float(msg.load)
+
+    def step_at_detected(self, side, msg):
+        if side not in self.held_load:
+            return []
+        return markers.step_markers(markers.with_load(msg, self.held_load[side]), side, self.weight_kg, self.step_size_m, self.lifetime_s)
 
     def on_user_desc(self, msg):
         if msg.weight > 0:
