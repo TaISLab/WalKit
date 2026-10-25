@@ -19,7 +19,7 @@ def generate_launch_description():
     rplidar_ros_launch_file = join( rplidar_ros_dir, 'launch', 'rplidar_a1_launch.py')
 
     walker_bringup_dir = get_package_share_directory('walker_bringup')
-    nav_laser_filter_launch_file = join( walker_bringup_dir, 'launch', 'nav_laser_filter.launch.py')
+    nav_laser_filter_launch_file = join(get_package_share_directory('walker_laser_filter'), 'launch', 'nav_filter.launch.py')
     
     wit_config = join(walker_bringup_dir, 'config', 'wt901.yml')
     
@@ -51,7 +51,7 @@ def generate_launch_description():
                                           }.items(),
         ),
 
-        # ros2 launch walker_bringup nav_laser_filter.launch.py
+        # ros2 launch walker_laser_filter nav_filter.launch.py
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(nav_laser_filter_launch_file)
         ),

@@ -124,7 +124,7 @@ ni la velocidad reales del test. **Corregido**: `timer_callback()` ahora usa
 ## Punto 2: pipeline real vs mocap, resultados sobre los 47 bags
 
 `compare_gait_mocap_vs_walker.py` lanza `walker_loads/launch/
-replay_offline.launch.py` (box_filter -> km_detect_steps -> partial_loads ->
+replay_offline.launch.py` (self_filter -> feet_filter -> km_detect_steps -> partial_loads ->
 mocap_odometry -> gait_monitor_speed) contra cada uno de los 47 bags de
 `datasets/labeled_bags`, graba el ULTIMO mensaje de `/left_gait_stats`,
 `/right_gait_stats` y `/global_gait_stats` (GaitStamped/WalkStats son

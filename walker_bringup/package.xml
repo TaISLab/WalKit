@@ -24,7 +24,7 @@
   <exec_depend>walker_replay</exec_depend>
   <exec_depend>walker_arduino</exec_depend>
   <exec_depend>walker_diff_odom</exec_depend>
-  <exec_depend>laser_filters</exec_depend>
+  <exec_depend>walker_laser_filter</exec_depend>
   <exec_depend>rosbridge_server</exec_depend>
   <exec_depend>ros2_laser_scan_matcher</exec_depend>
   <exec_depend>nav2_common</exec_depend>

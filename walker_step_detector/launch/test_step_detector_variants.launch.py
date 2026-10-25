@@ -18,10 +18,10 @@ prueba "el" detector de pasos en general.
 
 Bags: reproduce los bags definitivos con walker_replay -- traen /scan crudo
 (sin pasar por walker_laser_filter) + ground truth de mocap (/labeled_markers,
-/rigid_bodies). Aqui mismo se recorta ese /scan crudo a
-/scan_feet con box_filter (walker_laser_filter, config/box_filter_eval.yaml
--- misma caja que inverted_box_filter.yaml, solo cambia el topic de
-entrada) antes de pasarselo a las tres variantes: sin este recorte,
+/rigid_bodies). Aqui mismo se filtra ese /scan crudo con la cadena del robot
+(walker_laser_filter: self_filter.launch.py da /scan_filtered y
+feet_filter.launch.py recorta /scan_filtered a /scan_feet, la zona activa)
+antes de pasarselo a las tres variantes: sin este recorte,
 km_detect_steps (que no filtra por distancia en su propio codigo, ver
 km_detect_steps.cpp) hace k-means sobre TODA la sala en vez de sobre las
 piernas -- probado en vivo contra CA_test01, con /scan crudo publicaba
@@ -72,10 +72,11 @@ from walker_replay.launch_utils import replay_actions
 
 from os.path import expanduser, join
 
+from walker_laser_filter.launching import include_stage
+
 step_detector_path = get_package_share_directory('walker_step_detector')
 forest_file_path = join(step_detector_path, "config", "trained_step_detector_res_0.33.yaml")
 segmentation_cfg_eval = join(step_detector_path, "config", "laser_segmentation_eval.yml")
-box_filter_cfg_eval = join(step_detector_path, "config", "box_filter_eval.yaml")
 rviz2_config_path = join(get_package_share_directory("walker_rviz"), "rviz", "step_detector.rviz")
 
 
@@ -109,7 +110,7 @@ def generate_launch_description():
     ld.add_action(DeclareLaunchArgument("use_rviz", default_value="false"))
 
     # El bag (y use_sim_time para lo que viene despues) primero: /scan para los
-    # detectores (via box_filter abajo), /labeled_markers + /rigid_bodies para
+    # detectores (via los filtros abajo), /labeled_markers + /rigid_bodies para
     # poder grabarlos junto a las salidas y evaluar despues. El TF del andador
     # (base_footprint -> laser, etc.) lo publica walker_replay desde el xacro de
     # walker_description -- no hardcodear el offset del laser aqui.
@@ -124,13 +125,12 @@ def generate_launch_description():
             shutdown_on_end=LaunchConfiguration("shutdown_on_end")):
         ld.add_action(action)
 
-    # Recorta /scan (crudo) a /scan_feet -- la zona donde pueden aparecer
-    # las piernas -- antes de pasarselo a cualquier detector (ver nota
-    # arriba: km_detect_steps no es usable sin esto).
-    box_filter_node = Node(
-        package="walker_laser_filter", executable="box_filter", name="step_laser_filter",
-        parameters=[box_filter_cfg_eval])
-    ld.add_action(box_filter_node)
+    # /scan (crudo) -> /scan_filtered (sin la estructura del andador) -> /scan_feet
+    # (la zona donde pueden aparecer las piernas) antes de pasarselo a cualquier
+    # detector (ver nota arriba: km_detect_steps no es usable sin esto).
+    filter_args = dict(sim_time=LaunchConfiguration("sim_time"), debug=LaunchConfiguration("debug"))
+    ld.add_action(include_stage("self_filter.launch.py", **filter_args))
+    ld.add_action(include_stage("feet_filter.launch.py", **filter_args))
 
     # Segmentacion laser en vivo para detect_steps_s, ya sobre /scan_feet
     # (ver config/laser_segmentation_eval.yml).

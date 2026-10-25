@@ -17,8 +17,9 @@ Este launcher lanza SOLO dos cosas; el resto lo lanza el robot real:
         odom -> base_footprint
 
 Entradas que ha de proporcionar el resto del sistema (NO se lanzan aqui):
-  - /scan_nav: scan recortado de nav_laser_filter.launch.py (a su vez alimentado
-    por /scan_filtered de laser_filter.launch.py, sobre el /scan de rplidar_ros).
+  - /scan_nav: scan recortado de nav_filter.launch.py (a su vez alimentado por
+    /scan_filtered de self_filter.launch.py, ambos de walker_laser_filter, sobre
+    el /scan de rplidar_ros).
   - /bwt901cl/imu: walker_witmotion.launch.py (witmotion_ros, IMU cruda; NO la
     filtrada: su estimador de sesgo corrompe el gyro, ver walker_ekf.yaml).
   - TF: walker_state_publisher (walker_description), que da

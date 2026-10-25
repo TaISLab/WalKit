@@ -63,7 +63,7 @@ python3 scripts/export_bag_timeseries.py \
 
 Para cada bag: calcula las series de mocap directamente (sin reproducir),
 y hace **una única reproducción** del pipeline real completo
-(`box_filter` → `detect_steps` → `partial_loads` → `mocap_odometry` →
+(`self_filter` → `feet_filter` → `detect_steps` → `partial_loads` → `mocap_odometry` →
 `gait_monitor_speed` + `walker_centroid_support`) grabando todo lo que
 publica. Escribe un CSV por serie y por fuente
 (`{bag}_mocap_*.csv`, `{bag}_walker_*.csv`), todas con el mismo eje

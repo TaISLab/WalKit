@@ -26,7 +26,7 @@ picture follows the data: a bag replayed at any rate looks the same, and each th
 | `centroid` | `/support_centroid` (`walker_centroid_support`) | a sphere on the floor |
 | `stability` | `/user_stability` (`walker_stability`) | the centre-of-mass estimate as a sphere, red to green by `sta`, and `margin cm \| sta \| contacts` above it |
 | `gait` | `/global_gait_stats` (`walker_loads`) | the gait summary (steps, cadence, speed, distance) as a text floating over `base_link` |
-| `active_area` | the filters' own YAML (`active_area_files`, default `walker_laser_filter/config/inverted_box_filter.yaml`) | the boxes as outlines, published once and latched. (`plot_active_area` had the numbers typed in, and out of date.) |
+| `active_area` | the filters' own YAML (`active_area_files`, default `walker_laser_filter/config/feet_filter.yaml`) | the boxes as outlines, published once and latched. (`plot_active_area` had the numbers typed in, and out of date.) |
 
 The **support polygon** of `walker_stability` is not drawn by this node: that node publishes it as a `PolygonStamped`
 (`/support_polygon`) and rviz draws that natively (it is in the views).

@@ -29,8 +29,8 @@ windows:
   - name: filters
     tags: ['core']
     panes:
-      - ros2 launch walker_bringup nav_laser_filter.launch.py
-      - ros2 launch walker_bringup laser_filter.launch.py
+      - ros2 launch walker_laser_filter nav_filter.launch.py
+      - ros2 launch walker_laser_filter self_filter.launch.py
   - name: position
     tags: ['core']
     panes:

@@ -38,7 +38,7 @@ def default_calibration_file():
 
 def default_area_files():
     try:
-        return [os.path.join(get_package_share_directory('walker_laser_filter'), 'config', 'inverted_box_filter.yaml')]
+        return [os.path.join(get_package_share_directory('walker_laser_filter'), 'config', 'feet_filter.yaml')]
     except PackageNotFoundError:
         return []
 
