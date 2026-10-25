@@ -115,10 +115,10 @@ def test_boxes_become_closed_outlines_in_their_frame():
 def test_boxes_are_read_from_the_filters_own_yaml(tmp_path):
     f = tmp_path / 'box.yaml'
     f.write_text("""
-/step_laser_filter:
+/**:
   ros__parameters:
-    filter:
-      name: inverted_box_filter
+    filter1:
+      name: active_area
       params:
         box_frame: laser
         max_x: 0.03
