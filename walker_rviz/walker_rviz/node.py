@@ -80,8 +80,9 @@ class WalkerMarkers(Node):
             self.create_subscription(UserDesc, p('user_desc_topic_name', '/user_desc'), self.on_user_desc, LATCHED)
         if self.layers['detected_steps']:
             min_confidence = float(p('min_confidence', 0.0))
+            detected_prefix = p('detected_steps_topic_name', '/detected_step')
             for side in (markers.LEFT, markers.RIGHT):
-                self.layer('detected_steps', StepStamped, p('detected_steps_topic_name', '/detected_step') + '_' + side,
+                self.layer('detected_steps', StepStamped, detected_prefix + '_' + side,
                            lambda m, side=side: markers.detected_step_markers(m, side, 0.05, self.lifetime_s)
                            if m.confidence >= min_confidence else [])
         if self.layers['centroid']:
