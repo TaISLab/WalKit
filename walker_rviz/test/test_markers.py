@@ -161,3 +161,12 @@ def test_no_label_has_a_space_in_it():
     assert len(texts) == 4 and all(t.text and not any(c.isspace() for c in t.text) for t in texts)
     (padded,) = [markers._text(Header(), 'x', 0, 'a b\u00a0c  d', (0, 0, 0), 0.5)]
     assert padded.text == 'a_b_c_d'
+
+
+def test_a_detected_step_gets_the_load_it_is_given_and_nothing_else_changes():
+    detected = step(-0.6, 0.1, -1.0, confidence=0.9, frame='laser')
+    out = markers.with_load(detected, 31.5)
+    assert out.load == 31.5 and detected.load == -1.0                                   # a copy
+    assert (out.position.point.x, out.position.point.y, out.confidence) == (-0.6, 0.1, 0.9)
+    body, label = markers.step_markers(out, markers.LEFT)
+    assert label.text == 'left:32kg' and (body.pose.position.x, body.pose.position.y) == (-0.6, 0.1)

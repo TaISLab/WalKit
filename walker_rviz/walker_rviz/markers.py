@@ -12,6 +12,7 @@ Layers and what they show:
   gait       the gait summary as text
   area       the boxes of the laser filters, as outlines
 """
+import copy
 import re
 
 from builtin_interfaces.msg import Duration
@@ -86,6 +87,14 @@ def step_markers(msg, side, weight_kg=60.0, size_m=0.15, lifetime_s=0.5):
     label = _text(msg.position.header, 'steps_text', ident, '%s:%.0fkg' % (side, max(float(msg.load), 0.0)),
                   (msg.position.point.x, msg.position.point.y, 0.005 + size_m), lifetime_s)
     return [body, label]
+
+
+def with_load(msg, load):
+    """A copy of the StepStamped `msg` with its load (kg) replaced: a detected step, which comes out about 0.1 s after the scan,
+    with the last load known (the loads come out 0.7 s after the scan: they wait for the handles)."""
+    out = copy.deepcopy(msg)
+    out.load = float(load)
+    return out
 
 
 def detected_step_markers(msg, side, size_m=0.05, lifetime_s=0.5):
