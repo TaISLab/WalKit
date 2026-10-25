@@ -12,6 +12,8 @@ Layers and what they show:
   gait       the gait summary as text
   area       the boxes of the laser filters, as outlines
 """
+import re
+
 from builtin_interfaces.msg import Duration
 from geometry_msgs.msg import Point
 from std_msgs.msg import Header
@@ -49,7 +51,9 @@ def _text(header, ns, marker_id, text, position, lifetime_s, height=0.05, rgb=(1
     m.pose.position.x, m.pose.position.y, m.pose.position.z = (float(p) for p in position)
     m.scale.z = float(height)
     _colour(m, rgb)
-    m.text = text
+    # No spaces, of any kind: this RViz draws each one tens of times too wide, so a label like "left 45 kg" comes out as three words
+    # a metre apart. (The labels are written without them; this keeps one added later from bringing the problem back.)
+    m.text = re.sub(r'\s+', '_', text)
     return m
 
 
@@ -66,7 +70,7 @@ def handle_markers(msg, side, max_kg=20.0, lifetime_s=0.5):
         arrow.points.append(p)
     arrow.scale.x, arrow.scale.y, arrow.scale.z = 0.03, 0.06, 0.06
     _colour(arrow, jet(share))
-    label = _text(msg.header, 'handles_text', ident, '%.1f kg' % float(msg.force), (0.0, 0.0, length + 0.06), lifetime_s)
+    label = _text(msg.header, 'handles_text', ident, '%.1fkg' % float(msg.force), (0.0, 0.0, length + 0.06), lifetime_s)
     return [arrow, label]
 
 
@@ -79,7 +83,7 @@ def step_markers(msg, side, weight_kg=60.0, size_m=0.15, lifetime_s=0.5):
     body.scale.x = body.scale.y = body.scale.z = float(size_m)
     share = max(0.0, float(msg.load)) / weight_kg if weight_kg > 0 else 0.0
     _colour(body, jet(share), alpha=max(float(msg.confidence), 0.1))
-    label = _text(msg.position.header, 'steps_text', ident, '%s %.0f kg' % (side, max(float(msg.load), 0.0)),
+    label = _text(msg.position.header, 'steps_text', ident, '%s:%.0fkg' % (side, max(float(msg.load), 0.0)),
                   (msg.position.point.x, msg.position.point.y, 0.005 + size_m), lifetime_s)
     return [body, label]
 
@@ -111,14 +115,14 @@ def stability_markers(msg, size_m=0.1, lifetime_s=0.5):
     body.pose.position.x, body.pose.position.y, body.pose.position.z = msg.pose.pose.position.x, msg.pose.pose.position.y, 0.02
     body.scale.x = body.scale.y = body.scale.z = float(size_m)
     _colour(body, red_to_green(msg.sta))
-    label = _text(header, 'stability_text', 0, 'margin %+.1f cm | sta %.2f | %d contacts' % (100.0 * msg.margin, msg.sta, msg.contacts),
+    label = _text(header, 'stability_text', 0, 'margin:%+.1fcm|sta:%.2f|contacts:%d' % (100.0 * msg.margin, msg.sta, msg.contacts),
                   (msg.pose.pose.position.x, msg.pose.pose.position.y, 0.02 + size_m + 0.04), lifetime_s)
     return [body, label]
 
 
 def gait_marker(msg, frame_id, position=(0.0, 0.0, 1.3), lifetime_s=5.0):
     """msg: walker_msgs/WalkStats. A text with the gait summary, floating at `position` of `frame_id`."""
-    text = 'steps %d | cadence %.0f/min | speed %.2f m/s | distance %.1f m' % (msg.nos, msg.cad, msg.wv, msg.d)
+    text = 'steps:%d|cadence:%.0f/min|speed:%.2fm/s|distance:%.1fm' % (msg.nos, msg.cad, msg.wv, msg.d)
     header = Header()
     header.stamp, header.frame_id = msg.header.stamp, frame_id
     return [_text(header, 'gait', 0, text, position, lifetime_s, height=0.08, rgb=(0.9, 0.9, 0.2))]

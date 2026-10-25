@@ -24,7 +24,7 @@ picture follows the data: a bag replayed at any rate looks the same, and each th
 | `steps` | `/left_loads`, `/right_loads` (`walker_loads`) | each leg's tracked foot on the floor (sphere = left, cube = right), coloured by the share of the user's weight it carries (`/user_desc`), transparent as the detection's confidence, with its label and kg |
 | `detected_steps` (off) | `<detected_steps_topic_name>_left/_right` (a step detector) | the same shapes in a fixed colour per leg, for detectors that have no load |
 | `centroid` | `/support_centroid` (`walker_centroid_support`) | a sphere on the floor |
-| `stability` | `/user_stability` (`walker_stability`) | the centre-of-mass estimate as a sphere, red to green by `sta`, and `margin cm \| sta \| contacts` above it |
+| `stability` | `/user_stability` (`walker_stability`) | the centre-of-mass estimate as a sphere, red to green by `sta`, and `margin:…cm\|sta:…\|contacts:…` (no spaces: this RViz draws a space far too wide) above it |
 | `gait` | `/global_gait_stats` (`walker_loads`) | the gait summary (steps, cadence, speed, distance) as a text floating over `base_link` |
 | `active_area` | the filters' own YAML (`active_area_files`, default `walker_laser_filter/config/feet_filter.yaml`) | the boxes as outlines, published once and latched. (`plot_active_area` had the numbers typed in, and out of date.) |
 
