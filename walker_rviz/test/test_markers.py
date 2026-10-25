@@ -4,6 +4,7 @@ import sys
 import pytest
 from builtin_interfaces.msg import Time
 from geometry_msgs.msg import PointStamped
+from std_msgs.msg import Header
 from visualization_msgs.msg import Marker
 from walker_msgs.msg import ForceStamped, StabilityStamped, StepStamped, WalkStats
 
@@ -45,7 +46,7 @@ def test_handle_arrow_ends_at_the_handle_points_down_and_grows_with_the_load():
 def test_handle_labels_say_the_kg_and_the_sides_have_their_own_ids():
     left_arrow, left_text = markers.handle_markers(force(7.26), markers.LEFT)
     right_arrow, right_text = markers.handle_markers(force(1.0), markers.RIGHT)
-    assert left_text.text == '7.3 kg' and left_text.type == Marker.TEXT_VIEW_FACING
+    assert left_text.text == '7.3kg' and left_text.type == Marker.TEXT_VIEW_FACING
     assert left_arrow.id != right_arrow.id and left_text.id != right_text.id
     assert left_arrow.ns == right_arrow.ns
 
@@ -60,7 +61,7 @@ def test_step_marker_sits_on_the_floor_of_its_frame_and_left_is_a_sphere_right_a
     assert left.type == Marker.SPHERE and right.type == Marker.CUBE
     assert (left.pose.position.x, left.pose.position.y) == (-0.6, 0.1) and left.pose.position.z < 0.01
     assert left.header.frame_id == 'laser' and left.header.stamp.sec == 7
-    assert left_text.text == 'left 30 kg'
+    assert left_text.text == 'left:30kg'
 
 
 def test_step_colour_follows_the_share_of_the_weight_and_transparency_the_confidence():
@@ -90,7 +91,7 @@ def test_centroid_and_stability_markers():
     stab.sta, stab.margin, stab.contacts = 0.8, 0.083, 4
     body, label = markers.stability_markers(stab)
     assert body.color.g > body.color.r and body.header.frame_id == 'laser'
-    assert label.text == 'margin +8.3 cm | sta 0.80 | 4 contacts'
+    assert label.text == 'margin:+8.3cm|sta:0.80|contacts:4'
     stab.sta, stab.margin = 0.0, -0.02
     assert markers.stability_markers(stab)[0].color.r == 1.0
 
@@ -101,7 +102,7 @@ def test_gait_text_is_in_the_frame_asked_for_and_does_not_touch_the_message():
     stats.nos, stats.cad, stats.wv, stats.d = 42, 97.5, 0.43, 12.3
     (text,) = markers.gait_marker(stats, 'base_link')
     assert text.header.frame_id == 'base_link' and stats.header.frame_id == 'odom'
-    assert 'steps 42' in text.text and '0.43 m/s' in text.text
+    assert 'steps:42' in text.text and '0.43m/s' in text.text
 
 
 def test_boxes_become_closed_outlines_in_their_frame():
@@ -147,3 +148,16 @@ def test_handle_calibration_interpolates_the_table_and_goes_on_beyond_its_ends(t
     real = os.path.join(os.path.dirname(__file__), '..', '..', 'walker_loads', 'config', 'handle_calib.yaml')
     if os.path.exists(real):
         assert 0.0 < HandleCalibration.from_yaml(real).kg('left', 255.0) < 9.0
+
+
+def test_no_label_has_a_space_in_it():
+    # RViz draws a space tens of times too wide: "left 45 kg" came out as three words a metre apart
+    stab = StabilityStamped()
+    stab.sta, stab.margin, stab.contacts = 0.8, 0.083, 4
+    stats = WalkStats()
+    stats.nos, stats.cad, stats.wv, stats.d = 42, 80.0, 0.43, 3.1
+    texts = [m for m in (markers.handle_markers(force(7.26), markers.LEFT) + markers.step_markers(step(-0.6, 0.1, 30.0), markers.RIGHT)
+                         + markers.stability_markers(stab) + markers.gait_marker(stats, 'base_link')) if m.type == Marker.TEXT_VIEW_FACING]
+    assert len(texts) == 4 and all(t.text and not any(c.isspace() for c in t.text) for t in texts)
+    (padded,) = [markers._text(Header(), 'x', 0, 'a b\u00a0c  d', (0, 0, 0), 0.5)]
+    assert padded.text == 'a_b_c_d'
