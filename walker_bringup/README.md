@@ -10,7 +10,7 @@ Other packages can reuse its launch files and configs. The system is started wit
 | Folder    | Contents |
 |-----------|----------|
 | `tmule/`  | TMuLE sessions: the reference for how the system is brought up (`walker.yaml`, `walker_sensors.yaml`, `walker_rtab.yaml`, `walker_demo.yaml`, `walker_leap.yaml`) and `walker_cfg.bash`. |
-| `launch/` | Launch files used by the tmule sessions: sensors (`walker_witmotion`, laser filters), localization (`walker_amcl`, `walker_ekf`, `walker_lsm`, `walker_laser_imu_odom`), mapping (`walker_rtabmap`, `rtabmap_stereo`, `walker_stereo_odom`), `walker_map_server`, `bag_recorder`. |
+| `launch/` | Launch files used by the tmule sessions: sensors (`walker_witmotion`; the laser filters are in `walker_laser_filter`), localization (`walker_amcl`, `walker_ekf`, `walker_lsm`, `walker_laser_imu_odom`), mapping (`walker_rtabmap`, `rtabmap_stereo`, `walker_stereo_odom`), `walker_map_server`, `bag_recorder`. |
 | `launch/test/` | Launchers not used by any tmule session (cameras, rviz, SLAM, bag replay and odometry evaluation). Still installed and launchable with `ros2 launch walker_bringup <file>`. |
 | `config/` | Parameter files and rviz configs for the above. |
 | `maps/`   | Placeholder for the maps generated on the walker (empty in the repository). |
