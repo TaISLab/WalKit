@@ -7,7 +7,7 @@ genera /scan_filtered como lo haria el robot real.
         reproduce /scan (y los topics extra que se pidan) como si los
         publicase el robot, con /clock y use_sim_time:=true para todo lo de
         este launcher, y publica el TF del andador (URDF).
-    laser_filter.launch.py (walker_bringup)
+    self_filter.launch.py (walker_laser_filter)
         el mismo filtro del robot real: /scan -> /scan_filtered.
     step_detector.launch.py (este paquete)
         el launcher del robot, tal cual: es lo unico que se evalua. Publica
@@ -45,6 +45,8 @@ from walker_replay.launch_utils import replay_actions
 
 from os.path import expanduser, join
 
+from walker_laser_filter.launching import include_stage
+
 
 def generate_launch_description():
 
@@ -74,7 +76,6 @@ def generate_launch_description():
     ld.add_action(DeclareLaunchArgument(
         "debug", default_value="false", description="log en debug del reproductor del bag"))
 
-    bringup = get_package_share_directory('walker_bringup')
 
     # El bag (y use_sim_time para lo que viene despues) primero; el
     # reproductor espera `delay` segundos, asi los nodos de abajo ya estan
@@ -91,8 +92,7 @@ def generate_launch_description():
         ld.add_action(action)
 
     # Lo que en el robot real ya existe: el filtro que da /scan_filtered
-    ld.add_action(IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(join(bringup, 'launch', 'laser_filter.launch.py'))))
+    ld.add_action(include_stage('self_filter.launch.py', sim_time=LaunchConfiguration('sim_time'), debug=LaunchConfiguration('debug')))
 
     # Lo que se evalua: el launcher del robot, sin tocar
     ld.add_action(IncludeLaunchDescription(

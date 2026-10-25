@@ -39,12 +39,10 @@
   <exec_depend>launch_ros</exec_depend>
   <exec_depend>ament_index_python</exec_depend>
   <!-- test_step_detector*.launch.py: walker_replay (reproduce el bag y
-       publica el TF del andador, de walker_description) y, para
-       test_step_detector.launch.py, laser_filter.launch.py (walker_bringup) -->
+       publica el TF del andador, de walker_description) y walker_laser_filter
+       (la cadena de filtros del laser: /scan_filtered y /scan_feet) -->
   <exec_depend>walker_replay</exec_depend>
-  <exec_depend>walker_bringup</exec_depend>
   <exec_depend>walker_description</exec_depend>
-  <!-- test_step_detector_variants.launch.py / step_detector_s.launch.py -->
   <exec_depend>walker_laser_filter</exec_depend>
   <exec_depend>laser_segmentation</exec_depend>
   <exec_depend>rviz2</exec_depend>

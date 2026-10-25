@@ -319,12 +319,12 @@ y produjo una conclusión falsa ("catastrófico") que tuvo que corregirse.
 - **`launch/step_detector.launch.py`** -- el del robot real. Solo lanza
   `detect_steps` (RF), con los parámetros validados, leyendo `/scan_filtered`
   y publicando `/detected_step_left` y `/detected_step_right`. No lanza el
-  filtro láser: `/scan_filtered` lo genera `walker_bringup
-  laser_filter.launch.py` en el robot.
+  filtro láser: `/scan_filtered` lo genera `walker_laser_filter
+  self_filter.launch.py` en el robot.
 - **`launch/test_step_detector.launch.py`** -- el mismo launcher del robot,
   sin robot: usa `walker_replay` (reproduce `/scan` del bag definitivo con
   `/clock` y `use_sim_time:=true`, y publica el TF del andador),
-  `laser_filter.launch.py` (genera `/scan_filtered` como el robot) y
+  `self_filter.launch.py` de `walker_laser_filter` (genera `/scan_filtered` como el robot) y
   `step_detector.launch.py` sin tocar. `step_detector` solo se suscribe a
   `/scan_filtered`, así que no hacen falta handles ni configuración de
   usuario. Argumentos: `bag_folder`, `bag_name`, `rate`, `topics` (por defecto
