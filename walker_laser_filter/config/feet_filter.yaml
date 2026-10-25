@@ -1,0 +1,16 @@
+# /scan_filtered -> /scan_feet: only the active area (where the user's feet are), for the step detectors. The same box as
+# nav_filter.yaml (a test checks it), which removes it. walker_rviz draws this box.
+/**:
+  ros__parameters:
+    filter1:
+      name: active_area
+      type: laser_filters/LaserScanBoxFilter
+      params:
+        box_frame: laser
+        min_x: -1.2
+        max_x: 0.03
+        min_y: -0.3
+        max_y: 0.3
+        min_z: -1.0
+        max_z: 1.0
+        invert: true

@@ -1,0 +1,16 @@
+# /scan_filtered -> /scan_nav: the scan without the active area (where the user's feet are), so that what navigation and the laser
+# odometry see is the surroundings and not the user. The same box as feet_filter.yaml (a test checks it), which keeps what is inside.
+/**:
+  ros__parameters:
+    filter1:
+      name: active_area
+      type: laser_filters/LaserScanBoxFilter
+      params:
+        box_frame: laser
+        min_x: -1.2
+        max_x: 0.03
+        min_y: -0.3
+        max_y: 0.3
+        min_z: -1.0
+        max_z: 1.0
+        invert: false

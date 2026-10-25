@@ -3,7 +3,7 @@
 <package format="3">
   <name>walker_laser_filter</name>
   <version>0.0.0</version>
-  <description>Walker laser filter</description> 
+  <description>The walker's scan chain (/scan -> /scan_filtered -> /scan_nav, /scan_feet) with the official laser_filters, and the tool that finds the walker's own structure in recorded scans</description>
   <maintainer email="manolofc@gmail.com">Manuel Fernandez-Carmona</maintainer>
   <author email="manolofc@gmail.com">Manuel Fernandez-Carmona</author>
   <license>BSD</license>
@@ -11,13 +11,18 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>ament_cmake_python</buildtool_depend>
 
-  <depend>rclcpp</depend>
-  <depend>sensor_msgs</depend>
-  <exec_depend>rclpy</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>laser_filters</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
   <exec_depend>python3-numpy</exec_depend>
-  
-  <test_depend>ament_lint_auto</test_depend>
-  <test_depend>ament_lint_common</test_depend>
+  <exec_depend>python3-yaml</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>walker_replay</exec_depend>
+
+  <test_depend>ament_cmake_pytest</test_depend>
+  <test_depend>python3-pytest</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>
