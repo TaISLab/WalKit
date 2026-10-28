@@ -138,6 +138,14 @@ ros2 run walker_description handle_tf_publisher.py
 ros2 launch walker_centroid_support centroid_support.launch.py
 ```
 
+## Verlo en rviz
+
+`walker_rviz` dibuja `/support_centroid` con la capa `centroid` (una esfera en el suelo), que está en las vistas `walker`,
+`step_detector`, `bringup_demo` y `vicon`; `mocap_analysis/rviz/test_steps.rviz` añade un display `PointStamped` del mismo topic. En un
+replay `mocap_analysis/replay_feet.launch.py` lo lanza junto con el resto de la cadena. Sale unos 0.94 s después del sello del scan (MF_test07, rate 1): espera a las manetas, como
+`walker_loads` (que ya llega a 0.73 s), y ordena de nuevo; así que va por detrás de los puntos del láser. Ver "How late each layer is"
+en el README de `walker_rviz`.
+
 ## Decisiones de diseño
 
 - **Normaliza por la carga total medida, no por el peso declarado
