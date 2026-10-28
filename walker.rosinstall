@@ -22,18 +22,13 @@
     local-name: witmotion/witmotion_ros
     version: ros2
 
-# witmotion_ros adds this one as a subdirectory (add_subdirectory(witmotion-uart-qt) in its CMakeLists.txt), at the commit its own
-# submodule pins (v0.9.17-alpha-33; main is 11 commits ahead)
+# witmotion_ros adds this one as a subdirectory (add_subdirectory(witmotion-uart-qt) in its CMakeLists.txt) and builds it inside itself, at
+# the commit its own submodule pins (v0.9.17-alpha-33; main is 11 commits ahead). It is the only copy needed: do not clone it also at the
+# top level, where colcon would build it as a package of its own that nothing uses.
 - git:
     uri: https://github.com/ElettraSciComp/witmotion_IMU_QT.git
     local-name: witmotion/witmotion_ros/witmotion-uart-qt
     version: 5c2e86dd2ba7dba76d84e68fa7f65dc3527f5de0
-
-# The same repository, also at the top level: colcon builds it as the package witmotion-uart-qt (nothing in the workspace depends on it)
-- git:
-    uri: https://github.com/ElettraSciComp/witmotion_IMU_QT.git
-    local-name: witmotion/witmotion_IMU_QT
-    version: main
 
 # --- Laser odometry and scan segmentation ---
 - git:
