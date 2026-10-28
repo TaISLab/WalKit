@@ -118,3 +118,29 @@ class Ticks:
             tick = self._next
             self._next += self._period
             yield tick
+
+
+class Watermark:
+    """The data time up to which every stream has delivered, for a node that does not hold anything back to put the streams
+    in order but publishes as each message arrives (the StampSequencer is for the other kind). It is the smallest of the
+    streams' newest stamps, as in StampSequencer; a stream that stays silent is given up on in the same way: it never lags the
+    newest stamp of all by more than max_wait_ns (<= 0: it can). `update` returns None until every stream has delivered.
+
+    An output stamped with it is complete up to that stamp: it already holds whatever the faster streams delivered after it.
+    The stamps it gives never go back, as long as those of each stream do not."""
+
+    def __init__(self, n_streams, max_wait_ns=0):
+        self._last = [None] * n_streams
+        self._max_seen = None
+        self._max_wait_ns = max_wait_ns
+
+    def update(self, stream, stamp):
+        last = self._last[stream]
+        self._last[stream] = stamp if last is None else max(last, stamp)
+        self._max_seen = stamp if self._max_seen is None else max(self._max_seen, stamp)
+        if any(last is None for last in self._last):
+            return None
+        wm = min(self._last)
+        if self._max_wait_ns > 0:
+            wm = max(wm, self._max_seen - self._max_wait_ns)
+        return wm

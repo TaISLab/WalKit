@@ -1,6 +1,6 @@
 import random
 
-from walker_loads.stamp_sequencer import StampSequencer, Ticks
+from walker_loads.stamp_sequencer import StampSequencer, Ticks, Watermark
 
 
 def run(arrivals, n_streams=2, max_wait_ns=0, max_buffer=1000, repeating=(), late_ok=()):
@@ -87,3 +87,25 @@ def test_late_ok_stream_is_handed_over_at_once_instead_of_dropped():
     assert seq.push(1, 20, 'late-but-fine')
     assert [p for _, _, p in out] == ['b0', 'a50', 'late-but-fine']
     assert seq.out_of_order == 1 and seq.late == 0
+
+
+def test_watermark_is_none_until_every_stream_has_delivered_then_the_oldest_newest_stamp():
+    wm = Watermark(3)
+    assert [wm.update(0, 50), wm.update(1, 70)] == [None, None]
+    assert wm.update(2, 20) == 20
+    assert wm.update(0, 60) == 20              # a faster stream running on does not move it
+    assert wm.update(2, 65) == 60
+    assert wm.update(1, 40) == 60              # a stamp older than the stream's newest changes nothing
+    assert wm.update(2, 90) == 60
+
+
+def test_watermark_gives_up_on_a_silent_stream_after_max_wait():
+    wm = Watermark(2, max_wait_ns=100)
+    wm.update(0, 10)
+    assert wm.update(1, 10) == 10
+    assert [wm.update(0, t) for t in (50, 100, 150)] == [10, 10, 50]       # stream 1 stays at 10: after 100 it is let go
+    assert wm.update(1, 20) == 50                                        # and what it delivers late does not take it back
+    unbounded = Watermark(2)
+    unbounded.update(0, 10)
+    unbounded.update(1, 10)
+    assert unbounded.update(0, 10_000) == 10

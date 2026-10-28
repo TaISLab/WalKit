@@ -86,6 +86,11 @@ since the previous one. Consequences:
   order makes the outputs bursty, and a reliable writer with a short history overwrites what a slower
   subscriber has not yet taken.
 
+The python nodes downstream share the same helpers (`walker_loads/stamp_sequencer.py`): `StampSequencer` and `Ticks` for the
+stamp-ordered, reproducible behaviour, and `Watermark` for a node that publishes on every message it receives instead
+(`walker_centroid_support`, `walker_stability` by default): it only tracks the data time every stream has reached, the smallest of
+the streams' newest stamps, and gives up on a silent stream after `max_wait_ns` as the sequencer does.
+
 ## How the leg-load split works
 
 1. `leg_load = weight - left_hand_force - right_hand_force`, clamped to
