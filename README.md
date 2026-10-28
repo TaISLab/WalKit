@@ -24,13 +24,63 @@ WalKit is an open hardware project created to monitor the elderly. It is modular
     - walker_step_detector: reports step position.
     - walker_web_gui: web interface for tests.
             
-- Repositories forked for this project
-    - aws-robomaker-hospital-world: simulated hospital for gazebo.  
-    - bwt901cl_pkg: IMU package.   
-    - csm: ROS2 port of Andrea Censeis Scan matcher, needed by laser scan matcher package.
-    - leap_motion: stereo camera package (DOES NOT WORK WITH arm64)  
+- Other repositories the workspace uses (all in [`walker.repos`](walker.repos), see [Getting the sources](#getting-the-sources))
+    - csm: ROS2 port of Andrea Censi's scan matcher, needed by the laser scan matcher package.
     - ros2_laser_scan_matcher: provides odometry from laser readings.
-    - rplidar_ros: RPLidar A1 package. 
+    - rplidar_ros: RPLidar A1 package.
+    - witmotion_ros: driver of the WitMotion IMU.
+    - slg_msgs, laser_segmentation: scan segmentation, used by the `seg` variant of walker_step_detector.
+    - mocap4r2: MOCAP4ROS2 messages, visualisation and Vicon driver.
+    - e4_msgs: messages of the Empatica E4 wristband.
+
+<p align="right">(<a href="#top">back to top</a>)</p>
+
+<!-- GETTING THE SOURCES -->
+## Getting the sources
+
+The public repositories the workspace is made of (WalKit itself, the sensor drivers, the laser odometry, the mocap messages...) are
+listed in [`walker.repos`](walker.repos), in the native format of [vcstool](https://github.com/dirk-thomas/vcstool). Each key is the
+path inside the workspace's `src` folder, and `version` is a branch, a tag or a commit:
+
+```yaml
+repositories:
+  lidar/rplidar_ros:
+    type: git
+    url: https://github.com/Slamtec/rplidar_ros.git
+    version: ros2
+```
+
+To get all of them into an empty workspace (WalKit included, so there is nothing to clone before):
+```
+sudo apt install python3-vcstool
+mkdir -p ~/workspace/walker_ws/src && cd ~/workspace/walker_ws
+vcs import src --input https://raw.githubusercontent.com/TaISLab/WalKit/jazzy/walker.repos
+```
+From a clone of WalKit it is `vcs import src < src/WalKit/walker.repos`. The destination folder (`src`) has to exist already. Then build the
+workspace with colcon as usual.
+
+| To... | Run |
+|---|---|
+| see what changed in every repository | `vcs status src` |
+| update them all | `vcs pull src` |
+| add the repositories that were added to the file, without touching the ones you have | `vcs import --skip-existing src < walker.repos` |
+| download without history | `vcs import --shallow src < walker.repos` |
+| check that every url and version of the file exists | `vcs validate --input walker.repos` |
+| save the exact commits of your workspace (e.g. for an experiment) | `vcs export --exact src > workspace.repos` |
+
+Things to know:
+- **Do not use `--skip-existing` for the first import.** `witmotion_ros` brings an empty `witmotion-uart-qt` folder (its submodule), the file
+  has an entry for that path, and `--skip-existing` skips folders that exist: it stays empty and `witmotion_ros` does not build. Use it to
+  update, because it also leaves alone the repositories where you have checked out another branch; a plain `vcs import` over a workspace
+  switches each repository back to its `version`.
+- `witmotion/witmotion_ros/witmotion-uart-qt` is pinned to a commit (the one `witmotion_ros` has as a submodule), which `vcs validate`
+  cannot verify without cloning. `--shallow` works with it.
+- `vcs` prints a `pkg_resources` deprecation warning with recent setuptools: it is harmless.
+- Commented-out entries are the repositories the workspace used before or does not use any more; removing the `#` at the start of their
+  lines makes them valid entries.
+- The mocap4w analysis tools are in private repositories and are not in this file; they are listed in `mocap4w.repos`, in the
+  [mocap_analysis](https://github.com/MFernandezCarmona/mocap_analysis) repository (it needs access to that account). Import it after this one.
+- The old `walker.rosinstall` (wstool format) is gone: `wstool` is deprecated and does not read `.repos` files.
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
