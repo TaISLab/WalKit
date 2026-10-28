@@ -11,9 +11,29 @@ ros2 launch walker_stability walker_stability.launch.py            # sim_time:=t
 python3 -m pytest test                                              # the geometry (support_polygon) and the model
 ```
 
-It works on data time, like `walker_centroid_support`: the four inputs go through a `StampSequencer` (`walker_loads`), the
-state is evaluated on a 50 ms grid of *data* time and published stamped with the tick. Same bag, same output, at any replay
-rate (checked at rates 1 and 4), at the price of the sequencer's latency (up to `max_wait_s`, about a second in practice).
+It is evaluated and published **every time any of the four inputs changes**: each message of `/left_loads`, `/right_loads`,
+`/left_hand_loads` or `/right_hand_loads` gives an output computed with the latest of each, without waiting for the others. The
+`pose` stamp is the data time the legs have reached, the older of the two leg loads' newest stamps (`walker_loads`'
+`Watermark`; the handles' stamps do not enter, they come at 2.4 Hz in the recorded bags and would hold it back), and the
+low-pass of the centre of mass advances with it. Measured on 4 bags (MF_test07, CA_test03, LA_test04, MT_test13, replayed at
+rate 4) against the stamp-ordered mode:
+
+- A change in an input shows at once: with the stamp order a leg load took 0.12 s on average (90th percentile 0.42 s) to show in the
+  output, a handle's 0.5–0.6 s. The age of what comes out (clock minus stamp, median) falls only from 0.88 to 0.85 s, because
+  the leg loads reach this node ~0.75 s old (`partial_loads` waits for the handles).
+- 2.5–4.6 times more messages (24–26 Hz with the handles at 2.4 Hz, 86 Hz in CA, whose left handle publishes at 50 Hz); 76 % share
+  their stamp with another one (none did before).
+- The output depends on the order the messages arrive in: the same bag does not give exactly the same output twice (the mean
+  absolute error of the margin varies ±0.1 cm over three runs at rate 4; at another rate it may change more).
+- It agrees a little worse with the mocap: mean absolute error of the margin 5.3 → 5.7 cm, correlation 0.12 → 0.06, "little
+  stable" agreement 80 → 77 %, contacts agreement 67 → 62 %. An output mixes times (legs at the stamp, handles up to 0.4 s
+  newer) and the loads recomputed on the same step position carry that position's stamp.
+
+`stamp_ordered:=true` brings back the previous behaviour, **for studies that need the result to be reproducible**: the four inputs
+go through a `StampSequencer` (`walker_loads`), the state is evaluated on a 50 ms grid of *data* time and published stamped with
+the tick. Same bag, same output, at any replay rate (checked at rates 1 and 4; in the four bags above, the same CSV byte for byte
+as before the default changed), at the price of the sequencer's latency (up to `max_wait_s`, about a second in practice). Set it
+with the launch argument (`ros2 launch walker_stability walker_stability.launch.py stamp_ordered:=true`; it reaches the launchers that include this one too, e.g. the `compare_*` of mocap4w) or with `--ros-args -p stamp_ordered:=true`.
 
 ## The model (`walker_stability/stability_model.py`, `support_polygon.py`)
 
@@ -30,7 +50,7 @@ The support polygon is also published, as a `geometry_msgs/PolygonStamped` on `/
 `/user_stability`, for rviz (`walker_rviz` draws it) and for anything else that wants to see what the margin is measured in.
 
 The frame of `pose` is that of the step positions (`laser`). Everything depends on the stamps only, not on the clock: the
-filter advances with the stamps of the ticks it is evaluated at.
+filter advances with the stamp of the output it is evaluated for (the tick in the stamp-ordered mode).
 
 ### Bias of the centre of mass
 
@@ -72,7 +92,7 @@ history (`git show c53eff7:walker_stability/walker_stability/bos.py`).
 `stability_grid_map` (which only reads `sta` and `pose`) is unaffected; `pose.position` is now the estimate of the centre of
 mass, no longer the raw centroid. Without `/user_desc` the node publishes anyway (`uid` empty, `tin` NaN).
 
-Parameters: `period` (0.05 s, grid of data time), `max_wait_s` (5), `min_foot_load_kg` (5), `com_tau_s` (0.5), `com_moment_kgm` (6),
+Parameters: `stamp_ordered` (false, see above), `period` (0.05 s, grid of data time, only in the stamp-ordered mode), `max_wait_s` (5), `min_foot_load_kg` (5), `com_tau_s` (0.5), `com_moment_kgm` (6),
 `margin_ref_m` (0.10), `foot_heel_m`, `foot_toe_m`, `foot_half_width_m`, the topic names. The foot sole and `margin_ref_m` must be the same
 in `mocap_stability` for its numbers to be comparable.
 

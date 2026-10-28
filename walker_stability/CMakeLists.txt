@@ -29,6 +29,7 @@ if(BUILD_TESTING)
   ament_add_pytest_test(test_support_polygon test/test_support_polygon.py)
   ament_add_pytest_test(test_stability_model test/test_stability_model.py)
   ament_add_pytest_test(test_arm_posture test/test_arm_posture.py)
+  ament_add_pytest_test(test_user_stability_node test/test_user_stability_node.py)
 endif()
 
 ament_package()

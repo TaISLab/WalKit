@@ -6,10 +6,18 @@ of the two handles (/left_hand_loads, /right_hand_loads), and to /user_desc (lat
 /user_stability (walker_msgs/StabilityStamped). The geometry and what the numbers mean are in
 walker_stability/stability_model.py.
 
-Works on data time, like walker_centroid_support: the four inputs are put in stamp order (StampSequencer; the
-leg loads by the stamp of the step position) and, on a fixed grid of data time (`period`), the state as of each tick is
-evaluated and published, if anything new arrived since the previous tick, stamped with the tick. The output depends
-only on the messages, not on when or in which order they arrive, and lags the data by up to ~max_wait_s.
+It is evaluated and published every time any of the four inputs changes, i.e. whenever a message of one of them arrives:
+the state of the latest of each. Nothing waits for the other inputs, so it comes out as soon as a change arrives, not
+when the slowest input has caught up. It is stamped with the data time the legs have reached, the older of the two leg
+loads' newest stamps (the handles' stamps do not enter: they come at 2.4 Hz in the recorded bags and would hold the stamp
+back; the low-pass of the centre of mass advances with this stamp). The price is that which messages it has seen when it
+is evaluated depends on the order they arrive in: the same bag does not give exactly the same output twice, and several
+outputs can share a stamp (the ones a handle's load makes).
+
+With stamp_ordered:=true it works on data time instead, like walker_centroid_support: the four inputs are put in stamp order
+(StampSequencer; the leg loads by the stamp of the step position) and, on a fixed grid of data time (`period`), the state as
+of each tick is evaluated and published, if anything new arrived since the previous tick, stamped with the tick. The output
+then depends only on the messages, not on when or in which order they arrive, and lags the data by up to ~max_wait_s.
 """
 import math
 import signal
@@ -24,7 +32,7 @@ from rclpy.qos import QoSDurabilityPolicy, QoSHistoryPolicy, QoSProfile, QoSReli
 from rclpy.time import Time
 from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
-from walker_loads.stamp_sequencer import StampSequencer, Ticks, stamp_ns
+from walker_loads.stamp_sequencer import StampSequencer, Ticks, Watermark, stamp_ns
 from walker_msgs.msg import ForceStamped, StabilityStamped, StepStamped, UserDesc
 
 from walker_stability.stability_model import LEFT, RIGHT, StabilityModel
@@ -44,9 +52,13 @@ class UserStability(Node):
             ('user_desc_topic_name', '/user_desc'),
             ('stability_topic_name', '/user_stability'),
             ('polygon_topic_name', '/support_polygon'),
+            # False: evaluate on every input message. True: inputs in stamp order and evaluated on a grid of data time,
+            # reproducible at any replay rate (`period` only matters then)
+            ('stamp_ordered', False),
             # period of the output grid, in data time (s)
             ('period', 0.05),
-            # data time to wait for a silent input before giving up on it, see StampSequencer
+            # data time to wait for a silent input before giving up on it, see StampSequencer (without stamp_ordered: how far
+            # the stamp of the output can fall behind if a leg goes silent)
             ('max_wait_s', 5.0),
             # model, see stability_model.StabilityModel
             ('min_foot_load_kg', 5.0),
@@ -59,12 +71,15 @@ class UserStability(Node):
         ])
         p = lambda name: self.get_parameter(name).value  # noqa: E731
         self.stability_topic_name = p('stability_topic_name')
+        self.stamp_ordered = p('stamp_ordered')
         self.model = StabilityModel(p('min_foot_load_kg'), p('com_tau_s'), p('margin_ref_m'), p('foot_heel_m'),
                                     p('foot_toe_m'), p('foot_half_width_m'), p('com_moment_kgm'))
         self.user = None
         self.step_header = None            # header of the latest step position: frame of the output
         self.handle_msgs = {}              # latest message of each handle, until its frame is resolved
-        self.new_data_available = False
+        self.new_data_available = False    # stamp_ordered only: something arrived since the last tick
+        self.leg_ns = None                 # not stamp_ordered: the data time the legs have reached, the stamp of the output
+        self.legs = Watermark(2, int(p('max_wait_s') * 1e9))
 
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
@@ -98,18 +113,30 @@ class UserStability(Node):
         self.model.set_weight(msg.weight)
 
     def push(self, stream, stamp, msg):
+        if not self.stamp_ordered:
+            self.store(stream, msg)
+            if stream in (LEFT_LOAD, RIGHT_LOAD):
+                self.leg_ns = self.legs.update(stream - LEFT_LOAD, stamp)
+            if self.leg_ns is not None:
+                self.publish(self.leg_ns)
+            return
         if not self.sequencer.push(stream, stamp, msg) and self.sequencer.late % 100 == 1:
             self.get_logger().warn(
                 'Dropped %d inputs older than what was already processed (an input stayed silent '
                 'for more than max_wait_s)' % self.sequencer.late)
         self.sequencer.release()
 
-    # Called by the sequencer, in stamp order
+    # stamp_ordered: called by the sequencer, in stamp order
     def process(self, stream, stamp, msg):
         # the ticks that fall before this input see the state without it
         for tick in self.ticks.until(stamp):
-            self.publish(tick)
+            if self.new_data_available:
+                self.new_data_available = False
+                self.publish(tick)
         self.new_data_available = True
+        self.store(stream, msg)
+
+    def store(self, stream, msg):
         if stream in (LEFT_LOAD, RIGHT_LOAD):
             self.step_header = msg.position.header
             self.model.set_foot(LEFT if stream == LEFT_LOAD else RIGHT, msg.position.point.x, msg.position.point.y, msg.load)
@@ -139,11 +166,8 @@ class UserStability(Node):
             return None
         return t.transform.translation.x, t.transform.translation.y
 
-    def publish(self, tick_ns):
-        if not self.new_data_available:
-            return
-        self.new_data_available = False
-        result = self.model.evaluate(tick_ns * 1e-9)
+    def publish(self, at_ns):
+        result = self.model.evaluate(at_ns * 1e-9)
         if result is None:
             return
         out = StabilityStamped()
@@ -154,7 +178,7 @@ class UserStability(Node):
         out.contacts = int(result.contacts)
         out.pose = PoseStamped()
         out.pose.header.frame_id = self.step_header.frame_id
-        out.pose.header.stamp.sec, out.pose.header.stamp.nanosec = divmod(tick_ns, 1_000_000_000)
+        out.pose.header.stamp.sec, out.pose.header.stamp.nanosec = divmod(at_ns, 1_000_000_000)
         out.pose.pose.position.x, out.pose.pose.position.y = result.com
         out.pose.pose.orientation.w = 1.0
         self.stability_pub.publish(out)
