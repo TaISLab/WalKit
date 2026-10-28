@@ -76,6 +76,17 @@ Parameters: `period` (0.05 s, grid of data time), `max_wait_s` (5), `min_foot_lo
 `margin_ref_m` (0.10), `foot_heel_m`, `foot_toe_m`, `foot_half_width_m`, the topic names. The foot sole and `margin_ref_m` must be the same
 in `mocap_stability` for its numbers to be comparable.
 
+## Seeing it in rviz
+
+- **`/support_polygon`** (`PolygonStamped`, stamped like `/user_stability`) is drawn by rviz itself: the `Support polygon` display of the
+  views `walker`, `step_detector`, `bringup_demo` and `vicon` of `walker_rviz`.
+- **The `stability` layer** of `walker_rviz` draws `/user_stability` as a sphere at the centre-of-mass estimate, red to green by `sta`,
+  with `margin:+8.3cm|sta:0.80|contacts:4` above it (no spaces: this RViz draws them far too wide).
+- `mocap_analysis/replay_feet.launch.py` does **not** start this node: launch `ros2 launch walker_stability walker_stability.launch.py
+  sim_time:=true` next to it to get the polygon and the sphere.
+- In a replay they trail the laser points by about 0.9 s (MF_test07, rate 1): the node orders its four inputs by stamp and waits for the
+  handles, as `walker_loads` does before it. See "How late each layer is" in the README of `walker_rviz`.
+
 ## Validation
 
 `mocap_stability` (mocap4w, private repo `MFernandezCarmona/mocap_stability`) computes the same quantity from the motion capture (centre of mass of the De Leva model, feet

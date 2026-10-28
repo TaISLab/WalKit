@@ -12,7 +12,7 @@ Other packages can reuse its launch files and configs. The system is started wit
 | `tmule/`  | TMuLE sessions: the reference for how the system is brought up (`walker.yaml`, `walker_sensors.yaml`, `walker_rtab.yaml`, `walker_demo.yaml`, `walker_leap.yaml`) and `walker_cfg.bash`. |
 | `launch/` | Launch files used by the tmule sessions: sensors (`walker_witmotion`; the laser filters are in `walker_laser_filter`), localization (`walker_amcl`, `walker_ekf`, `walker_lsm`, `walker_laser_imu_odom`), mapping (`walker_rtabmap`, `rtabmap_stereo`, `walker_stereo_odom`), `walker_map_server`, `bag_recorder`. |
 | `launch/test/` | Launchers not used by any tmule session (cameras, rviz, SLAM, bag replay and odometry evaluation). Still installed and launchable with `ros2 launch walker_bringup <file>`. |
-| `config/` | Parameter files and rviz configs for the above. |
+| `config/` | Parameter files for the above. The rviz configs are in `walker_rviz/rviz/`. |
 | `maps/`   | Placeholder for the maps generated on the walker (empty in the repository). |
 | `udev/`   | How to create the `/dev/rplidar` and `/dev/witmotion` udev rules. See [udev/README.md](udev/README.md). |
 | `scripts/`, `script/` | `record_service.py` (`/rosbag_record` service) and the `command_*.sh` it calls; `walker_config.bash` sourced by the tmule sessions. |
@@ -69,6 +69,14 @@ none in the 8 scan-matching-anomalous ones. Bags whose gyro integral is 5-7 % of
 (`imu_gyro_scale` in `bag_quality.yaml`) are correctly flagged as bias.
 
 Without the supervisor (`supervise_imu:=false`) the EKF reads `/scan_odom` and `/bwt901cl/imu` directly.
+
+### Seeing it in rviz
+
+`ros2 launch walker_rviz walker_view.launch.py view:=robot sim_time:=true` draws the model with the scan, the TF and the `/odom` arrows
+(fixed frame `odom`; the camera follows `base_link`, the arrows are 0.25 m long, one every 25 cm). Tried on screen with a replay of a
+definitive bag through `mocap_odometry/compare_odometry.launch.py`, which starts this odometry. The view `bringup_demo` is the old demo
+view of this package (scans, odometry, point cloud, clusters and the walker layers); its point cloud (`/laser_cloud`) has no publisher.
+Details in the README of `walker_rviz`.
 
 ## Dependencies
 

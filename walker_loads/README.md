@@ -77,7 +77,12 @@ since the previous one. Consequences:
   topics happened to arrive and the wall-clock tick decided the Kalman updates, the loads and so the gait
   parameters downstream.
 - **Latency**: a message waits for the slowest input, i.e. up to about one handle period (the handles publish
-  at ~2 Hz, ~0.5 s) plus the grid. `/left_hand_loads` and `/right_hand_loads` depend on one message each and go
+  at ~2 Hz, ~0.5 s) plus the grid. Measured on MF_test07 replayed at rate 1 (bag clock minus stamp): `/left_loads` come out
+  0.73 s after their stamp, against 0.13 s for the detected step they are made from, because the handle messages arrive with a
+  stamp 0.41 s older than their arrival (the same as their period; measured in MF_test07, both the original and the definitive bag,
+  in MT_test13 and in the right handle of CA_test03); `/left_hand_loads`
+  0.39 s. With the handles stamped on arrival and still at 2.4 Hz a model with the real stamps gives 0.3 s, and 0.14-0.2 s (the
+  laser's own delay) with handles at 10 Hz or more. `/left_hand_loads` and `/right_hand_loads` depend on one message each and go
   out immediately. If an input stops altogether the others wait at most `max_wait_s`; what the silent input
   delivers afterwards, if older than what was already processed, is dropped (warning).
 - The Kalman filter steps by the difference of the stamps (the first measurement starts the clock), so the
@@ -85,6 +90,17 @@ since the previous one. Consequences:
 - Inputs are subscribed with a 500-deep queue and outputs published with a 1000-deep one: releasing in stamp
   order makes the outputs bursty, and a reliable writer with a short history overwrites what a slower
   subscriber has not yet taken.
+
+## Seeing it in rviz
+
+`walker_rviz` draws what this package publishes: the `handles` layer (`/left_hand_loads`, `/right_hand_loads`: an arrow as long as the
+kg, with its text), the `steps` layer (each foot with its kg, coloured by the share of the user's weight) and the `gait` layer
+(`/global_gait_stats`: steps, cadence, speed and distance as text over `base_link`; it needs `gait_monitor_speed` and `/odom`, and
+`mocap_analysis/replay_feet.launch.py` does not run it, so it stays empty there).
+
+Because of the latency above, the `steps` layer draws each foot **at the detected step** (as old as the scan) and colours it with the
+**last load** `/left_loads` or `/right_loads` gave for that side, instead of where the loads message puts it (0.73 s old): the feet stay on
+the laser points. `steps_at_detected:=false` gives the old behaviour. Details and the numbers in the README of `walker_rviz`.
 
 ## How the leg-load split works
 

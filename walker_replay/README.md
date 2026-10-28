@@ -56,6 +56,20 @@ ros2 launch walker_replay replay.launch.py bag_name:=CA_test01 topics:='/scan /l
 | `publish_context` | `true` | `/user_desc` y `/handle_height` |
 | `publish_tf` | `true` | tf estático del andador y `/robot_description` (mismo `walker_state_publisher`) |
 
+### Verlo en rviz
+
+El módulo publica `/clock`, el tf estático del andador y `/robot_description` (con `publish_tf`), así que rviz puede dibujar el modelo.
+rviz tiene que ir con el reloj del bag: `sim_time:=true`. En otra terminal, con lo que calcule lo que quieras ver (por ejemplo
+`mocap_analysis/replay_feet.launch.py`, que ya incluye este módulo):
+
+```bash
+ros2 launch walker_rviz walker_view.launch.py view:=walker sim_time:=true
+```
+
+Las vistas `walker`, `step_detector`, `bringup_demo` y `robot` se probaron así en pantalla; `vicon` y `navigation` cargan pero necesitan
+un Vicon en directo y la pila de navegación (ver el README de `walker_rviz`). Si el launcher que llama a este módulo abre su propio rviz,
+`replay_actions` ya pone `use_sim_time` a todo lo que se lance después, rviz incluido.
+
 ### Desde otro launcher
 
 ```python
