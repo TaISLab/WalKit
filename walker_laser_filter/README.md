@@ -120,6 +120,13 @@ bags for ATE, heading and drift, and worse in 5 of 6 for scale. CA_test05 improv
 a little, CA_test03 stays (0.345 → 0.347 m) and MF_test07 gets worse (0.101 → 0.122 m). With six bags this is "no worse on average", not an improvement shown. The scan matcher and EKF
 parameters (`odom_tuning`) were tuned with the unfiltered `/scan_nav` and have not been tuned again.
 
+## Seeing it in rviz
+
+The views of `walker_rviz` draw this chain: `walker` shows `/scan_filtered` and `/scan_feet` (`/scan` and `/scan_nav` are there, off),
+`step_detector` only `/scan_feet`, `bringup_demo` `/scan_filtered`; the `active_area` layer outlines the box of `feet_filter.yaml`
+(the same one `nav_filter.yaml` removes). They were tried on screen with a replay of `mocap_analysis/replay_feet.launch.py`, which starts
+these launchers; see the README of `walker_rviz`. The laser points of its `test_steps.rviz` are 3 cm: the 1 cm ones were hard to see.
+
 ## Notes
 
 - `LaserScanBoxFilter` is a lifecycle node that `laser_filters` names `laser_scan_box_filter` whatever its name in the chain, so a chain

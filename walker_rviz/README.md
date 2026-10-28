@@ -12,6 +12,20 @@ ros2 launch walker_rviz walker_markers.launch.py show_detected_steps:=true      
 python3 -m pytest test
 ```
 
+To see a recorded bag, replay it with whatever computes what you want to see and open the view in another terminal with
+`sim_time:=true` (rviz must run on the bag's clock). Both pairs below were tried on screen, see [Tried on screen](#tried-on-screen):
+
+```bash
+# feet, loads, centroid, stability, support polygon (views walker, step_detector, bringup_demo)
+ros2 launch mocap_analysis replay_feet.launch.py bag_name:=MF_test07          # replay + laser filters + detector + loads + centroid
+ros2 launch walker_stability walker_stability.launch.py sim_time:=true         # /user_stability and /support_polygon
+ros2 launch walker_rviz walker_view.launch.py view:=walker sim_time:=true
+
+# robot model following the walker, with the laser-inertial odometry (view robot)
+ros2 launch mocap_odometry compare_odometry.launch.py bag_name:=MF_test07
+ros2 launch walker_rviz walker_view.launch.py view:=robot sim_time:=true
+```
+
 ## The node: `walker_markers` (namespace `/walker_rviz`)
 
 One node, one layer per kind of data; each layer is a `MarkerArray` topic and can be switched off with `show_<layer>:=false`.
@@ -32,8 +46,36 @@ The **support polygon** of `walker_stability` is not drawn by this node: that no
 (`/support_polygon`) and rviz draws that natively (it is in the views).
 
 Parameters: `lifetime_s` (0.5), `handle_max_kg` (20: the load that fills the arrow), `step_size_m` (0.15), `default_weight_kg`
-(60, until `/user_desc` arrives), `min_confidence` (0, for `detected_steps`), `gait_frame_id` (`base_link`), the topic names, and
-`show_*`. The launcher exposes `sim_time`, `debug`, `lifetime_s`, `detected_steps_topic_name` and the `show_*`.
+(60, until `/user_desc` arrives), `min_confidence` (0, for `detected_steps`), `steps_at_detected` (true, see below), `handles_raw`
+(false), `gait_frame_id` (`base_link`), the topic names, and `show_*`. The launcher exposes `sim_time`, `debug`, `lifetime_s`,
+`detected_steps_topic_name`, `handles_raw`, `steps_at_detected` and the `show_*`.
+
+**Labels have no spaces** (`left:45kg`, `margin:+8.3cm|sta:0.80|contacts:4`): this RViz draws every kind of space tens of times too
+wide, so `left 45 kg` came out as three words a metre apart. `_text()` in `markers.py` turns any whitespace into `_`, and a test
+looks at every label.
+
+### How late each layer is
+
+Each marker carries the stamp of the data it is made from, and the data do not all come out at the same delay. Measured on
+MF_test07 replayed at rate 1 (bag clock minus the message's stamp):
+
+| Data | Delay | Why |
+|---|---|---|
+| `/scan_feet`, `/detected_step_*`; the `steps` and `detected_steps` layers | 0.13 s | one laser sweep: the scan is stamped at the start of the sweep and published at its end. It is the floor |
+| `/left_hand_loads` (`handles` layer) | 0.39 s | the handle messages arrive with a stamp 0.41 s older than their arrival (their period; 2.4 Hz) |
+| `/left_loads`, `/right_loads` | 0.73 s | `walker_loads` orders its inputs by stamp and waits for the handles |
+| `/user_stability` (`stability` layer) | 0.85 s (0.90 s with `stamp_ordered:=true`) | the legs' own delay: it is published with every input message and stamped with the data time the legs have reached; `stamp_ordered:=true` orders the inputs again and waits for the slowest |
+| `/support_centroid` (`centroid` layer) | 0.85 s (0.94 s with `stamp_ordered:=true`) | the same |
+
+(The two 0.85 s are the median over MF_test07, CA_test03, LA_test04 and MT_test13 replayed at rate 4, the rest of the table is
+MF_test07 at rate 1.) So in a replay the centroid and the stability marker trail the laser points by ~0.7 s; at walking pace that is
+several centimetres to tens of centimetres. They cannot be more recent than the leg loads they are made from, but a change in any
+input, a handle's included, shows in them at once instead of 0.1-0.6 s later. The feet do not: with `steps_at_detected:=true` (the default) the `steps` layer draws each foot at the
+**detected step** (as old as the scan) and colours it with the **last load** `walker_loads` gave for that side, which changes slowly;
+no foot is drawn until its first load has arrived. `steps_at_detected:=false` draws it where the loads message puts it (0.73 s
+late). On MF_test07 the distance from each foot marker to the nearest laser point of the last scan, which is what is on screen, went
+from a median of 4.9 / 9.0 cm (left / right) and a p90 of 19-20 cm to 2.7 / 5.8 cm and 3.2 / 9.1 cm: what is left is the radius of
+the leg, as the marker goes to the centre of the cluster.
 
 ## Views (`rviz/`)
 
@@ -64,8 +106,24 @@ the new command in it.
   had not existed for a while); it uses `walker_markers` now.
 - `stability_grid_map` has its own demo and rviz file for its grid map.
 
-## Not tested
+## Tried on screen
 
-The markers node is tested with unit tests (`test/`) and by replaying a definitive bag through the walker chain and reading
-back what it publishes. **The rviz views were not opened**: they were rewritten from the old files with a script (the old
-marker displays replaced by the layers), and there was no display to check them on.
+The views were rewritten from the old files with a script and first only tested through the node. They were then opened, one by one,
+with a definitive bag replayed at rate 1 (MF_test07), with the Displays panel visible to read the status of every display:
+
+| View | Fed by | Result |
+|---|---|---|
+| `walker` | `mocap_analysis replay_feet` + `walker_stability` | works: model, scans, feet with their kg, handles, centroid, centre of mass, support polygon and active area; every enabled display is green |
+| `step_detector` | the same, with `show_detected_steps:=true` | works, the detected steps are drawn next to the feet |
+| `bringup_demo` | the same | works; its `PointCloud2` (`/laser_cloud`) shows nothing: no node of the workspace publishes that topic |
+| `robot` | `mocap_odometry compare_odometry` | works. It looked at the origin of `odom`, so the walker left the picture a few seconds into the bag, and its odometry arrows (1 m long, one every 10 cm) filled the rest: the camera now follows `base_link` and the arrows are 0.25 m long, one every 25 cm |
+| `vicon` | -- | loads, but a bag has no `vicon_world` frame: `Frame [vicon_world] does not exist`. It needs a live Vicon |
+| `navigation` | -- | loads (the nav2 plugins are there), but there is no map and no particle cloud: `Frame [map] does not exist`. It needs the navigation stack |
+
+Things to know when you open them:
+
+- The `Gait` layer shows nothing with `replay_feet`: it draws `/global_gait_stats`, which `walker_loads/gait_monitor_speed` publishes (it needs `/odom`) and `replay_feet` does not run.
+- The `walker` and `bringup_demo` views start with the left panel collapsed (click the arrow at the left edge to see the Displays).
+- `walker_markers` takes `sim_time`; the rviz that `walker_view.launch.py` starts takes it from the same argument.
+- The tests (`test/`) cover the markers, the node (it is built with every layer on and its topics are checked; a foot is drawn at the
+  detected step with the last load and not before one is known) and the labels.
