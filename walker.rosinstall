@@ -1,35 +1,53 @@
+# The workspace's public sources. `local-name` is the path inside the workspace's `src` folder; `version` is a branch (but for the one commit
+# that a comment explains). This is the layout of ~/workspace/walker_ws/src as of 2026-10-28:
+#   vcs import src < walker.rosinstall      (or: wstool init src walker.rosinstall)
+#
+# The mocap4w tools are not here: they are in private repositories, and are listed in mocap4w.rosinstall (in the mocap_analysis repository)
+# with what only they need (the human model, the old mocap messages, Shimmer). Import this file first.
+
+# --- The walker ---
 - git:
     uri: https://github.com/TaISLab/WalKit.git
     local-name: WalKit
     version: jazzy
 
+# --- Sensors ---
 - git:
     uri: https://github.com/Slamtec/rplidar_ros.git
-    local-name: rplidar_ros
+    local-name: lidar/rplidar_ros
     version: ros2
- 
+
 - git:
     uri: https://github.com/ElettraSciComp/witmotion_IMU_ros.git
-    local-name: witmotion_ros
+    local-name: witmotion/witmotion_ros
     version: ros2
 
+# witmotion_ros adds this one as a subdirectory (add_subdirectory(witmotion-uart-qt) in its CMakeLists.txt), at the commit its own
+# submodule pins (v0.9.17-alpha-33; main is 11 commits ahead)
 - git:
     uri: https://github.com/ElettraSciComp/witmotion_IMU_QT.git
-    local-name: witmotion_ros/witmotion-uart-qt
+    local-name: witmotion/witmotion_ros/witmotion-uart-qt
+    version: 5c2e86dd2ba7dba76d84e68fa7f65dc3527f5de0
+
+# The same repository, also at the top level: colcon builds it as the package witmotion-uart-qt (nothing in the workspace depends on it)
+- git:
+    uri: https://github.com/ElettraSciComp/witmotion_IMU_QT.git
+    local-name: witmotion/witmotion_IMU_QT
     version: main
 
+# --- Laser odometry and scan segmentation ---
 - git:
     uri: https://github.com/TaISLab/ros2_laser_scan_matcher.git
-    local-name: ros2_laser_scan_matcher
+    local-name: lidar/ros2_laser_scan_matcher
     version: main
 
 - git:
     uri: https://github.com/AlexKaravaev/csm.git
     local-name: csm
-    version: ros2_csm_eigen  
+    version: ros2_csm_eigen
 
 - git:
-    uri: https://github.com/ajtudela/slg_msgs.git 
+    uri: https://github.com/ajtudela/slg_msgs.git
     local-name: ajt_segment/slg_msgs
     version: jazzy
 
@@ -38,36 +56,46 @@
     local-name: ajt_segment/laser_segmentation
     version: jazzy
 
+# --- Mocap (MOCAP4ROS2) ---
+# mocap4r2 is the former `mocap` repository; the messages mocap_msgs and mocap_control_msgs are in its old_msgs folder
 - git:
-    uri: https://github.com/MOCAP4ROS2-Project/mocap_interfaces.git
-    local-name: mocap/mocap_interfaces
-    version: rolling 
-    
-- git:
-    uri: https://github.com/MOCAP4ROS2-Project/mocap_msgs.git
-    local-name: mocap/mocap_msgs
-    version: jazzy
-
-- git:
-    uri: https://github.com/MOCAP4ROS2-Project/mocap.git 
-    local-name: mocap/mocap
-    version: rep-mocap-jazzy
-
-- git:
-    uri: https://github.com/MOCAP4ROS2-Project/mocap4ros2_vicon.git     
-    local-name: mocap/mocap4ros2_vicon
+    uri: https://github.com/MOCAP4ROS2-Project/mocap4r2.git
+    local-name: mocap4r2/mocap4r2
     version: rolling
 
 - git:
-    uri: https://github.com/tbazina/emg_grip_interfaces.git (push)
-    local-name: shimmer/emg_grip_interfaces
-    version: main
+    uri: https://github.com/MOCAP4ROS2-Project/mocap_interfaces.git
+    local-name: mocap4r2/mocap_interfaces
+    version: rolling
 
 - git:
-    uri: https://github.com/tbazina/shimmer_ros2.git (fetch)
-    local-name: shimmer/shimmer_ros2
+    uri: https://github.com/MOCAP4ROS2-Project/mocap4ros2_vicon.git
+    local-name: mocap4r2/mocap4ros2_vicon
+    version: rolling
+
+# --- E4 messages (used by mocap_analysis) ---
+- git:
+    uri: https://github.com/TaISLab/e4_msgs.git
+    local-name: e4_msgs
     version: main
-    
+
+# --- Shimmer (commented out) ---
+#  The workspace uses ros_shimmer, which is private: it is in mocap4w.rosinstall.
+#
+#  The ones this file had before (the workspace does not use them):
+#- git:
+#    uri: https://github.com/tbazina/emg_grip_interfaces.git
+#    local-name: shimmer/emg_grip_interfaces
+#    version: main
+#
+#- git:
+#    uri: https://github.com/tbazina/shimmer_ros2.git
+#    local-name: shimmer/shimmer_ros2
+#    version: main
+
+# --- Not used any more ---
+#  mocap_msgs (jazzy) and mocap (rep-mocap-jazzy) of MOCAP4ROS2-Project were replaced by mocap4r2 above.
+#
 #  Takes ages to download. We need rethinking the simulation system
 #- git:
 #    uri: https://github.com/TaISLab/aws-robomaker-hospital-world.git
@@ -81,28 +109,29 @@
 #    local-name: leap_motion
 #    version: jazzy
 #
-#  This fork is not needed anymore. We use step detector instead  
+#  This fork is not needed anymore. We use step detector instead
 #
 #- git:
 #    uri: https://github.com/TaISLab/ros2_leg_detector.git
 #    local-name: ros2_leg_detector
-#    version: foxy    
+#    version: foxy
 #
-#  In jazzy laser_filters work flawlessly. 
+#  The official laser_filters is used (a rosdep dependency of walker_laser_filter), not this fork.
 #
 #- git:
 #    uri: https://github.com/TaISLab/laser_filters.git
 #    local-name: laser_filters
-#    version: ros2    
+#    version: ros2
 #
-#  In jazzy rosbag2 work flawlessly. 
+#  In jazzy rosbag2 work flawlessly.
 #
 #- git:
 #    uri: https://github.com/ros2/rosbag2.git
 #    local-name: rosbag2
 #    version: foxy-future
-
-# using another driver
+#
+#  Using another driver
+#
 #- git:
 #    uri: https://github.com/TaISLab/bwt901cl_pkg.git
 #    local-name: bwt901cl_pkg
