@@ -1,0 +1,134 @@
+# The workspace's public sources. Each key is the path inside the workspace's `src` folder; `version` is a branch (but for the one commit
+# that a comment explains). This is the layout of ~/workspace/walker_ws/src as of 2026-10-28:
+#   vcs import src < walker.repos
+#
+# The mocap4w tools are not here: they are in private repositories, and are listed in mocap4w.repos (in the mocap_analysis repository)
+# with what only they need (the human model, the old mocap messages, Shimmer). Import this file first.
+
+repositories:
+  # --- The walker ---
+  WalKit:
+    type: git
+    url: https://github.com/TaISLab/WalKit.git
+    version: jazzy
+
+  # --- Sensors ---
+  lidar/rplidar_ros:
+    type: git
+    url: https://github.com/Slamtec/rplidar_ros.git
+    version: ros2
+
+  witmotion/witmotion_ros:
+    type: git
+    url: https://github.com/ElettraSciComp/witmotion_IMU_ros.git
+    version: ros2
+
+  # witmotion_ros adds this one as a subdirectory (add_subdirectory(witmotion-uart-qt) in its CMakeLists.txt) and builds it inside itself, at
+  # the commit its own submodule pins (v0.9.17-alpha-33; main is 11 commits ahead). It is the only copy needed: do not clone it also at the
+  # top level, where colcon would build it as a package of its own that nothing uses.
+  witmotion/witmotion_ros/witmotion-uart-qt:
+    type: git
+    url: https://github.com/ElettraSciComp/witmotion_IMU_QT.git
+    version: 5c2e86dd2ba7dba76d84e68fa7f65dc3527f5de0
+
+  # --- Laser odometry and scan segmentation ---
+  lidar/ros2_laser_scan_matcher:
+    type: git
+    url: https://github.com/TaISLab/ros2_laser_scan_matcher.git
+    version: main
+
+  csm:
+    type: git
+    url: https://github.com/AlexKaravaev/csm.git
+    version: ros2_csm_eigen
+
+  ajt_segment/slg_msgs:
+    type: git
+    url: https://github.com/ajtudela/slg_msgs.git
+    version: jazzy
+
+  ajt_segment/laser_segmentation:
+    type: git
+    url: https://github.com/ajtudela/laser_segmentation.git
+    version: jazzy
+
+  # --- Mocap (MOCAP4ROS2) ---
+  # mocap4r2 is the former `mocap` repository; the messages mocap_msgs and mocap_control_msgs are in its old_msgs folder
+  mocap4r2/mocap4r2:
+    type: git
+    url: https://github.com/MOCAP4ROS2-Project/mocap4r2.git
+    version: rolling
+
+  mocap4r2/mocap_interfaces:
+    type: git
+    url: https://github.com/MOCAP4ROS2-Project/mocap_interfaces.git
+    version: rolling
+
+  mocap4r2/mocap4ros2_vicon:
+    type: git
+    url: https://github.com/MOCAP4ROS2-Project/mocap4ros2_vicon.git
+    version: rolling
+
+  # --- E4 messages (used by mocap_analysis) ---
+  e4_msgs:
+    type: git
+    url: https://github.com/TaISLab/e4_msgs.git
+    version: main
+
+  # --- Shimmer (commented out) ---
+  #  The workspace uses ros_shimmer, which is private: it is in mocap4w.repos.
+  #
+  #  The ones this file had before (the workspace does not use them):
+  #shimmer/emg_grip_interfaces:
+  #  type: git
+  #  url: https://github.com/tbazina/emg_grip_interfaces.git
+  #  version: main
+  #
+  #shimmer/shimmer_ros2:
+  #  type: git
+  #  url: https://github.com/tbazina/shimmer_ros2.git
+  #  version: main
+
+  # --- Not used any more ---
+  #  mocap_msgs (jazzy) and mocap (rep-mocap-jazzy) of MOCAP4ROS2-Project were replaced by mocap4r2 above.
+  #
+  #  Takes ages to download. We need rethinking the simulation system
+  #aws-robomaker-hospital-world:
+  #  type: git
+  #  url: https://github.com/TaISLab/aws-robomaker-hospital-world.git
+  #  version: ros2
+  #
+  #  Not supported for arm64 yet
+  #
+  #leap_motion:
+  #  type: git
+  #  url: https://github.com/TaISLab/leap_motion.git
+  #  version: jazzy
+  #
+  #  This fork is not needed anymore. We use step detector instead
+  #
+  #ros2_leg_detector:
+  #  type: git
+  #  url: https://github.com/TaISLab/ros2_leg_detector.git
+  #  version: foxy
+  #
+  #  The official laser_filters is used (a rosdep dependency of walker_laser_filter), not this fork.
+  #
+  #laser_filters:
+  #  type: git
+  #  url: https://github.com/TaISLab/laser_filters.git
+  #  version: ros2
+  #
+  #  In jazzy rosbag2 work flawlessly.
+  #
+  #rosbag2:
+  #  type: git
+  #  url: https://github.com/ros2/rosbag2.git
+  #  version: foxy-future
+  #
+  #  Using another driver
+  #
+  #bwt901cl_pkg:
+  #  type: git
+  #  url: https://github.com/TaISLab/bwt901cl_pkg.git
+  #  version: jazzy
