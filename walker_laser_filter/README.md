@@ -117,8 +117,16 @@ mean of the six): A = the old behaviour (hand-made boxes and a `/scan_nav` that 
 
 A reproduces the figure `mocap_odometry` documents for the old pipeline (CA_test05: ATE 0.198 m, heading 5.7°). C is better than A in 4 of 6
 bags for ATE, heading and drift, and worse in 5 of 6 for scale. CA_test05 improves most (0.198 → 0.110 m, 5.7° → 2.6°), LA_test04, MF_test14 and MT_test13
-a little, CA_test03 stays (0.345 → 0.347 m) and MF_test07 gets worse (0.101 → 0.122 m). With six bags this is "no worse on average", not an improvement shown. The scan matcher and EKF
-parameters (`odom_tuning`) were tuned with the unfiltered `/scan_nav` and have not been tuned again.
+a little, CA_test03 stays (0.345 → 0.347 m) and MF_test07 gets worse (0.101 → 0.122 m). With six bags this is "no worse on average", not an improvement shown; the 47-bag run below settles it for the position.
+
+**All 47 bags** (same `walker_lsm.yaml` and mocap reference; the "before" is the scan matcher fed with `/scan_filtered`, which is exactly what the
+old `/scan_nav` was; `mocap_odometry`'s `odom_tuning`). The EKF's `/odom` on the 33 clean bags, 3 repetitions: ATE **0.2093 → 0.1826 m** (28 of 33
+bags improve), heading 1.97° → 2.03° (+0.06° ± 0.06°: inside the noise, the position improves and the heading does not move). Scan matcher alone
+on the 34 clean bags: ATE 0.211 → 0.186 m, drift 1.31 → 1.15 %. The 8 bags where the scan matcher fails do not change (ATE 0.319 → 0.321 m). Two
+identical recordings of the scan matcher agree sample by sample in 23 of 47 bags, and in the rest differ by 0.0019 m of ATE (standard deviation), far
+below the differences above. The scan matcher and EKF parameters (`odom_tuning`) were tuned with the unfiltered `/scan_nav`; they were tuned again with
+the new one (`tune.py`, ten sweeps) and **no change of parameters beats the noise**, so `walker_ekf.yaml` and `walker_lsm.yaml` stay as they are. Details
+and the tool: `scripts/odom_tuning/README.md` of the `mocap_odometry` repository.
 
 ## Seeing it in rviz
 
