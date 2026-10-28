@@ -65,9 +65,14 @@ laser_scan_matcher_node:
     # Heading variance 0.2 rad2 (std ~26 deg): deliberately weak. Successive scan matches are chained to
     # one keyframe, so they are not independent heading measurements, and since the gyro also seeds
     # the ICP (imu_topic below) the heading is dominated by the gyro and the laser only anchors it
-    # slowly. Measured on 32 clean mocap bags (3 repetitions): heading 2.22 deg (scan matcher alone)
-    # -> 1.91 deg, ATE 0.213 -> 0.208 m; worst bag +0.5 deg, most improve. Going weaker still
-    # (R 0.2 / Q 1e-4) averages 1.77 deg but its worst bag regresses +1.1 deg: it leans on the gyro.
+    # slowly. Measured against the mocap on the clean bags with the /scan_nav of walker_laser_filter
+    # (2026-10-28, 3 repetitions): the EKF's /odom has heading 2.03 deg and ATE 0.183 m (33 bags); the
+    # scan matcher alone, 2.44 deg and 0.186 m (34 bags). Heading is the error left after removing a
+    # constant bias. Tuned again with that recording (mocap_odometry/scripts/odom_tuning/tune.py): no
+    # change of these covariances beats the noise of the evaluation.
+    # With the earlier /scan_nav (the legs inside the scan), on 32 clean bags: heading 2.22 deg (scan
+    # matcher alone) -> 1.91 deg, ATE 0.213 -> 0.208 m; worst bag +0.5 deg, most improve. Going weaker
+    # still (R 0.2 / Q 1e-4) averaged 1.77 deg but its worst bag regressed +1.1 deg: it leans on the gyro.
     pose_covariance_diagonal:  [0.0025, 0.0025, 1.0e-6, 1.0e-6, 1.0e-6, 0.2]
     twist_covariance_diagonal: [0.01,   0.01,   1.0e-6, 1.0e-6, 1.0e-6, 0.02]
 
