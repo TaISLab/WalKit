@@ -64,11 +64,13 @@ MF_test07 replayed at rate 1 (bag clock minus the message's stamp):
 | `/scan_feet`, `/detected_step_*`; the `steps` and `detected_steps` layers | 0.13 s | one laser sweep: the scan is stamped at the start of the sweep and published at its end. It is the floor |
 | `/left_hand_loads` (`handles` layer) | 0.39 s | the handle messages arrive with a stamp 0.41 s older than their arrival (their period; 2.4 Hz) |
 | `/left_loads`, `/right_loads` | 0.73 s | `walker_loads` orders its inputs by stamp and waits for the handles |
-| `/user_stability` (`stability` layer) | 0.90 s | the same wait, ordered again |
-| `/support_centroid` (`centroid` layer) | 0.94 s | the same wait, ordered again |
+| `/user_stability` (`stability` layer) | 0.85 s (0.90 s with `stamp_ordered:=true`) | the legs' own delay: it is published with every input message and stamped with the data time the legs have reached; `stamp_ordered:=true` orders the inputs again and waits for the slowest |
+| `/support_centroid` (`centroid` layer) | 0.85 s (0.94 s with `stamp_ordered:=true`) | the same |
 
-So in a replay the centroid and the stability marker trail the laser points by ~0.8 s; at walking pace that is several centimetres
-to tens of centimetres. The feet do not: with `steps_at_detected:=true` (the default) the `steps` layer draws each foot at the
+(The two 0.85 s are the median over MF_test07, CA_test03, LA_test04 and MT_test13 replayed at rate 4, the rest of the table is
+MF_test07 at rate 1.) So in a replay the centroid and the stability marker trail the laser points by ~0.7 s; at walking pace that is
+several centimetres to tens of centimetres. They cannot be more recent than the leg loads they are made from, but a change in any
+input, a handle's included, shows in them at once instead of 0.1-0.6 s later. The feet, on the other hand, do not trail the scan: with `steps_at_detected:=true` (the default) the `steps` layer draws each foot at the
 **detected step** (as old as the scan) and colours it with the **last load** `walker_loads` gave for that side, which changes slowly;
 no foot is drawn until its first load has arrived. `steps_at_detected:=false` draws it where the loads message puts it (0.73 s
 late). On MF_test07 the distance from each foot marker to the nearest laser point of the last scan, which is what is on screen, went

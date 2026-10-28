@@ -91,6 +91,11 @@ since the previous one. Consequences:
   order makes the outputs bursty, and a reliable writer with a short history overwrites what a slower
   subscriber has not yet taken.
 
+The python nodes downstream share the same helpers (`walker_loads/stamp_sequencer.py`): `StampSequencer` and `Ticks` for the
+stamp-ordered, reproducible behaviour, and `Watermark` for a node that publishes on every message it receives instead
+(`walker_centroid_support`, `walker_stability` by default): it only tracks the data time every stream has reached, the smallest of
+the streams' newest stamps, and gives up on a silent stream after `max_wait_ns` as the sequencer does.
+
 ## Seeing it in rviz
 
 `walker_rviz` draws what this package publishes: the `handles` layer (`/left_hand_loads`, `/right_hand_loads`: an arrow as long as the

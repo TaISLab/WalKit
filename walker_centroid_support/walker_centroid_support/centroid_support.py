@@ -1,5 +1,6 @@
 import sys
 
+from builtin_interfaces.msg import Time
 from geometry_msgs.msg import PointStamped
 import numpy as np
 
@@ -10,8 +11,9 @@ from rclpy.node import Node
 from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
 
+from std_msgs.msg import Header
 from walker_msgs.msg import ForceStamped, StepStamped
-from walker_loads.stamp_sequencer import StampSequencer, Ticks, stamp_ns
+from walker_loads.stamp_sequencer import StampSequencer, Ticks, Watermark, stamp_ns
 
 LEFT_HAND, RIGHT_HAND, LEFT_LOAD, RIGHT_LOAD = 0, 1, 2, 3
 
@@ -20,11 +22,20 @@ LEFT_HAND, RIGHT_HAND, LEFT_LOAD, RIGHT_LOAD = 0, 1, 2, 3
 class CentroidSupport(Node):
     """Weighted centroid of the four contact points (two feet, two handles).
 
-    Works on data time, not on the clock or a timer: the four inputs are put in stamp order
-    (StampSequencer; the handle loads by their header stamp, the leg loads by the stamp of the step
-    position) and, on a fixed grid of data time (`period`), the centroid of the state as of each tick
-    is published, if anything new arrived since the previous tick, stamped with the stamp of the step
-    position. The centroids therefore depend only on the messages, not on when or in which order they
+    It is published every time any of the four inputs changes, i.e. whenever a message of one of them
+    arrives: the centroid of the latest of each. Nothing waits for the other inputs, so it comes out as soon
+    as a change arrives, not when the slowest input has caught up. It is stamped with the data time the legs
+    have reached, the older of the two leg loads' newest stamps (the position of the feet is what moves
+    the centroid; the handles' stamps do not enter, they come at 2.4 Hz in the recorded bags and would hold
+    the stamp back). The price is that which messages it has seen when it is computed depends on the order
+    they arrive in: the same bag does not give exactly the same centroids twice, and several centroids can
+    share a stamp (the ones a handle's load makes).
+
+    With `stamp_ordered:=true` it works on data time instead, not on the clock or a timer: the four inputs
+    are put in stamp order (StampSequencer; the handle loads by their header stamp, the leg loads by the
+    stamp of the step position) and, on a fixed grid of data time (`period`), the centroid of the state as
+    of each tick is published, if anything new arrived since the previous tick, stamped with the stamp of
+    the step position. The centroids then depend only on the messages, not on when or in which order they
     arrive (same bag, same centroids, at any replay rate), and lag the data by up to ~max_wait_s
     (normally less than the period of the slowest input, the handles).
     """
@@ -38,9 +49,13 @@ class CentroidSupport(Node):
                 ('right_loads_topic_name', '/right_loads'),
                 ('left_hand_loads_topic_name', '/left_hand_loads'),
                 ('right_hand_loads_topic_name', '/right_hand_loads'),
+                # False: publish on every input message. True: inputs in stamp order and published on a grid of data
+                # time, reproducible at any replay rate (`period` only matters then)
+                ('stamp_ordered', False),
                 # period of the output grid, in data time (s)
                 ('period', 0.05),
-                # data time to wait for a silent input before giving up on it, see StampSequencer;
+                # data time to wait for a silent input before giving up on it, see StampSequencer (without
+                # stamp_ordered: how far the stamp of the output can fall behind if a leg goes silent);
                 # must be longer than the largest lag between inputs (the loads trail the odometry by
                 # about a handle period, more when replaying faster than real time)
                 ('max_wait_s', 5.0),
@@ -53,6 +68,7 @@ class CentroidSupport(Node):
         self.left_hand_loads_topic_name = self.get_parameter('left_hand_loads_topic_name').value
         self.right_hand_loads_topic_name = self.get_parameter('right_hand_loads_topic_name').value
         self.centroid_topic_name = self.get_parameter('centroid_topic_name').value
+        self.stamp_ordered = self.get_parameter('stamp_ordered').value
         self.period = self.get_parameter('period').value
         self.max_wait_s = self.get_parameter('max_wait_s').value
 
@@ -70,7 +86,9 @@ class CentroidSupport(Node):
         self.listener = TransformListener(self.buffer, self)
 
         self.first_data_ready = False
-        self.new_data_available = False
+        self.new_data_available = False         # stamp_ordered only: something arrived since the last tick
+        self.leg_ns = None                      # not stamp_ordered: the data time the legs have reached, the output's stamp
+        self.legs = Watermark(2, int(self.max_wait_s * 1e9))
         self.ticks = Ticks(int(self.period * 1e9))
         # the leg loads repeat their step's stamp while the load itself is recomputed
         self.sequencer = StampSequencer(4, self.process, max_wait_ns=int(self.max_wait_s * 1e9),
@@ -106,18 +124,30 @@ class CentroidSupport(Node):
         self.push(RIGHT_LOAD, stamp_ns(msg.position.header.stamp), msg)
 
     def push(self, stream, stamp, msg):
+        if not self.stamp_ordered:
+            self.store(stream, msg)
+            if stream in (LEFT_LOAD, RIGHT_LOAD):
+                self.leg_ns = self.legs.update(stream - LEFT_LOAD, stamp)
+            if self.leg_ns is not None:
+                self.publish_centroid(self.leg_ns)
+            return
         if not self.sequencer.push(stream, stamp, msg) and self.sequencer.late % 100 == 1:
             self.get_logger().warn(
                 'Dropped %d inputs older than what was already processed (an input stayed silent '
                 'for more than max_wait_s)' % self.sequencer.late)
         self.sequencer.release()
 
-    # Called by the sequencer, in stamp order
+    # stamp_ordered: called by the sequencer, in stamp order
     def process(self, stream, stamp, msg):
         # the ticks that fall before this input see the state without it
         for _ in self.ticks.until(stamp):
-            self.publish_centroid()
+            if self.new_data_available:
+                self.new_data_available = False
+                self.publish_centroid()
         self.new_data_available = True
+        self.store(stream, msg)
+
+    def store(self, stream, msg):
         if stream == LEFT_HAND:
             # msg.force already holds the calibrated weight (kg), as computed
             # and published by walker_loads/partial_loads from the raw handle readings.
@@ -135,11 +165,8 @@ class CentroidSupport(Node):
             self.right_leg_load = msg.load
             self.right_speed = msg.speed
 
-    def publish_centroid(self):
-        if not self.new_data_available:
-            return
-        self.new_data_available = False
-
+    def publish_centroid(self, at_ns=None):
+        """at_ns: the stamp of the centroid; by default that of the right step position."""
         if not self.first_data_ready:
             self.first_data_ready = (
                 self.left_handle_msg is not None and
@@ -189,7 +216,11 @@ class CentroidSupport(Node):
                     self.left_handle_weight * left_handle_position) / total_load
 
         centroid_msg = PointStamped()
-        centroid_msg.header = self.right_step_msg.position.header
+        header = self.right_step_msg.position.header
+        stamp = header.stamp
+        if at_ns is not None:
+            stamp = Time(sec=at_ns // 1_000_000_000, nanosec=at_ns % 1_000_000_000)
+        centroid_msg.header = Header(stamp=stamp, frame_id=header.frame_id)
         centroid_msg.point.x = centroid[0]
         centroid_msg.point.y = centroid[1]
         centroid_msg.point.z = centroid[2]
