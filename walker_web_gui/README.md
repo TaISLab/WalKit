@@ -23,7 +23,7 @@ Two tabs:
   red while the form differs from what was last published.
 
 Published topics: `/user_desc` (`walker_msgs/UserDesc`) and `/handle_height`
-(`std_msgs/Int32`), both latched. Subscribed topics: loads, wheels, IMU, laser,
+(`std_msgs/Int32`), both latched. Subscribed topics: loads, wheels, IMU,
 odom, and the two above.
 
 The GUI does not start/stop the rosbag recording.

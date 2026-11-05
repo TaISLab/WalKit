@@ -140,15 +140,6 @@ topic('/right_loads', 'walker_msgs/msg/StepStamped').subscribe((m) => {
   if (x !== 0 || y !== 0) plot.setFoot('right', -y, x, m.load);
 });
 
-topic('/laser_poses', 'geometry_msgs/msg/PoseArray').subscribe((m) => {
-  const xs = [], ys = [];
-  for (const pose of m.poses) {
-    xs.push(-pose.position.y);
-    ys.push(pose.position.x);
-  }
-  plot.setLaser(xs, ys);
-});
-
 let leftHandLoad = 0, rightHandLoad = 0;
 topic('/left_hand_loads', 'walker_msgs/msg/ForceStamped').subscribe((m) => {
   fields.leftHandleForce.update(m.force);
