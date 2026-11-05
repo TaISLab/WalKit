@@ -93,7 +93,7 @@ markers node unless `markers:=false`.
 
 The launchers that opened the old files (`walker_bringup/launch/test/{rviz2,walker_rviz2}.launch.py`,
 `walker_step_detector/launch/test_step_detector_variants.launch.py` with `use_rviz`, `walker_navigation2/launch/navigation2.launch.py`)
-open these now. The `tmule` sessions `walker_demo.yaml` and `walker_leap.yaml` start `walker_markers` instead of the three old
+open these now. The `tmule` session `walker_demo.yaml` starts `walker_markers` instead of the three old
 nodes; in `walker.yaml` the block stays commented, as it was ("until we do a full reworking of the whole visualization"), with
 the new command in it.
 
