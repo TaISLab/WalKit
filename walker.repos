@@ -53,7 +53,7 @@ repositories:
     version: jazzy
 
   # --- Mocap (MOCAP4ROS2) ---
-  # mocap4r2 is the former `mocap` repository; the messages mocap_msgs and mocap_control_msgs are in its old_msgs folder
+  # mocap4r2 is the former `mocap` repository. The old messages (mocap_msgs, mocap_control_msgs) are not here: they are only needed to read the 2024 rosbags
   mocap4r2/mocap4r2:
     type: git
     url: https://github.com/MOCAP4ROS2-Project/mocap4r2.git
