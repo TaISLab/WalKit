@@ -100,14 +100,26 @@ setInterval(() => {
 // ---------------------------------------------------------------------
 // Topics
 // ---------------------------------------------------------------------
-function topic(name, messageType, latch = false) {
-  return new ROSLIB.Topic({ ros: rosLink.ros, name, messageType, queue_length: 0, latch });
+function topic(name, messageType, latch = false, throttleMs = 0) {
+  return new ROSLIB.Topic({ ros: rosLink.ros, name, messageType, queue_length: 0, latch, throttle_rate: throttleMs });
 }
 
-topic('/sensor/bwt901cl/Angle', 'geometry_msgs/msg/Vector3').subscribe((m) => {
-  fields.imuX.update(m.x);
-  fields.imuY.update(m.y);
-  fields.imuZ.update(m.z);
+// The IMU only publishes sensor_msgs/Imu. witmotion_ros builds its quaternion from the sensor's own roll, pitch and yaw
+// (use_native_orientation: false in wt901.yaml), so this gives those angles back, in degrees.
+const RAD2DEG = 180 / Math.PI;
+function quaternionToRpyDeg({ x, y, z, w }) {
+  const roll = Math.atan2(2 * (w * x + y * z), 1 - 2 * (x * x + y * y));
+  const pitch = Math.asin(Math.max(-1, Math.min(1, 2 * (w * y - z * x))));
+  const yaw = Math.atan2(2 * (w * z + x * y), 1 - 2 * (y * y + z * z));
+  return [roll * RAD2DEG, pitch * RAD2DEG, yaw * RAD2DEG];
+}
+
+// 100 ms is plenty for a value refreshed twice a second, and spares rosbridge the full-rate Imu.
+topic('/bwt901cl/imu', 'sensor_msgs/msg/Imu', false, 100).subscribe((m) => {
+  const [roll, pitch, yaw] = quaternionToRpyDeg(m.orientation);
+  fields.imuX.update(roll);
+  fields.imuY.update(pitch);
+  fields.imuZ.update(yaw);
 });
 
 topic('/left_wheel', 'walker_msgs/msg/EncoderStamped').subscribe((m) => fields.leftWheel.update(m.encoder));
