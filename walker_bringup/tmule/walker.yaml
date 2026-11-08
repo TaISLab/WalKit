@@ -59,4 +59,4 @@ windows:
   # - name: record
   #   tags: ['record']
   #   panes:
-  #     - ros2 launch walker_bringup bag_recorder.launch.py
+  #     - ros2 launch walker_bringup bag_recorder.launch.py bag_name:=test01

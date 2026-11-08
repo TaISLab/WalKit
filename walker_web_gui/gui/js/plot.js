@@ -1,4 +1,4 @@
-// Top-down view of the walker: feet loads, handle loads, laser points and
+// Top-down view of the walker: feet loads, handle loads and
 // the current advance direction. Same geometry/idea as the original GUI,
 // but wrapped so stale traces visibly fade out instead of sitting there
 // looking live forever.
@@ -20,7 +20,7 @@ const handleRight = toPlot(ORIG.handleRight);
 export class WalkerPlot {
   constructor(elId) {
     this.el = document.getElementById(elId);
-    this._lastUpdate = { leftFoot: 0, rightFoot: 0, laser: 0, handles: 0, odom: 0 };
+    this._lastUpdate = { leftFoot: 0, rightFoot: 0, handles: 0, odom: 0 };
 
     this.data = [
       { // 0: left foot
@@ -37,17 +37,12 @@ export class WalkerPlot {
         },
         showlegend: false,
       },
-      { // 2: laser
-        x: [], y: [], type: 'scatter', mode: 'markers', name: 'laser',
-        marker: { color: 'rgb(255, 0, 255)', size: 2, opacity: DEAD_OPACITY },
-        showlegend: false,
-      },
-      { // 3: advance direction arrow tip (used via annotation, kept as marker for legend-free simplicity)
+      { // 2: advance direction arrow tip (used via annotation, kept as marker for legend-free simplicity)
         x: [0], y: [1.5 * handleRight.y], type: 'scatter', mode: 'markers', name: 'avance',
         marker: { color: 'rgb(0,0,0)', size: 10, symbol: 'star-triangle-up', opacity: DEAD_OPACITY },
         showlegend: false,
       },
-      { // 4: handle loads
+      { // 3: handle loads
         x: [handleLeft.x, handleRight.x], y: [handleLeft.y, handleRight.y],
         type: 'scatter', mode: 'markers', name: 'handles',
         marker: {
@@ -87,18 +82,9 @@ export class WalkerPlot {
     this._redraw();
   }
 
-  setLaser(xs, ys) {
-    this.data[2].x = xs;
-    this.data[2].y = ys;
-    this.data[2].marker.opacity = 1;
-    this._touch('laser');
-    for (let i = 0; i < xs.length; i++) this._grow(xs[i], ys[i]);
-    this._redraw();
-  }
-
   setHandleLoads(left, right) {
-    this.data[4].marker.color = [left, right];
-    this.data[4].marker.opacity = 1;
+    this.data[3].marker.color = [left, right];
+    this.data[3].marker.opacity = 1;
     this._touch('handles');
     this._redraw();
   }
@@ -124,7 +110,7 @@ export class WalkerPlot {
   }
 
   // Fade traces whose data hasn't updated in a while, so an operator can
-  // tell "no laser data" apart from "robot standing still".
+  // tell "no foot data" apart from "robot standing still".
   tick(now) {
     let changed = false;
     const fade = (idx, key) => {
@@ -137,8 +123,7 @@ export class WalkerPlot {
     };
     fade(0, 'leftFoot');
     fade(1, 'rightFoot');
-    fade(2, 'laser');
-    fade(4, 'handles');
+    fade(3, 'handles');
     if (changed) this._redraw();
   }
 }

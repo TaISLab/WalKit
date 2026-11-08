@@ -92,7 +92,8 @@ cd ~/workspace/walker_ws/src/WalKit/walker_bringup/tmule/
 tmule -c walker.yaml launch
 ```
 Every window of `walker.yaml` has the `core` tag, so `--tag core` starts the same. The session does not record a rosbag: to record one run
-`ros2 launch walker_bringup bag_recorder.launch.py` (arguments `topic_list` and `bag_name`); the bags are stored at `~/bagsFolder`.
+`ros2 launch walker_bringup bag_recorder.launch.py bag_name:=test01`: the bag is stored at `~/bagsFolder/<campaign>_tests_walker/test01`
+(see [walker_bringup](walker_bringup/README.md#recording-a-test)).
 
 ROS launch files can be monitored at the tmux session. You can attach to it with the following command:
 ```

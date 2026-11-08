@@ -9,13 +9,13 @@ Other packages can reuse its launch files and configs. The system is started wit
 
 | Folder    | Contents |
 |-----------|----------|
-| `tmule/`  | TMuLE sessions: the reference for how the system is brought up (`walker.yaml`, `walker_sensors.yaml`, `walker_rtab.yaml`, `walker_demo.yaml`, `walker_leap.yaml`) and `walker_cfg.bash`. |
-| `launch/` | Launch files used by the tmule sessions: sensors (`walker_witmotion`; the laser filters are in `walker_laser_filter`), localization (`walker_amcl`, `walker_ekf`, `walker_lsm`, `walker_laser_imu_odom`), mapping (`walker_rtabmap`, `rtabmap_stereo`, `walker_stereo_odom`), `walker_map_server`, `bag_recorder`. |
+| `tmule/`  | TMuLE sessions: the reference for how the system is brought up (`walker.yaml`, `walker_sensors.yaml`, `walker_rtab.yaml`, `walker_demo.yaml`) and `walker_cfg.bash`. |
+| `launch/` | Launch files used by the tmule sessions: sensors (`walker_witmotion`; the laser filters are in `walker_laser_filter`), localization (`walker_amcl`, `walker_ekf`, `walker_lsm`, `walker_laser_imu_odom`), mapping (`walker_rtabmap`, `rtabmap_stereo`, `walker_stereo_odom`), `walker_map_server`. `bag_recorder` is run by hand, see [Recording a test](#recording-a-test). |
 | `launch/test/` | Launchers not used by any tmule session (cameras, rviz, SLAM, bag replay and odometry evaluation). Still installed and launchable with `ros2 launch walker_bringup <file>`. |
 | `config/` | Parameter files for the above. The rviz configs are in `walker_rviz/rviz/`. |
 | `maps/`   | Placeholder for the maps generated on the walker (empty in the repository). |
 | `udev/`   | How to create the `/dev/rplidar` and `/dev/witmotion` udev rules. See [udev/README.md](udev/README.md). |
-| `scripts/`, `script/` | `record_service.py` (`/rosbag_record` service) and the `command_*.sh` it calls; `walker_config.bash` sourced by the tmule sessions. |
+| `scripts/`, `script/` | `odom_supervisor.py` (the gyro supervisor, see below); `command_core.sh` (starts the `core` window of `walker.yaml`) and `walker_config.bash`, sourced by the tmule sessions. |
 
 ## Setting up a machine
 
@@ -33,7 +33,28 @@ tmule -c tmule/walker.yaml terminate
 ```
 
 Other sessions: `walker_sensors.yaml` (sensors only), `walker_rtab.yaml` (RTAB-Map),
-`walker_demo.yaml`, `walker_leap.yaml`.
+`walker_demo.yaml`.
+
+## Recording a test
+
+No session records. With the system running, `bag_recorder.launch.py` records the walker's rosbag of a test:
+
+```bash
+ros2 launch walker_bringup bag_recorder.launch.py bag_name:=test01     # Ctrl-C ends the test
+```
+
+It leaves `~/bagsFolder/<campaign>_tests_walker/test01`. A test is recorded as two rosbags, one on each computer, and the
+definitive-bag pipeline (`soma13kp/merge_definitive.py`, see its `GENERAR_BAGS_DEFINITIVOS.md`) pairs them by folder name: the other
+one is recorded on the laptop with the same `campaign` and `bag_name`. Use a new `bag_name` for each test.
+
+| Argument | Default | |
+|---|---|---|
+| `bag_name` | date and time | name of the test, the same on both computers |
+| `campaign` | `YYYY_MM` | prefix of the folder, the same on both computers |
+| `bags_folder` | `~/bagsFolder` | where it goes |
+| `topic_list` | the walker's sensors, `/scan`, `/scan_filtered`, the loads and steps, `/tf`, `/tag`... (see the file) | topics to record |
+
+The pipeline needs `/tag` (the button press that lines the two clocks up) and `/scan` in this bag.
 
 ## Laser-inertial odometry and the gyro supervisor
 
